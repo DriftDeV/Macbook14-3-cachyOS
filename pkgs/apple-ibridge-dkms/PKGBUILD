@@ -1,0 +1,41 @@
+# Maintainer: DriftDeV
+# Touch Bar T1 via DKMS. Il fork sorgente va scelto prima della build (vedi sotto).
+# NON VERIFICATO su hardware: struttura e nomi dei moduli dipendono dal fork.
+pkgname=apple-ibridge-dkms
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Driver Touch Bar/ALS T1 (apple-ibridge, apple-ib-tb, apple-ib-als) per MacBookPro14,x"
+arch=('x86_64')
+url="https://github.com/nonderbe/macbook-pro-touchbar-driver"
+license=('GPL2')
+depends=('dkms')
+makedepends=('git')
+# Sostituisci '#commit=' con lo SHA che hai verificato funzionante sul tuo 14,3.
+source=("apple-ibridge::git+https://github.com/nonderbe/macbook-pro-touchbar-driver.git")
+sha256sums=('SKIP')
+
+pkgver() {
+    cd "$srcdir/apple-ibridge"
+    printf '0.git.%s' "$(git rev-parse --short HEAD)"
+}
+
+package() {
+    local dest="$pkgdir/usr/src/apple-ibridge-$pkgver"
+    install -d "$dest"
+    cp -a "$srcdir/apple-ibridge/." "$dest/"
+    rm -rf "$dest/.git"
+    if [ ! -f "$dest/dkms.conf" ]; then
+        sed "s/@VERSION@/$pkgver/" "$startdir/../../dkms/apple-ibridge/dkms.conf" > "$dest/dkms.conf"
+    fi
+    # DKMS usa il PACKAGE_VERSION del dkms.conf: allinea il nome della directory.
+    local v
+    v="$(awk -F'"' '/^PACKAGE_VERSION=/{print $2; exit}' "$dest/dkms.conf")"
+    if [ -n "$v" ] && [ "$v" != "$pkgver" ]; then
+        mv "$dest" "$pkgdir/usr/src/apple-ibridge-$v"
+    fi
+    install -Dm644 /dev/stdin "$pkgdir/etc/modules-load.d/apple-ibridge.conf" <<EOF
+apple-ibridge
+apple-ib-tb
+apple-ib-als
+EOF
+}

@@ -1,0 +1,15 @@
+# Quirk libinput per MacBookPro14,x (dal profilo nixos-hardware apple/macbook-pro/14-1).
+# Segnalano che tastiera SPI e Touch Bar (USB 05ac:8600) sono tastiere interne,
+# così il touchpad viene disabilitato mentre si scrive.
+
+[Apple SPI Keyboard]
+MatchUdevType=keyboard
+MatchName=*Apple SPI Keyboard*
+AttrKeyboardIntegration=internal
+
+[Apple Touch Bar]
+MatchUdevType=keyboard
+MatchBus=usb
+MatchVendor=0x05AC
+MatchProduct=0x8600
+AttrKeyboardIntegration=internal

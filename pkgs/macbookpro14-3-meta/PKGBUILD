@@ -1,0 +1,29 @@
+# Maintainer: DriftDeV
+# Metapacchetto: dipendenze + file di configurazione per MacBookPro14,3.
+# Build locale dalla radice della repo:  cd pkgs/macbookpro14-3-meta && makepkg -si
+# I file vengono letti da ../../config e ../../scripts (startdir), non scaricati.
+pkgname=macbookpro14-3-meta
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Configurazione hardware per MacBookPro14,3 (tastiera SPI, sleep, quirk libinput)"
+arch=('any')
+license=('MIT')
+depends=('dkms' 'iio-sensor-proxy' 'linux-firmware' 'mkinitcpio')
+optdepends=('apple-ibridge-dkms: Touch Bar T1 (pacchetto locale della repo)')
+install="$pkgname.install"
+
+package() {
+    local root="$startdir/../.."
+    install -Dm644 "$root/config/libinput/local-overrides.quirks" \
+        "$pkgdir/etc/libinput/local-overrides.quirks"
+    install -Dm644 "$root/config/mkinitcpio/macbookpro14-3.conf" \
+        "$pkgdir/etc/mkinitcpio.conf.d/macbookpro14-3.conf"
+    install -Dm644 "$root/config/sleep/s2idle.conf" \
+        "$pkgdir/etc/systemd/sleep.conf.d/10-macbookpro14-3.conf"
+    install -Dm755 "$root/scripts/d3cold-nvme.sh" \
+        "$pkgdir/usr/local/lib/macbookpro14-3/d3cold-nvme.sh"
+    install -Dm644 "$root/config/systemd/macbookpro14-3-d3cold.service" \
+        "$pkgdir/usr/lib/systemd/system/macbookpro14-3-d3cold.service"
+    install -Dm755 "$root/config/sleep/macbookpro14-3-sleep.sh" \
+        "$pkgdir/usr/lib/systemd/system-sleep/macbookpro14-3-sleep.sh"
+}

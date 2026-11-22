@@ -1,0 +1,3 @@
+# Opzionale, NON installato di default. Da copiare in /etc/modprobe.d/brcmfmac.conf
+# solo se il firmware Wi-Fi va in crash o WPA cade (Arch BBS 313054, riferito a un 13,3).
+options brcmfmac feature_disable=0x82000

@@ -1,0 +1,9 @@
+[Unit]
+Description=Disabilita d3cold sull'NVMe del MacBookPro14,3
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/macbookpro14-3/d3cold-nvme.sh
+
+[Install]
+WantedBy=multi-user.target
