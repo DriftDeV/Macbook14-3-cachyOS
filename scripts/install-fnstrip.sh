@@ -16,6 +16,7 @@ source "$REPO_DIR/config/sources.conf"
 SEL="${XDG_CONFIG_HOME:-$HOME/.config}/t1bridge/renderer"
 restart_renderer() {
     local u
+    systemctl --user daemon-reload 2>/dev/null || true   # le unit possono essere appena state reinstallate
     for u in macbookpro14-3-touchbar-renderer.service t1test-touchbar.service; do
         systemctl --user -q is-active "$u" 2>/dev/null && systemctl --user restart "$u" && log "riavviato $u"
     done

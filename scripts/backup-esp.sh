@@ -10,8 +10,21 @@ source "$SCRIPT_DIR/lib.sh"
 DEST="${1:-/var/backups/macbookpro14-3}"
 need_root
 
-# Individua la partizione EFI (tipo GPT c12a7328-...).
-ESP="$(lsblk -rno PATH,PARTTYPE 2>/dev/null | awk 'tolower($2)=="c12a7328-f81f-11d2-ba4b-00a0c93ec93b"{print $1; exit}')"
+# Individua l'ESP di Apple: tra le partizioni EFI (tipo GPT c12a7328-...) quella con EFI/APPLE.
+# Sui Mac con Linux installato accanto a macOS ce ne possono essere più d'una (es. una per GRUB).
+ESP=""
+PROBE="$(mktemp -d)"
+for p in $(lsblk -rno PATH,PARTTYPE 2>/dev/null | awk 'tolower($2)=="c12a7328-f81f-11d2-ba4b-00a0c93ec93b"{print $1}'); do
+    [ -n "$ESP" ] || ESP="$p"                       # ripiego: la prima
+    if mount -o ro "$p" "$PROBE" 2>/dev/null; then
+        found=0; [ -d "$PROBE/EFI/APPLE" ] && found=1
+        umount "$PROBE"
+        if [ "$found" = 1 ]; then ESP="$p"; break; fi
+    elif findmnt -rno TARGET "$p" >/dev/null 2>&1 && [ -d "$(findmnt -rno TARGET "$p" | head -1)/EFI/APPLE" ]; then
+        ESP="$p"; break                             # già montata altrove
+    fi
+done
+rmdir "$PROBE" 2>/dev/null || true
 [ -n "$ESP" ] || die "ESP non trovata."
 log "ESP: $ESP"
 

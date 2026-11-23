@@ -45,5 +45,6 @@ if [ -e "$HOOK" ]; then   # l'hook di sleep riapplica il comando dopo il risvegl
 fi
 run systemctl daemon-reload
 run systemctl enable macbookpro14-3-bt-sco.service
-run python3 -I "$BIN" hci0
+# Se il Bluetooth è spento il comando fallisce: lo rimanda il servizio alla prossima accensione.
+run python3 -I "$BIN" hci0 || warn "Bluetooth spento o non pronto: il comando verrà inviato all'avvio del servizio."
 ok "Profilo headset con CVSD pronto (mSBC disattivato). Riavvia WirePlumber da utente: systemctl --user restart wireplumber"

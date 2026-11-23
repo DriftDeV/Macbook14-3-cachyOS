@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Imposta (una volta) la curva di luminosità automatica di KWin per lo schermo interno.
 # Da utente, SENZA sudo. La curva viene scritta al prossimo login, prima che parta KWin.
-#   scripts/set-kwin-brightness-curve.sh [file-curva.json]   (default: config/kde/kwin-brightness-curve.json)
+#   scripts/set-kwin-brightness-curve.sh [--force] [file-curva.json]   (default: config/kde/kwin-brightness-curve.json)
+#   Se una curva è già stata applicata non fa nulla (KWin la adatta alle regolazioni manuali): --force la riscrive.
 #   scripts/set-kwin-brightness-curve.sh --undo
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -22,6 +23,12 @@ if [ "${1:-}" = --undo ]; then
     exit 0
 fi
 
+FORCE_CURVE=0
+if [ "${1:-}" = --force ]; then FORCE_CURVE=1; shift; fi
+if [ -e "$CURVE.applied" ] && [ "$FORCE_CURVE" = 0 ]; then
+    ok "Curva di partenza già applicata in passato: KWin la sta adattando alle tue regolazioni, non la riscrivo (--force per farlo)."
+    exit 0
+fi
 SRC="${1:-$REPO_DIR/config/kde/kwin-brightness-curve.json}"
 python3 -I -c "import json,sys; c=json.load(open(sys.argv[1])); assert c and c==sorted(c) and all(len(p)==2 for p in c)" "$SRC" \
     || die "Curva non valida: serve una lista ordinata di coppie [lux, luminosità 0-1]."

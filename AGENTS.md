@@ -24,7 +24,7 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
 
 | Percorso | Contenuto |
 |---|---|
-| `install.sh` | installazione su CachyOS già installato; usa sempre `--dry-run` prima |
+| `install.sh` | post-installazione su CachyOS appena installato: passi in ordine, scelta Touch Bar keyboard/display, `--only/--skip`, riepilogo, registro in `/var/log/macbookpro14-3-install.log`; prima `--dry-run` |
 | `macos/prepare.sh` | da macOS: backup, download ISO, ridimensiona APFS, crea `COSLIVE` + partizione Linux, estrae ISO |
 | `scripts/` | `lib.sh`, `backup-esp.sh`, `install-touchbar.sh`, `install-audio.sh`, `install-wifi.sh`, `install-wifi-nvram.sh`, `install-sleep.sh`, `sleep-test.sh`, `install-power.sh`, `install-bt.sh`, `bt-sco-route.py`, `build-t1bridge.sh`, `install-touchbar-display.sh`, `touchbar-mode.sh`, `install-fnstrip.sh`, `set-kwin-brightness-curve.sh`, `t1-reenumerate.sh` |
 | `config/` | mkinitcpio, libinput, kde, sleep, power, systemd, udev, tmpfiles, networkmanager, modprobe, `sources.conf` (sorgenti esterne; Touch Bar pinnata) |
@@ -87,6 +87,13 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
   (il limite minimo del resize è uguale alla dimensione attuale finché non vengono eliminati).
 
 ## Stato della sessione (aggiornato il 23 novembre 2026)
+
+- **Installazione**: CachyOS installato dal live sul disco interno (partizioni `COSLIVE` 7 GB e `LINUXEFI` con GRUB su
+  `/boot/efi`; ESP Apple `nvme0n1p1` intatta) [I dalle partizioni]. README riscritto con stato verificato e istruzioni.
+- **`install.sh` riscritto** come post-install unico (backup ESP Apple, pacchetti, input, touchbar, audio, sleep, power,
+  bluetooth, brightness, touchbar-display, wifi per ultimo). [F] Rilancio reale su questa macchina il 23/11/2026
+  (`--yes --touchbar display --fnstrip`): 11 passi ok, idempotente (curva KWin non riscritta, power.conf conservato,
+  Wi-Fi tornato da solo). Non ancora provato su un'installazione davvero nuova.
 
 - **CachyOS è installato e avviato sul 14,3** (kernel 7.3.5-2-cachyos + LTS 6.18, KDE Plasma 6.8 Wayland).
   Funzionano: Wi-Fi 2,4 + 5 GHz, Touch Bar + sensore di luce (DKMS, dopo riavvio), webcam, sospensione s2idle (coperchio),
