@@ -107,6 +107,28 @@ Per la sospensione non conta (la modalità tastiera serve solo durante lo sleep)
     core) la alimenta su richiesta (LED acceso mentre gira). **Discord funziona.** Da fnstrip `contrib/t1-webcam` (MIT).
 - Ritorno manuale a `keyboard` senza riavvio: tocco OK, barra spenta fino allo spegnimento completo (sopra).
 
+### Reset del T1 senza spegnere: non possibile [F] (23/11/2026)
+
+Prova (`touchbar-mode keyboard` dalla modalità display, poi un metodo alla volta, barra osservata dall'utente):
+
+| Metodo | Esito |
+|---|---|
+| porta USB interna `usb1-port3`: `disable` 1 per 3 s, poi 0 | nessuna disconnessione nel kernel (stesso device number), barra spenta |
+| reset USB del dispositivo (`USBDEVFS_RESET`) | `reset high-speed USB device`, driver riagganciati, barra spenta |
+| sospensione S3 di ~15 s in modalità tastiera | al risveglio solo `reset high-speed USB device`: il T1 non perde corrente, barra spenta |
+
+Il T1 è un SoC con alimentazione propria: si azzera solo con lo spegnimento completo. L'unico reset software noto è il
+metodo ACPI `FRST` usato da t1-revive (`docs/linux-recovery.md` di T1Bridge), che manda il T1 in recovery
+(`05ac:1281`) da cui esce solo ricaricando il firmware: **non usarlo** [I dalla documentazione].
+
+Di conseguenza `touchbar-mode set keyboard` dalla modalità display **salva soltanto** la scelta: la grafica resta fino
+allo spegnimento completo e MacBook Manager propone di spegnere subito. `touchbar-mode keyboard` (senza `set`) fa
+ancora il passaggio a caldo, usato dalla sospensione. Se la barra resta spenta in modalità tastiera dopo la modalità
+display, il manager lo segnala (file `/run/macbookpro14-3/touchbar/display-this-boot`) con il pulsante "Spegni ora".
+
+Provato dal manager il 23/11/2026 [F]: *Correggi* (display a caldo, 23:58:31) → *Modalità tastiera* (solo salvata,
+grafica rimasta) → spegnimento proposto dal manager → riavvio alle 23:59:24 in modalità tastiera con la barra accesa.
+
 ## Installazione stabile (modalità sceglibile)
 
 Gli script sperimentali (`scripts/experimental/`) sono stati sostituiti da:

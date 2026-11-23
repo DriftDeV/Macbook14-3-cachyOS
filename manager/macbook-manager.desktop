@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=MacBook Manager
+GenericName=MacBook settings
+GenericName[it]=Impostazioni del MacBook
+Comment=Status and quick actions for the MacBookPro14,3: Touch Bar, suspend, drivers, energy
+Comment[it]=Stato e azioni rapide del MacBookPro14,3: Touch Bar, sospensione, driver, energia
+Exec=macbook-manager gui
+Icon=computer-laptop
+Terminal=false
+Categories=Settings;HardwareSettings;
+Keywords=macbook;touchbar;touch bar;sleep;suspend;dkms;battery;

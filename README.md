@@ -93,6 +93,7 @@ Alla fine **spegni completamente** il Mac, aspetta ~30 secondi e riaccendi (il T
 | `bluetooth` | audio delle chiamate (SCO via HCI), mSBC disattivato in WirePlumber |
 | `brightness` | curva di partenza della luminosità automatica di KWin |
 | `touchbar-display` | solo se scegli la modalità display: compila T1Bridge, installa driver e servizi (e fnstrip) |
+| `manager` | MacBook Manager: GUI e icona nella barra di sistema con stato e azioni rapide ([manager/README.md](manager/README.md)) |
 | `wifi` | per ultimo (la connessione cade ~20 s): NVRAM dal chip, firmware, impostazioni NetworkManager |
 
 Opzioni utili:
@@ -108,9 +109,14 @@ Se un passo fallisce gli altri proseguono; il riepilogo dice cosa rifare. Regist
 
 ## 3. Uso quotidiano
 
+Il modo più semplice è **MacBook Manager** (menu delle applicazioni o icona nella barra di sistema): stato di driver,
+Touch Bar, sospensione, Wi-Fi, batteria e temperature, con le azioni qui sotto a un clic. Da terminale:
+`macbook-manager status`, `macbook-manager actions`, `macbook-manager run <azione>`. Dettagli in
+[manager/README.md](manager/README.md).
+
 | Cosa | Comando |
 |---|---|
-| Modalità della Touch Bar | `sudo touchbar-mode status` · `sudo touchbar-mode set display` · `sudo touchbar-mode set keyboard` (poi spegnimento completo) |
+| Modalità della Touch Bar | `sudo touchbar-mode status` · `sudo touchbar-mode set display` · `sudo touchbar-mode set keyboard` (salva; attiva dopo uno spegnimento completo, l'unico modo di azzerare il T1) |
 | Webcam per Discord/browser (modalità display) | `t1-webcam on` / `t1-webcam off`, poi scegli "T1 camera (Discord)" |
 | Renderer fnstrip | `scripts/install-fnstrip.sh` (`--undo` per togliere); configurazione in `~/.config/fnstrip/config.toml`, poi `systemctl --user restart macbookpro14-3-touchbar-renderer` |
 | Energia a batteria | `/etc/macbookpro14-3/power.conf`; registro `journalctl -t macbookpro14-3-power` |
@@ -137,6 +143,7 @@ Se un passo fallisce gli altri proseguono; il riepilogo dice cosa rifare. Regist
 install.sh              post-installazione (sudo ./install.sh --dry-run)
 macos/prepare.sh        da macOS: partizione live sul disco interno, senza USB
 scripts/                un installer per componente, touchbar-mode, sleep-test, build T1Bridge/fnstrip
+manager/                MacBook Manager: comando, GUI Qt, helper polkit
 config/                 sorgenti esterne fissate (sources.conf), udev, systemd, sleep, power, NetworkManager,
                         WirePlumber, KDE, libinput, T1Bridge
 dkms/                   driver display e webcam della modalità display (T1Bridge, Linux 7.3)

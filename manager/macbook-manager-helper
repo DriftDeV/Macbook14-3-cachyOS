@@ -1,0 +1,62 @@
+#!/usr/bin/python3 -I
+"""Helper di root di MacBook Manager, lanciato con pkexec (policy org.macbookpro14-3.manager.helper).
+Accetta un solo argomento: l'id di un'azione root definita in macbook_manager/actions.py. Nessun argomento
+libero, nessuna shell: i comandi sono quelli scritti lì, i file vengono dalla cartella di installazione (di root).
+"""
+import os
+import re
+import subprocess
+import sys
+
+sys.path.insert(0, "/usr/local/lib/macbookpro14-3/manager")
+from macbook_manager import CONFDIR  # noqa: E402
+from macbook_manager.actions import BY_ID, available, expand  # noqa: E402
+
+CONF_KEY = re.compile(r"^[A-Z_][A-Z0-9_]*$")
+
+
+def set_conf(name, key, value):
+    if name not in ("power",) or not CONF_KEY.match(key) or not re.match(r"^[A-Za-z0-9_.-]*$", value):
+        raise SystemExit("parametro di configurazione non valido")
+    path = os.path.join(CONFDIR, name + ".conf")
+    with open(path) as f:
+        lines = f.read().splitlines()
+    for i, line in enumerate(lines):
+        if line.startswith(key + "="):
+            lines[i] = "%s=%s" % (key, value)
+            break
+    else:
+        lines.append("%s=%s" % (key, value))
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        f.write("\n".join(lines) + "\n")
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, path)
+    print("%s: %s=%s" % (path, key, value), flush=True)
+
+
+def main():
+    if os.geteuid() != 0:
+        raise SystemExit("serve root (lanciato da pkexec)")
+    if len(sys.argv) != 2 or sys.argv[1] not in BY_ID or not BY_ID[sys.argv[1]]["root"]:
+        raise SystemExit("azione sconosciuta")
+    action = BY_ID[sys.argv[1]]
+    if not available(action):
+        raise SystemExit("azione non disponibile su questo sistema (componente non installato)")
+    os.environ["PATH"] = "/usr/local/sbin:/usr/local/bin:/usr/bin"
+    os.environ["LC_ALL"] = "it_IT.UTF-8"
+    for step in action["steps"]:
+        if isinstance(step, tuple) and step[0] == "conf":
+            set_conf(*step[1:])
+            continue
+        argv = expand(step)
+        print("$ " + " ".join(argv), flush=True)
+        rc = subprocess.run(argv, stdin=subprocess.DEVNULL).returncode
+        if rc != 0:
+            print("comando fallito (codice %d)" % rc, flush=True)
+            return rc
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!-- MacBook Manager: pkexec può lanciare come root SOLO questo helper, che accetta solo le azioni fisse di
+     macbook_manager/actions.py. Password di amministratore, ricordata per qualche minuto. -->
+<policyconfig>
+  <vendor>Macbook14-3-cachyOS</vendor>
+  <action id="org.macbookpro14-3.manager.helper">
+    <description>Run a MacBook Manager system action</description>
+    <description xml:lang="it">Eseguire un'azione di sistema di MacBook Manager</description>
+    <message>Authentication is required to change MacBook settings</message>
+    <message xml:lang="it">Serve la password per modificare le impostazioni del MacBook</message>
+    <icon_name>computer-laptop</icon_name>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/local/lib/macbookpro14-3/manager/macbook-manager-helper</annotate>
+  </action>
+</policyconfig>

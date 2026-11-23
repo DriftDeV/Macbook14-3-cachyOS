@@ -2,7 +2,8 @@
 # Post-installazione per MacBookPro14,3 (15" 2017, Touch Bar T1) su CachyOS appena installato.
 # Applica, nell'ordine, i passaggi provati su questa macchina (vedi README e docs/):
 #   backup ESP Apple + firmware T1 -> pacchetti -> trackpad -> Touch Bar (modalità tastiera) -> audio ->
-#   sospensione -> energia -> Bluetooth -> luminosità automatica -> [Touch Bar in modalità display] -> Wi-Fi
+#   sospensione -> energia -> Bluetooth -> luminosità automatica -> [Touch Bar in modalità display] ->
+#   MacBook Manager (GUI, icona nella barra di sistema) -> Wi-Fi
 # Prima: sudo pacman -Syu e un riavvio (il kernel in uso deve essere quello installato).
 #
 #   sudo ./install.sh --dry-run          mostra cosa farebbe
@@ -14,7 +15,7 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/lib.sh
 source "$REPO_DIR/scripts/lib.sh"
 
-STEPS="backup packages input touchbar audio sleep power bluetooth brightness touchbar-display wifi"
+STEPS="backup packages input touchbar audio sleep power bluetooth brightness touchbar-display manager wifi"
 LOG=/var/log/macbookpro14-3-install.log
 TOUCHBAR_CHOICE=""      # keyboard | display
 FNSTRIP=""              # yes | no
@@ -157,6 +158,7 @@ step_packages() {
     # shellcheck disable=SC2206
     pkgs=(base-devel dkms git curl zstd python patch iw networkmanager iio-sensor-proxy
           linux-firmware linux-firmware-broadcom libinput-tools $headers)
+    wanted manager && pkgs+=(pyside6)   # GUI di MacBook Manager
     if [ "$TOUCHBAR_CHOICE" = display ] && wanted touchbar-display; then
         pkgs+=(rust ffmpeg intel-media-driver brightnessctl)
         modinfo v4l2loopback >/dev/null 2>&1 || pkgs+=(v4l2loopback-dkms)
@@ -182,6 +184,7 @@ step_audio() { sub install-audio.sh; }
 step_sleep() { sub install-sleep.sh; }
 step_power() { sub install-power.sh; }
 step_bluetooth() { sub install-bt.sh; }
+step_manager() { sub install-manager.sh; }
 step_brightness() { as_user bash "$REPO_DIR/scripts/set-kwin-brightness-curve.sh"; }
 
 step_touchbar_display() {
@@ -230,6 +233,7 @@ run_step power "Energia (batteria/alimentatore)" step_power
 run_step bluetooth "Bluetooth (audio delle chiamate)" step_bluetooth
 run_step brightness "Luminosità automatica (curva KWin)" step_brightness
 run_step touchbar-display "Touch Bar, modalità display (T1Bridge)" step_touchbar_display
+run_step manager "MacBook Manager (stato e azioni rapide, GUI)" step_manager
 run_step wifi "Wi-Fi 5 GHz (NVRAM dal chip)" step_wifi
 
 summary
@@ -242,6 +246,7 @@ fi
 ok "Fatto. Ora SPEGNI completamente il Mac, aspetta ~30 s e riaccendi (il T1 riparte pulito)."
 cat <<'EOF'
 Dopo il riavvio, controlli rapidi:
+  macbook-manager status                        # tutto in una schermata (o apri "MacBook Manager" dal menu)
   dkms status                                   # appleibridge, snd_hda_macbookpro (+ t1bridge-* in modalità display)
   grep Subsystem /proc/asound/card*/codec#0     # 0x106b3900 = audio a posto
   iw dev wlan0 link                             # 5 GHz se il router li offre

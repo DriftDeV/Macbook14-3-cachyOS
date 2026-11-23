@@ -6,12 +6,16 @@
 #             webcam H.264 con uvcvideo_t1 (+ webcam virtuale per Discord: t1-webcam on).
 # Comandi (root):
 #   touchbar-mode status
-#   touchbar-mode set display|keyboard   salva la scelta in /etc/macbookpro14-3/touchbar.conf e la applica
+#   touchbar-mode set display            salva la scelta in /etc/macbookpro14-3/touchbar.conf e la applica subito
+#   touchbar-mode set keyboard           salva la scelta; dalla modalità display vale dal prossimo spegnimento completo
+#                                        (la grafica resta attiva fino ad allora: niente barra spenta)
 #   touchbar-mode display|keyboard       applica subito, senza salvare
 #   touchbar-mode boot                   (servizio all'avvio) applica la scelta salvata
 #   touchbar-mode sleep-pre|sleep-post   (servizio di sospensione) keyboard prima dello sleep, display dopo
-# Tornando a keyboard senza riavvio la barra resta spenta (il tocco funziona): serve uno spegnimento
-# completo (~30 s). Vedi docs/t1bridge.md.
+# Tornando a keyboard senza riavvio la barra resta spenta (il tocco funziona): il lato display del T1 resta nello
+# stato della configurazione 2 e si azzera solo con uno spegnimento completo (~30 s). Provati senza successo il
+# 23/11/2026: porta USB disattivata/riattivata, reset USB, sospensione S3 (il T1 non perde corrente). L'unico reset
+# software noto (ACPI FRST) manda il T1 in recovery: non usarlo. Vedi docs/t1bridge.md.
 set -euo pipefail
 [ "$(id -u)" -eq 0 ] || { echo "Serve sudo." >&2; exit 1; }
 
@@ -98,7 +102,7 @@ to_display() {
     systemctl unmask --runtime iio-sensor-proxy.service >/dev/null 2>&1 || true
     systemctl start iio-sensor-proxy.service 2>/dev/null || true
     echo display > "$STATE/mode"
-    touch "$STATE/display"
+    touch "$STATE/display" "$STATE/display-this-boot"   # il secondo resta fino al riavvio (barra spenta in keyboard)
     user_systemctl start macbookpro14-3-touchbar-renderer.service || log "renderer non avviato"
     log "display: attiva ($(basename "$card"))"
 }
@@ -162,8 +166,9 @@ case "${1:-status}" in
             display) save_mode display; to_display ;;
             keyboard) save_mode keyboard
                 if [ "$(current_mode)" = display ]; then
-                    to_keyboard
-                    echo "Per riaccendere la barra in modalità tastiera: spegnimento completo, ~30 s, riaccensione."
+                    log "keyboard salvata: la grafica resta fino allo spegnimento completo (solo così il T1 riparte pulito)"
+                    echo "Spegni il Mac, aspetta ~30 s e riaccendi: partirà in modalità tastiera."
+                    echo "(Per passare subito, con la barra spenta ma il tocco funzionante: sudo touchbar-mode keyboard)"
                 fi ;;
             *) echo "Uso: touchbar-mode set display|keyboard" >&2; exit 1 ;;
         esac ;;

@@ -1,0 +1,10 @@
+#!/usr/bin/python3 -I
+# MacBook Manager (MacBookPro14,3). Installato da scripts/install-manager.sh come /usr/local/bin/macbook-manager;
+# si può anche lanciare dalla repo: manager/macbook-manager status
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+from macbook_manager.cli import main  # noqa: E402
+
+sys.exit(main())

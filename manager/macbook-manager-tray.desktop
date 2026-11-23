@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=MacBook Manager (barra di sistema)
+Comment=Icona di MacBook Manager nella barra di sistema
+Exec=macbook-manager gui --tray
+Icon=computer-laptop
+Terminal=false
+NoDisplay=true
+X-KDE-autostart-phase=2

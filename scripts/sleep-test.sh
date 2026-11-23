@@ -79,7 +79,7 @@ report() {   # dati dal journal: logind (coperchio), systemd-sleep, kernel, hook
         | grep -E 'Lid (closed|opened)|Performing sleep operation|returned from sleep operation|PM: suspend entry|macbookpro14-3-sleep.*(pre suspend: fatto|post suspend: batteria)' \
         | python3 -I -c '
 import re, sys, time
-cyc, cur, lid, opened = [], None, "?", 0.0
+cyc, cur, lid, opened, pre = [], None, "?", 0.0, None
 for l in sys.stdin:
     t, msg = float(l.split()[0]), l
     if "Lid closed" in msg: lid = "chiuso"
@@ -88,10 +88,11 @@ for l in sys.stdin:
         if cur and cur.get("end") and t - cur["end"] <= 5: cur["cause"] = "coperchio aperto"
     elif "Performing sleep operation" in msg:
         cur = {"start": t, "lid": lid, "mode": "?"}; cyc.append(cur)
+        if pre: cur["b0"], pre = pre, None   # l hook "pre" scrive la batteria prima di questa riga
     elif cur and "PM: suspend entry" in msg: cur["mode"] = re.search(r"\((\w+)\)", msg).group(1)
-    elif cur and "pre suspend: fatto" in msg:
+    elif "pre suspend: fatto" in msg:
         m = re.search(r"(\d+)% (\d+) mAh ac=(\d)", msg)   # le righe dei vecchi hook non hanno la batteria
-        if m: cur["b0"] = m.groups()
+        pre = m.groups() if m else None
     elif cur and "returned from sleep" in msg:
         cur["end"] = t
         if t - opened <= 5: cur["cause"] = "coperchio aperto"   # logind può scriverlo prima di systemd-sleep

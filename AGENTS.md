@@ -26,8 +26,9 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
 |---|---|
 | `install.sh` | post-installazione su CachyOS appena installato: passi in ordine, scelta Touch Bar keyboard/display, `--only/--skip`, riepilogo, registro in `/var/log/macbookpro14-3-install.log`; prima `--dry-run` |
 | `macos/prepare.sh` | da macOS: backup, download ISO, ridimensiona APFS, crea `COSLIVE` + partizione Linux, estrae ISO |
-| `scripts/` | `lib.sh`, `backup-esp.sh`, `install-touchbar.sh`, `install-audio.sh`, `install-wifi.sh`, `install-wifi-nvram.sh`, `install-sleep.sh`, `sleep-test.sh`, `install-power.sh`, `install-bt.sh`, `bt-sco-route.py`, `build-t1bridge.sh`, `install-touchbar-display.sh`, `touchbar-mode.sh`, `install-fnstrip.sh`, `set-kwin-brightness-curve.sh`, `t1-reenumerate.sh` |
+| `scripts/` | `lib.sh`, `backup-esp.sh`, `install-touchbar.sh`, `install-audio.sh`, `install-wifi.sh`, `install-wifi-nvram.sh`, `install-sleep.sh`, `sleep-test.sh`, `install-power.sh`, `install-bt.sh`, `bt-sco-route.py`, `build-t1bridge.sh`, `install-touchbar-display.sh`, `touchbar-mode.sh`, `install-fnstrip.sh`, `set-kwin-brightness-curve.sh`, `t1-reenumerate.sh`, `install-manager.sh` |
 | `config/` | mkinitcpio, libinput, kde, sleep, power, systemd, udev, tmpfiles, networkmanager, modprobe, `sources.conf` (sorgenti esterne; Touch Bar pinnata) |
+| `manager/` | MacBook Manager: `macbook-manager` (stato/azioni, CLI + GUI PySide6 con icona nella barra di sistema), helper root via pkexec che accetta solo gli id di `actions.py`; installato da `scripts/install-manager.sh` |
 | `pkgs/`, `dkms/` | PKGBUILD (`macbookpro14-3-meta`, `apple-ibridge-dkms`), `dkms.conf` di riserva, `t1bridge-appletbdrm`, `t1bridge-uvc` |
 | `patches/` | `touchbar/`: port di apple-ibridge a Linux 7.3 + `LLVM=1` automatico; README con le candidate |
 | `docs/` | report di ricerca e note per componente; indice in `docs/README.md` |
@@ -82,6 +83,9 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
   (`disabling eDP`), Radeon 7-9 W a riposo, runtime PM non disponibile. Opzioni in `docs/gpu.md`.
 - **Consumi [F]** (`docs/power.md`): unica leva netta a riposo = Radeon `manual`+`POWER_SAVING`+PCIe 2,5 GT/s (-1,5 W);
   `scripts/install-power.sh` la applica a batteria. Slider KDE e turbo non cambiano nulla a riposo. ~18 W ≈ 4 h.
+- **MacBook Manager [F]** (`manager/`, 23/11/2026): GUI, icona nella barra di sistema, azioni con password via polkit
+  provate (Touch Bar display/tastiera, spegnimento). Il T1 si azzera SOLO con lo spegnimento completo (porta USB, reset
+  USB, S3 provati invano; ACPI `FRST` = recovery, da non usare): `touchbar-mode set keyboard` salva soltanto.
 - `sudo` non funziona dalla shell di Claude (serve la password). Dal 23/11 pomeriggio funziona nel pannello Terminale
   dell'app (`run_in_terminal`, l'utente scrive la password); altrimenti Konsole.
 - Il vecchio submodule `macbook-pro-touchbar-driver` (commit `42034ae`) è stato rimosso: senza `.gitmodules` e senza commit pubblico.

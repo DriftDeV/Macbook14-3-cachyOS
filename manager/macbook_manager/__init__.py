@@ -1,0 +1,5 @@
+"""MacBook Manager: stato e azioni rapide per CachyOS sul MacBookPro14,3 (repo Macbook14-3-cachyOS)."""
+VERSION = "0.1.0"
+LIBDIR = "/usr/local/lib/macbookpro14-3"
+CONFDIR = "/etc/macbookpro14-3"
+HELPER = LIBDIR + "/manager/macbook-manager-helper"
