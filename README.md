@@ -9,6 +9,10 @@ passaggi provati su questa macchina: driver DKMS, patch, configurazioni, servizi
 > consumo della Radeon). È un progetto personale, scritto con l'aiuto di un assistente IA e provato su **una sola
 > macchina**: leggi gli script prima di usarli. I dettagli di ogni componente sono in [`docs/`](docs/README.md).
 
+![Touch Bar in modalità display: renderer fnstrip con il tema OLED](docs/media/touchbar-oled.png)
+<sub>La Touch Bar in modalità display (renderer fnstrip, preset OLED di MacBook Manager): Esc, luminosità dello schermo e
+della tastiera, media, volume. Screenshot reale a 2170×60, catturato con *Touch Bar in diretta*.</sub>
+
 ## Cosa funziona
 
 ✅ provato sulla macchina · 🟡 funziona con limiti · ❓ non verificato · ❌ non funziona
