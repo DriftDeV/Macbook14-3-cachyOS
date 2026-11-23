@@ -1,0 +1,15 @@
+# In modalità display: modalità tastiera durante la sospensione (la strada provata in docs/sleep.md),
+# di nuovo display al risveglio. In modalità tastiera non fa nulla.
+[Unit]
+Description=Touch Bar T1: modalità tastiera durante la sospensione
+Before=sleep.target
+StopWhenUnneeded=yes
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/touchbar-mode sleep-pre
+ExecStop=/usr/local/bin/touchbar-mode sleep-post
+
+[Install]
+WantedBy=sleep.target

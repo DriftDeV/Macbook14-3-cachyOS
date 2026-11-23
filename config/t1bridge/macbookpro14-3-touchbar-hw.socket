@@ -1,0 +1,13 @@
+# Touch Bar in modalità display: socket del servizio (da T1Bridge systemd/t1-touchbar-hw.socket).
+[Unit]
+Description=Touch Bar T1 (modalità display): socket del servizio hardware
+BindsTo=dev-dri-touchbar.device
+After=dev-dri-touchbar.device
+
+[Socket]
+ListenSequentialPacket=/run/t1bridge/touchbar.sock
+SocketUser=root
+SocketGroup=@GROUP@
+SocketMode=0660
+DirectoryMode=0750
+RemoveOnStop=yes

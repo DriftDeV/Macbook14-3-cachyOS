@@ -1,0 +1,15 @@
+# Renderer della Touch Bar (T1Bridge t1-touchbar), servizio utente: parte solo in modalità display.
+[Unit]
+Description=Touch Bar T1 (modalità display): renderer
+PartOf=graphical-session.target
+After=graphical-session.target
+ConditionPathExists=/run/macbookpro14-3/touchbar/display
+
+[Service]
+ExecStart=/usr/local/lib/macbookpro14-3/t1bridge/t1-touchbar
+Environment=T1BRIDGE_DESKTOP_PROVIDER=/usr/local/lib/macbookpro14-3/t1bridge/desktop-provider
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target

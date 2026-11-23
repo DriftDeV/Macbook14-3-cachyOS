@@ -1,0 +1,15 @@
+# Webcam del T1 in modalità display (solo H.264) -> webcam virtuale /dev/video10 "T1 camera (Discord)"
+# per le app che non decodificano H.264 (Discord, browser). Decodifica sulla GPU Intel (VA-API, ripiega
+# sulla CPU). Su richiesta (t1-webcam on): il LED della camera resta acceso mentre gira.
+# Da acmccubbin/fnstrip contrib/t1-webcam (MIT).
+[Unit]
+Description=Webcam T1 (H.264) -> webcam virtuale per Discord e browser
+
+[Service]
+ExecStart=/usr/bin/ffmpeg -hide_banner -loglevel warning -nostdin -fflags nobuffer -flags low_delay \
+  -hwaccel vaapi -hwaccel_device /dev/dri/renderD128 \
+  -f v4l2 -input_format h264 -video_size 1280x720 -framerate 30 \
+  -i /dev/v4l/by-id/usb-Apple_Inc._iBridge-video-index0 -pix_fmt yuv420p -f v4l2 /dev/video10
+Restart=on-failure
+RestartSec=3
+SuccessExitStatus=255

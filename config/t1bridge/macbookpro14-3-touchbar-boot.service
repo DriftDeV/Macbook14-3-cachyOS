@@ -1,0 +1,10 @@
+[Unit]
+Description=Touch Bar T1: applica la modalità scelta in /etc/macbookpro14-3/touchbar.conf
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/touchbar-mode boot
+
+[Install]
+WantedBy=graphical.target

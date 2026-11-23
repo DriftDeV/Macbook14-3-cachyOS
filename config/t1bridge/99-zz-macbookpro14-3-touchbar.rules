@@ -1,0 +1,7 @@
+# Display della Touch Bar T1 (esiste solo in configurazione USB 2): fuori dalla sessione grafica,
+# così KWin non lo usa come monitor; /dev/dri/touchbar e unit dev-dri-touchbar.device per systemd.
+# Da T1Bridge systemd/99-zz-t1bridge-touchbar.rules (senza avvio automatico del servizio).
+ACTION=="add|change", SUBSYSTEM=="drm", KERNEL=="card[0-9]*", \
+  SUBSYSTEMS=="usb", ATTRS{idVendor}=="05ac", ATTRS{idProduct}=="8600", \
+  ENV{ID_SEAT}="seat-touchbar", TAG+="seat", TAG+="seat-touchbar", \
+  TAG-="master-of-seat", TAG-="uaccess", SYMLINK+="dri/touchbar", TAG+="systemd"

@@ -1,0 +1,66 @@
+#!/bin/sh
+# Provider "Desktop provider v1" di T1Bridge (docs/interfaces.md di T1Bridge): volume e muto
+# tramite PipeWire (wpctl), tasti media tramite MPRIS sul bus di sessione (busctl), notifica se il
+# renderer personalizzato non parte.
+# Basato su acmccubbin/fnstrip contrib/desktop-provider/fnstrip-desktop-provider (commit 4a71af6),
+# licenza MIT, Copyright Alex McCubbin. Gira come utente; ogni chiamata deve finire entro 500 ms.
+# Installato da scripts/install-touchbar-display.sh; il renderer lo trova tramite T1BRIDGE_DESKTOP_PROVIDER.
+
+SINK=@DEFAULT_AUDIO_SINK@
+CAP_AUDIO=1 CAP_MEDIA=2 CAP_NOTIFY=4
+
+# Il primo player multimediale sul bus di sessione, se c'è.
+player() {
+  busctl --user --no-legend list 2>/dev/null |
+    awk '$1 ~ /^org\.mpris\.MediaPlayer2\./ { print $1; exit }'
+}
+
+media() {
+  name=$(player)
+  [ -n "$name" ] || return 1
+  busctl --user call "$name" /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player "$1"
+}
+
+status() {
+  capabilities=0
+  volume=-
+  muted=-
+  # "Volume: 0.42" o "Volume: 0.42 [MUTED]"; PipeWire permette oltre il 100 %, il contratto no.
+  if state=$(wpctl get-volume "$SINK" 2>/dev/null); then
+    parsed=$(printf '%s\n' "$state" | awk '/^Volume:/ {
+      level = int($2 * 100 + 0.5); if (level > 100) level = 100
+      print level, (/\[MUTED\]/ ? 1 : 0); exit }')
+    if [ -n "$parsed" ]; then
+      capabilities=$((capabilities | CAP_AUDIO))
+      volume=${parsed% *}
+      muted=${parsed#* }
+    fi
+  fi
+  [ -n "$(player)" ] && capabilities=$((capabilities | CAP_MEDIA))
+  command -v notify-send >/dev/null 2>&1 && capabilities=$((capabilities | CAP_NOTIFY))
+  printf 'T1BRIDGE-DESKTOP 1 %s %s %s\n' "$capabilities" "$volume" "$muted"
+}
+
+[ "${1:-}" = v1 ] || exit 2
+case ${2:-} in
+  status) status ;;
+  set-volume)
+    case ${3:-} in
+      '' | *[!0-9]*) exit 2 ;;
+    esac
+    [ "$3" -le 100 ] || exit 2
+    wpctl set-volume "$SINK" "$3%"
+    ;;
+  toggle-mute) wpctl set-mute "$SINK" toggle ;;
+  media-previous) media Previous ;;
+  media-play-pause) media PlayPause ;;
+  media-next) media Next ;;
+  notify-renderer-fallback)
+    case ${3:-} in
+      selection-unavailable | selection-exited) ;;
+      *) exit 2 ;;
+    esac
+    notify-send -a t1bridge "Touch Bar" "Il renderer personalizzato non è attivo ($3): uso quello incluso."
+    ;;
+  *) exit 2 ;;
+esac

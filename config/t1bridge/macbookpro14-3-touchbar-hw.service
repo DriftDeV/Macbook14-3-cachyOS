@@ -1,0 +1,32 @@
+# Touch Bar in modalità display: display DRM, tocco (hidraw), Fn e tasti (uinput).
+# Da T1Bridge systemd/t1-touchbar-hw.service (v0.1.12); avviato da touchbar-mode, non all'avvio.
+[Unit]
+Description=Touch Bar T1 (modalità display): servizio hardware
+BindsTo=dev-dri-touchbar.device
+Requires=macbookpro14-3-touchbar-hw.socket
+After=dev-dri-touchbar.device macbookpro14-3-touchbar-hw.socket
+
+[Service]
+Type=simple
+ExecStart=/usr/local/lib/macbookpro14-3/t1bridge/t1-touchbar-hw
+Sockets=macbookpro14-3-touchbar-hw.socket
+User=root
+Group=@GROUP@
+RuntimeDirectory=t1bridge
+RuntimeDirectoryMode=0750
+RuntimeDirectoryPreserve=yes
+UMask=0007
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native

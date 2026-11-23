@@ -9,7 +9,11 @@ script) per avere **CachyOS (Arch) il più possibile funzionante sul MacBook Pro
 (15" 2017, Touch Bar con chip **T1**, i7-7820HQ, Radeon Pro 555/560, **senza T2**).
 L'utente vuole abbandonare macOS (Mac non più supportato) e punta al "100% senza compromessi".
 **Non è raggiungibile oggi**: Touch ID, ibernazione, grafica della Touch Bar e il consumo della dGPU
-restano limiti. Non promettere il 100%.
+restano limiti. Non promettere il 100%. Touch ID e grafica della Touch Bar esistono sul T1 tramite T1Bridge
+(configurazione USB 2), ma sono incompatibili con lo stack attuale e senza sospensione: vedi `docs/t1bridge.md`.
+**Grafica della Touch Bar [F] provata a runtime** (23/11/2026; ora `scripts/install-touchbar-display.sh` + `touchbar-mode`):
+grafica, tocco, volume, sospensione (passaggio automatico a modalità tastiera) e webcam (H.264; Discord via v4l2loopback).
+Renderer fnstrip (`scripts/install-fnstrip.sh`) provato e funzionante.
 
 Obiettivo secondario: installare CachyOS **da macOS, senza chiavetta USB** (partizione live sul disco interno).
 
@@ -22,9 +26,9 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
 |---|---|
 | `install.sh` | installazione su CachyOS già installato; usa sempre `--dry-run` prima |
 | `macos/prepare.sh` | da macOS: backup, download ISO, ridimensiona APFS, crea `COSLIVE` + partizione Linux, estrae ISO |
-| `scripts/` | `lib.sh`, `backup-esp.sh`, `install-touchbar.sh`, `install-audio.sh`, `install-wifi.sh`, `install-wifi-nvram.sh`, `install-sleep.sh`, `sleep-test.sh`, `install-power.sh`, `install-bt.sh`, `bt-sco-route.py`, `set-kwin-brightness-curve.sh`, `t1-reenumerate.sh` |
+| `scripts/` | `lib.sh`, `backup-esp.sh`, `install-touchbar.sh`, `install-audio.sh`, `install-wifi.sh`, `install-wifi-nvram.sh`, `install-sleep.sh`, `sleep-test.sh`, `install-power.sh`, `install-bt.sh`, `bt-sco-route.py`, `build-t1bridge.sh`, `install-touchbar-display.sh`, `touchbar-mode.sh`, `install-fnstrip.sh`, `set-kwin-brightness-curve.sh`, `t1-reenumerate.sh` |
 | `config/` | mkinitcpio, libinput, kde, sleep, power, systemd, udev, tmpfiles, networkmanager, modprobe, `sources.conf` (sorgenti esterne; Touch Bar pinnata) |
-| `pkgs/`, `dkms/` | PKGBUILD (`macbookpro14-3-meta`, `apple-ibridge-dkms`) e `dkms.conf` di riserva |
+| `pkgs/`, `dkms/` | PKGBUILD (`macbookpro14-3-meta`, `apple-ibridge-dkms`), `dkms.conf` di riserva, `t1bridge-appletbdrm`, `t1bridge-uvc` |
 | `patches/` | `touchbar/`: port di apple-ibridge a Linux 7.3 + `LLVM=1` automatico; README con le candidate |
 | `docs/` | report di ricerca e note per componente; indice in `docs/README.md` |
 
