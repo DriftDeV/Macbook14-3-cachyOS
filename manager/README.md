@@ -25,6 +25,27 @@ Semaforo: verde a posto, giallo avviso, rosso da sistemare (con il pulsante **Co
 risolve, per esempio "ricompila i driver" dopo un aggiornamento del kernel). La scheda **Sospensioni** elenca ogni
 sospensione con durata, modalità, batteria consumata e causa del risveglio (`macbook-manager sleep-report`).
 
+## Touch Bar: editor di fnstrip (scheda Touch Bar)
+
+Modifica `~/.config/fnstrip/config.toml` (renderer fnstrip della modalità display) senza scrivere TOML:
+
+- **Aspetto**: tema (classico, pastello, mono, arcobaleno, **OLED**), riga principale (comandi oppure Esc + F1-F12), °C/°F,
+  animazione all'avvio.
+- **Colori personalizzati** sopra il tema (sfondo, tasti, scritte, tasto acceso, cursori...): clic per scegliere,
+  clic destro per tornare al colore del tema.
+- **Riga extra** (doppio tocco su Fn, fino a 10 pulsanti): aggiungi, togli e riordina interruttori (microfono, webcam
+  virtuale, VPN con i tuoi comandi) e indicatori (CPU, memoria, disco, rete, batteria, temperatura, ventole); per gli
+  interruttori si possono cambiare comando e comando di stato. Anteprima schematica della riga.
+- **Salva e applica**: controlla i valori, salva (la versione precedente resta in `config.toml.bak`), riavvia il
+  renderer se la barra è in modalità display e riporta nel registro gli eventuali errori segnalati da fnstrip.
+
+**OLED** è un preset del manager, non un tema di fnstrip (che ne ha quattro compilati): `theme = "mono"` più tutti i
+`[colors]` (sfondo e tasti `#000000`, scritte `#ffffff`, tasto premuto `#404040`, icone spente `#707070`, cursori
+`#1a1a1a`, volume muto `#101010`). Tasto acceso e riempimento dei cursori restano grigi (`#2e2e2e`, `#1a1a1a`) perché fnstrip ci disegna sopra le icone con il
+colore delle scritte. Si riconosce rileggendo il file; cambiando un colore a mano diventa "Mono" con colori propri.
+
+I commenti scritti a mano nel file vengono rigenerati; le chiavi che il manager non conosce vengono conservate.
+
 ## Azioni (`macbook-manager actions`, `macbook-manager run <id>`)
 
 | Gruppo | Azioni |

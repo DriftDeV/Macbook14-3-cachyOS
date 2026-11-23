@@ -35,7 +35,10 @@ class Job(QRunnable):
             val = self.fn()
         except Exception as e:  # noqa: BLE001
             val = e
-        self.signals.done.emit(self.name, val)
+        try:
+            self.signals.done.emit(self.name, val)
+        except RuntimeError:  # finestra già chiusa (uscita durante una lettura)
+            pass
 
 
 def _dot(level):
@@ -79,6 +82,9 @@ class MainWindow(QMainWindow):
         scroll.setWidget(self.status_box)
         self.tabs.addTab(scroll, QIcon.fromTheme("dialog-information"), "Stato")
         self.tabs.addTab(self._actions_tab(), QIcon.fromTheme("system-run"), "Azioni")
+        from .gui_fnstrip import FnstripEditor
+        self.fnstrip = FnstripEditor(lambda t: self.log.appendPlainText(t))
+        self.tabs.addTab(self.fnstrip, QIcon.fromTheme("input-keyboard"), "Touch Bar")
         self.sleep_table = QTableWidget(0, 6)
         self.sleep_table.setHorizontalHeaderLabels(["Inizio", "Durata", "Modo", "Coperchio", "Batteria", "Risveglio"])
         self.sleep_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
@@ -92,7 +98,7 @@ class MainWindow(QMainWindow):
         sl.addWidget(self.sleep_note)
         sl.addWidget(self.sleep_table)
         self.tabs.addTab(sleep_tab, QIcon.fromTheme("system-suspend"), "Sospensioni")
-        self.tabs.currentChanged.connect(lambda i: i == 2 and self.load_sleep())
+        self.tabs.currentChanged.connect(self._tab_changed)
         lay.addWidget(self.tabs, 1)
 
         lay.addWidget(QLabel("Registro"))
@@ -208,6 +214,13 @@ class MainWindow(QMainWindow):
             return
         self.last = time.monotonic()
         self.pool.start(Job("status", lambda: (status.collect(), active_ids()), self.sig))
+
+    def _tab_changed(self, i):
+        w = self.tabs.widget(i)
+        if w is self.fnstrip:
+            self.fnstrip._update_info()
+        elif self.tabs.tabText(i) == "Sospensioni":
+            self.load_sleep()
 
     def load_sleep(self):
         self.sleep_note.setText("Lettura del journal…")
