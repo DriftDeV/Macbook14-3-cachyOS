@@ -10,7 +10,10 @@ from PySide6.QtWidgets import (QCheckBox, QColorDialog, QComboBox, QFormLayout, 
 
 from . import fnstrip as F
 
-CHIP = ("QLabel { background: %s; color: %s; border-radius: 5px; padding: 4px 8px; margin: 1px; }")
+CHIP = ("QLabel { background: %s; color: %s; border: 1px solid #333; border-radius: 4px; padding: 2px 5px; "
+        "font-size: 8pt; }")
+SHORT = {"mic": "mic", "camera": "cam", "vpn": "vpn", "cpu": "cpu", "mem": "mem", "disk": "disco", "net": "rete",
+         "battery": "batt", "temp": "temp", "fan": "fan"}  # anteprima compatta: deve stare nella finestra
 
 
 class FnstripEditor(QScrollArea):
@@ -55,8 +58,9 @@ class FnstripEditor(QScrollArea):
             b.clicked.connect(lambda _=False, k=key: self._pick(k))
             b.setContextMenuPolicy(Qt.CustomContextMenu)
             b.customContextMenuRequested.connect(lambda _p, k=key: self._set_color(k, None))
-            grid.addWidget(QLabel(label), i // 3, (i % 3) * 2)
-            grid.addWidget(b, i // 3, (i % 3) * 2 + 1)
+            b.setMinimumWidth(90)
+            grid.addWidget(QLabel(label), i // 2, (i % 2) * 2)   # due colonne: con lo schermo a 1,75x tre non entrano
+            grid.addWidget(b, i // 2, (i % 2) * 2 + 1)
             self.color_btn[key] = b
         lay.addWidget(self.colors_box)
 
@@ -109,6 +113,7 @@ class FnstripEditor(QScrollArea):
         # --- anteprima
         prev = QGroupBox("Anteprima della riga extra (schematica)")
         self.preview = QHBoxLayout(prev)
+        self.preview.setSpacing(3)
         lay.addWidget(prev)
 
         # --- pulsanti
@@ -329,13 +334,13 @@ class FnstripEditor(QScrollArea):
         toggles = sorted((e for e in ex if F.ICONS.get(e.get("icon"), ("",))[0] == "toggle"),
                          key=lambda e: ["camera", "mic", "vpn"].index(e["icon"]) if e["icon"] in ("camera", "mic", "vpn") else 9)
         meters = [e for e in ex if F.ICONS.get(e.get("icon"), ("",))[0] != "toggle"]
-        for text in ["esc"] + [F.ICONS[e["icon"]][1] for e in toggles]:
+        texts = ["esc"] + ["⏻ " + SHORT.get(e["icon"], e["icon"]) for e in toggles] + [None] + \
+                ["▁▃▆ " + SHORT.get(e.get("icon"), str(e.get("icon"))) for e in meters]
+        for text in texts:
+            if text is None:
+                self.preview.addStretch(1)
+                continue
             lab = QLabel(text)
-            lab.setStyleSheet(CHIP % (plate, label))
-            self.preview.addWidget(lab)
-        self.preview.addStretch(1)
-        for e in meters:
-            lab = QLabel("▁▃▆ " + F.ICONS.get(e.get("icon"), ("", e.get("icon")))[1])
             lab.setStyleSheet(CHIP % (plate, label))
             self.preview.addWidget(lab)
 
