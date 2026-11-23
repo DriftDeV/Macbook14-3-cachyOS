@@ -22,8 +22,8 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
 |---|---|
 | `install.sh` | installazione su CachyOS già installato; usa sempre `--dry-run` prima |
 | `macos/prepare.sh` | da macOS: backup, download ISO, ridimensiona APFS, crea `COSLIVE` + partizione Linux, estrae ISO |
-| `scripts/` | `lib.sh`, `backup-esp.sh`, `install-touchbar.sh`, `install-audio.sh`, `install-wifi-nvram.sh`, `install-sleep.sh`, `sleep-test.sh`, `t1-reenumerate.sh` |
-| `config/` | mkinitcpio, libinput, sleep, udev, tmpfiles, modprobe, `sources.conf` (sorgenti esterne; Touch Bar pinnata) |
+| `scripts/` | `lib.sh`, `backup-esp.sh`, `install-touchbar.sh`, `install-audio.sh`, `install-wifi.sh`, `install-wifi-nvram.sh`, `install-sleep.sh`, `sleep-test.sh`, `install-power.sh`, `t1-reenumerate.sh` |
+| `config/` | mkinitcpio, libinput, sleep, power, systemd, udev, tmpfiles, networkmanager, modprobe, `sources.conf` (sorgenti esterne; Touch Bar pinnata) |
 | `pkgs/`, `dkms/` | PKGBUILD (`macbookpro14-3-meta`, `apple-ibridge-dkms`) e `dkms.conf` di riserva |
 | `patches/` | `touchbar/`: port di apple-ibridge a Linux 7.3 + `LLVM=1` automatico; README con le candidate |
 | `docs/` | report di ricerca e note per componente; indice in `docs/README.md` |
@@ -35,11 +35,12 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
    alimentatore collegato. Le conferme scritte (`RIDIMENSIONA`, `ROLLBACK`) le scrive l'utente, non tu.
    Non cancellare mai la ESP di macOS (`disk0s1`): contiene il firmware T1 (Touch Bar, webcam, ALS).
 2. **Onestà sullo stato.** Quasi nulla è stato provato su hardware reale: fanno eccezione Touch Bar (`docs/touchbar.md`)
-   sospensione (`docs/sleep.md`) e audio (`docs/audio.md`).
+   sospensione (`docs/sleep.md`), audio (`docs/audio.md`) e Wi-Fi (`docs/wifi.md`).
    Marca come **[F] fatto / [I] inferenza / [NV] non verificato / [C] conflitto**. Non dichiarare "risolto"
    ciò che deriva solo da fonti secondarie.
 3. **Non inventare.** Nomi di moduli, branch, URL, parametri: se non sono in `docs/`, verificali o marcali [NV].
-   Non scaricare/ridistribuire il file NVRAM Wi-Fi (licenza poco chiara).
+   Non mettere nella repo né ridistribuire il file NVRAM Wi-Fi (licenza poco chiara): `install-wifi.sh` lo genera
+   sulla macchina dalla SROM del chip.
 4. **Niente sorgenti non fidate eseguite alla cieca.** I repo 2026 citati sono piccoli, si citano a vicenda e in
    parte sono scritti con IA: leggi il codice prima di integrarlo; pinna a un commit dopo averlo verificato.
 5. **Commit/push solo su richiesta dell'utente.** Messaggi di commit con la riga `Co-Authored-By` richiesta dal sistema.
@@ -62,7 +63,14 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
   `linux-cachyos` è compilato con clang (serve `LLVM=1`), `linux-cachyos-lts` con gcc.
 - **Sospensione [F] funziona** (s2idle + rimozione dei port Thunderbolt `8086:1578` + NVMe senza D3cold): prove
   pm_test, RTC e coperchio riuscite il 23/11/2026. Default del firmware è S3 (`deep`), che con la Radeon non riparte.
-- `sudo` non funziona dalla shell di Claude né dal pannello Terminale dell'app: i comandi root li lancia l'utente in Konsole.
+- **Wi-Fi 5 GHz [F] funziona** con `scripts/install-wifi.sh` (dnlbtz/mbp143-wifi v1.1.0: NVRAM dalla SROM + firmware
+  patchato): da ~21 a ~290 Mbit/s, -45 dBm. Resta a 40 MHz invece di 80 (ipotesi: regdom IT, vedi `docs/wifi.md`).
+- **GPU [F]**: nessuno switch automatico; schermo e desktop sempre sulla Radeon (`card2`, eDP-2), Intel sospesa e senza eDP
+  (`disabling eDP`), Radeon 7-9 W a riposo, runtime PM non disponibile. Opzioni in `docs/gpu.md`.
+- **Consumi [F]** (`docs/power.md`): unica leva netta a riposo = Radeon `manual`+`POWER_SAVING`+PCIe 2,5 GT/s (-1,5 W);
+  `scripts/install-power.sh` la applica a batteria. Slider KDE e turbo non cambiano nulla a riposo. ~18 W ≈ 4 h.
+- `sudo` non funziona dalla shell di Claude (serve la password). Dal 23/11 pomeriggio funziona nel pannello Terminale
+  dell'app (`run_in_terminal`, l'utente scrive la password); altrimenti Konsole.
 - Il vecchio submodule `macbook-pro-touchbar-driver` (commit `42034ae`) è stato rimosso: senza `.gitmodules` e senza commit pubblico.
 - Il dry-run su questo Mac ha mostrato: container APFS `disk1` da ~500 GB, **7 snapshot locali di Time Machine**
   (il limite minimo del resize è uguale alla dimensione attuale finché non vengono eliminati).
@@ -70,7 +78,7 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
 ## Stato della sessione (aggiornato il 23 novembre 2026)
 
 - **CachyOS è installato e avviato sul 14,3** (kernel 7.3.5-2-cachyos + LTS 6.18, KDE Plasma 6.8 Wayland).
-  Funzionano: Wi-Fi, Touch Bar + sensore di luce (DKMS, dopo riavvio), webcam, sospensione s2idle (coperchio),
+  Funzionano: Wi-Fi 2,4 + 5 GHz, Touch Bar + sensore di luce (DKMS, dopo riavvio), webcam, sospensione s2idle (coperchio),
   audio (speaker, cuffie, microfono interno e cuffie; DKMS installato, avvio a freddo da confermare).
   Le note sotto su `prepare.sh` sono storiche.
 

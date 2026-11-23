@@ -48,7 +48,7 @@ for f in "${OLD[@]}"; do
 done
 
 log "Hook system-sleep (Thunderbolt remove/rescan, Wi-Fi)"
-install_file 755 "$REPO_DIR/config/sleep/macbookpro14-3-sleep.sh" "$HOOK"
+run install -Dm755 "$REPO_DIR/config/sleep/macbookpro14-3-sleep.sh" "$HOOK"   # niente .bak: systemd-sleep eseguirebbe anche la copia
 
 log "s2idle, ibernazione disattivata"
 install_file 644 "$REPO_DIR/config/sleep/s2idle.conf" "$SLEEPCONF"

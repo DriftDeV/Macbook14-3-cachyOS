@@ -1,0 +1,2 @@
+# Cambia le impostazioni energetiche quando si collega o si scollega l'alimentatore.
+SUBSYSTEM=="power_supply", ATTR{type}=="Mains", ACTION=="change", RUN+="/usr/local/lib/macbookpro14-3/power-source.sh"

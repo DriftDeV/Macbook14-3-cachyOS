@@ -55,6 +55,8 @@ post() {
         modprobe brcmfmac || log "post $1: ricaricamento brcmfmac fallito"
         rm -f "$STATE/wifi"
     fi
+    # Riapplica le impostazioni energetiche (scripts/install-power.sh), se installate.
+    [ -x /usr/local/lib/macbookpro14-3/power-source.sh ] && /usr/local/lib/macbookpro14-3/power-source.sh
     log "post $1: fatto ($(ls /sys/bus/pci/devices | wc -l) funzioni PCI)"
 }
 

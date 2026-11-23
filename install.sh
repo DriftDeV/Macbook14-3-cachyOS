@@ -71,11 +71,23 @@ if [ "$DO_SLEEP" = 1 ]; then
     fi
 fi
 
+step "Energia (batteria/alimentatore)"
+if [ "$DRY_RUN" = 1 ]; then
+    bash "$REPO_DIR/scripts/install-power.sh" --dry-run
+else
+    bash "$REPO_DIR/scripts/install-power.sh" || FAILED="$FAILED power"
+fi
+
 if [ -n "$WIFI_FILE" ]; then
     step "Wi-Fi NVRAM"
     bash "$REPO_DIR/scripts/install-wifi-nvram.sh" --file "$WIFI_FILE" || FAILED="$FAILED wifi"
 else
-    warn "Wi-Fi: nessun --wifi-nvram dato. Senza il file NVRAM resta solo il 2,4 GHz."
+    step "Wi-Fi (NVRAM dalla calibrazione del chip)"
+    if [ "$DRY_RUN" = 1 ]; then
+        bash "$REPO_DIR/scripts/install-wifi.sh" --dry-run
+    else
+        bash "$REPO_DIR/scripts/install-wifi.sh" || FAILED="$FAILED wifi"
+    fi
 fi
 
 if [ "$DO_TOUCHBAR" = 1 ]; then

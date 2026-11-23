@@ -1,0 +1,11 @@
+[Unit]
+Description=Impostazioni energetiche del MacBookPro14,3 per alimentatore/batteria
+# Dopo il caricamento di amdgpu (coldplug udev) e di intel_pstate.
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/macbookpro14-3/power-source.sh
+
+[Install]
+WantedBy=graphical.target
