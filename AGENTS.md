@@ -22,8 +22,8 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
 |---|---|
 | `install.sh` | installazione su CachyOS già installato; usa sempre `--dry-run` prima |
 | `macos/prepare.sh` | da macOS: backup, download ISO, ridimensiona APFS, crea `COSLIVE` + partizione Linux, estrae ISO |
-| `scripts/` | `lib.sh`, `backup-esp.sh`, `install-touchbar.sh`, `install-audio.sh`, `install-wifi.sh`, `install-wifi-nvram.sh`, `install-sleep.sh`, `sleep-test.sh`, `install-power.sh`, `t1-reenumerate.sh` |
-| `config/` | mkinitcpio, libinput, sleep, power, systemd, udev, tmpfiles, networkmanager, modprobe, `sources.conf` (sorgenti esterne; Touch Bar pinnata) |
+| `scripts/` | `lib.sh`, `backup-esp.sh`, `install-touchbar.sh`, `install-audio.sh`, `install-wifi.sh`, `install-wifi-nvram.sh`, `install-sleep.sh`, `sleep-test.sh`, `install-power.sh`, `set-kwin-brightness-curve.sh`, `t1-reenumerate.sh` |
+| `config/` | mkinitcpio, libinput, kde, sleep, power, systemd, udev, tmpfiles, networkmanager, modprobe, `sources.conf` (sorgenti esterne; Touch Bar pinnata) |
 | `pkgs/`, `dkms/` | PKGBUILD (`macbookpro14-3-meta`, `apple-ibridge-dkms`) e `dkms.conf` di riserva |
 | `patches/` | `touchbar/`: port di apple-ibridge a Linux 7.3 + `LLVM=1` automatico; README con le candidate |
 | `docs/` | report di ricerca e note per componente; indice in `docs/README.md` |
@@ -51,7 +51,8 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
 
 - Codec audio: **CS8409** [F] (subsystem `0x106b3900`), non CS4208. **Audio [F] funziona** (speaker, cuffie, microfoni)
   con dnlbtz `offlineDkmsDeb` `11febcf` + `patches/audio/`; il fork ha sorgenti kernel solo per la serie 7.3.
-- Webcam: USB dietro l'iBridge → `uvcvideo`. **`facetimehd` non serve.**
+- Webcam: USB dietro l'iBridge → `uvcvideo`. **`facetimehd` non serve.** [F] Provata in Discord il 23/11/2026.
+  Tasti funzione/multimediali dalla Touch Bar [F] funzionano.
 - Il 14,3 **non ha il T2**: ignora `t2linux` e le pagine CachyOS sui T2.
 - Bootloader su EFI Apple: rEFInd o GRUB `--removable`. systemd-boot e Limine sconsigliati.
 - Il kernel `linux-cachyos` non ha una cartella di patch utente: preferire DKMS + header.
@@ -65,6 +66,10 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
   pm_test, RTC e coperchio riuscite il 23/11/2026. Default del firmware è S3 (`deep`), che con la Radeon non riparte.
 - **Wi-Fi 5 GHz [F] funziona** con `scripts/install-wifi.sh` (dnlbtz/mbp143-wifi v1.1.0: NVRAM dalla SROM + firmware
   patchato): da ~21 a ~290 Mbit/s, -45 dBm. Resta a 40 MHz invece di 80 (ipotesi: regdom IT, vedi `docs/wifi.md`).
+- **Trackpad [F]**: quirk `config/libinput/local-overrides.quirks` (tastiera SPI e Touch Bar interne) installato in
+  `/etc/libinput/` e funzionante (disabilita durante la digitazione). Vedi `docs/input.md`.
+- **Luminosità automatica [F]**: sensore Touch Bar 0-5000 lux (stanza 1-4); KWin 6.8 la gestisce con una curva
+  appresa: `scripts/set-kwin-brightness-curve.sh` scrive una curva di partenza prima di KWin. Provata: 35-100 %.
 - **GPU [F]**: nessuno switch automatico; schermo e desktop sempre sulla Radeon (`card2`, eDP-2), Intel sospesa e senza eDP
   (`disabling eDP`), Radeon 7-9 W a riposo, runtime PM non disponibile. Opzioni in `docs/gpu.md`.
 - **Consumi [F]** (`docs/power.md`): unica leva netta a riposo = Radeon `manual`+`POWER_SAVING`+PCIe 2,5 GT/s (-1,5 W);
