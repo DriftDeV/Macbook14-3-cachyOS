@@ -51,8 +51,10 @@ docs/                       report di ricerca e note
 
 Fa: controlli (modello, alimentatore, FileVault), backup della mappa partizioni e dell'ESP
 (contiene il firmware T1), download e verifica sha256 dell'ISO più recente, ridimensiona
-il container APFS creando una FAT32 `COSLIVE` da 8 GB, copia l'ISO e adatta `grub.cfg`.
-Poi riavvii con **Option (⌥)** e scegli "EFI Boot".
+il container APFS creando una FAT32 `COSLIVE` da 8 GB **e una partizione Linux non formattata**
+con tutto il resto dello spazio (`--no-target` per lasciarlo libero), copia l'ISO e adatta
+`grub.cfg`. Poi riavvii con **Option (⌥)** e scegli "EFI Boot". L'installazione vera la fai
+dal live con Calamares (partizionamento manuale): formatta la partizione Linux e montala su `/`.
 
 Limiti noti: non esiste un esempio documentato di questa procedura su Mac Intel; il
 bootloader dell'ISO potrebbe richiedere l'estrazione di `efiboot.img`; la tastiera interna

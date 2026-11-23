@@ -24,7 +24,9 @@ CONTAINER=""
 WORKDIR="$HOME/cachyos-mbp143"
 ISO_VERSION=""
 NOMODESET=0
+NO_TARGET=0
 BLESS_NEXT=0
+LINUX_GPT_TYPE="0FC63DAF-8483-4772-8E79-3D69D8477DE4"   # "Linux filesystem"
 FORCE=0
 MIRROR="https://mirror.cachyos.org/ISO/desktop"
 FALLBACK_VERSION="260809"   # ultima ISO confermata dalla ricerca (agosto 2026)
@@ -52,6 +54,7 @@ while [ $# -gt 0 ]; do
         --workdir) WORKDIR="${2:-}"; shift ;;
         --iso-version) ISO_VERSION="${2:-}"; shift ;;
         --nomodeset) NOMODESET=1 ;;
+        --no-target) NO_TARGET=1 ;;
         --bless-next-boot) BLESS_NEXT=1 ;;
         --force) FORCE=1 ;;
         -h|--help) usage; exit 0 ;;
@@ -148,7 +151,7 @@ do_partition() {
     total="$(diskutil info -plist "$CONTAINER" | plutil -extract TotalSize raw -o - -)"
     new=$((total - LINUX_GB * 1000 * 1000 * 1000))
     log "Container $CONTAINER: $((total / 1000000000)) GB -> $((new / 1000000000)) GB"
-    log "Verrà creata la FAT32 '$LABEL' da ${HELPER_GB} GB; il resto resta spazio libero per l'installazione."
+    log "Verrà creata la FAT32 '$LABEL' da ${HELPER_GB} GB; il resto ($((LINUX_GB - HELPER_GB)) GB) diventa la partizione Linux (vedi do_target)."
     echo "--- limiti validi (nessuna modifica) ---"
     diskutil apfs resizeContainer "$CONTAINER" limits || true
     echo "---"
@@ -184,6 +187,28 @@ do_partition() {
     [ "$a" = "RIDIMENSIONA" ] || die "Annullato."
     diskutil apfs resizeContainer "$CONTAINER" "${new}B" fat32 "$LABEL" "${HELPER_GB}g"
     ok "Partizione /Volumes/$LABEL creata"
+}
+
+# ------------------------------------------- partizione di destinazione Linux
+# Crea, nello spazio libero dopo COSLIVE, una partizione "Linux filesystem" NON formattata
+# (forma documentata di `diskutil addPartition ... %tipo% %noformat% 0`: size 0 = tutto lo spazio libero).
+# In Calamares la selezioni e la formatti (ext4/btrfs) montandola su /.
+do_target() {
+    if [ "$NO_TARGET" = 1 ]; then
+        log "--no-target: lascio lo spazio libero senza creare la partizione Linux."
+        return 0
+    fi
+    local helper
+    if [ "$EXECUTE" = 1 ]; then
+        helper="$(diskutil info -plist "/Volumes/$LABEL" | plutil -extract DeviceIdentifier raw -o - -)"
+        [ -n "$helper" ] || die "Partizione $LABEL non trovata."
+        log "Creo la partizione di destinazione Linux dopo $helper (tutto lo spazio libero)"
+        diskutil addPartition "$helper" "%$LINUX_GPT_TYPE%" %noformat% 0
+        ok "Partizione Linux creata (non formattata)"
+        diskutil list internal
+    else
+        echo "[dry-run] diskutil addPartition <ident-$LABEL> %$LINUX_GPT_TYPE% %noformat% 0"
+    fi
 }
 
 # ------------------------------------------------------------------ estrazione
@@ -232,8 +257,10 @@ final_instructions() {
 1. Riavvia tenendo premuto il tasto Option (⌥).
 2. Scegli la voce "EFI Boot" corrispondente a $LABEL.
 3. Se lo schermo resta nero, rifai la preparazione con --nomodeset.
-4. Nel live, installa CachyOS nello SPAZIO LIBERO (partizionamento manuale in Calamares).
-   NON formattare né cancellare la ESP di macOS (disk0s1): contiene il firmware T1.
+4. Nel live, installa CachyOS con partizionamento MANUALE in Calamares:
+   - seleziona la partizione "Linux filesystem" già creata (non formattata), formattala e montala su /;
+   - monta la ESP di macOS (disk0s1) su /boot/efi SENZA formattarla: contiene il firmware T1;
+   - la partizione COSLIVE (FAT32, 8 GB) puoi lasciarla o eliminarla a installazione finita.
    Come bootloader scegli rEFInd o GRUB (--removable): systemd-boot e Limine sono sconsigliati su EFI Apple.
 5. Dopo l'installazione, da Linux:  sudo ./install.sh --dry-run   poi senza --dry-run.
 
@@ -275,6 +302,7 @@ case "$CMD" in
         do_backup
         do_download
         do_partition
+        do_target
         do_extract
         if [ "$BLESS_NEXT" = 1 ]; then
             warn "bless --setBoot è inaffidabile con SIP/macOS recenti: in caso di errore usa il tasto Option."
