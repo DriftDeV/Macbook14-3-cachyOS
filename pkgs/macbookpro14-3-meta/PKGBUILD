@@ -20,10 +20,10 @@ package() {
         "$pkgdir/etc/mkinitcpio.conf.d/macbookpro14-3.conf"
     install -Dm644 "$root/config/sleep/s2idle.conf" \
         "$pkgdir/etc/systemd/sleep.conf.d/10-macbookpro14-3.conf"
-    install -Dm755 "$root/scripts/d3cold-nvme.sh" \
-        "$pkgdir/usr/local/lib/macbookpro14-3/d3cold-nvme.sh"
-    install -Dm644 "$root/config/systemd/macbookpro14-3-d3cold.service" \
-        "$pkgdir/usr/lib/systemd/system/macbookpro14-3-d3cold.service"
+    install -Dm644 "$root/config/udev/90-macbookpro14-3-nvme-no-d3cold.rules" \
+        "$pkgdir/usr/lib/udev/rules.d/90-macbookpro14-3-nvme-no-d3cold.rules"
+    install -Dm644 "$root/config/tmpfiles/macbookpro14-3-pm.conf" \
+        "$pkgdir/usr/lib/tmpfiles.d/macbookpro14-3-pm.conf"
     install -Dm755 "$root/config/sleep/macbookpro14-3-sleep.sh" \
         "$pkgdir/usr/lib/systemd/system-sleep/macbookpro14-3-sleep.sh"
 }

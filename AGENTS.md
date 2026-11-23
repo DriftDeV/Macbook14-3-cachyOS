@@ -22,10 +22,10 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
 |---|---|
 | `install.sh` | installazione su CachyOS già installato; usa sempre `--dry-run` prima |
 | `macos/prepare.sh` | da macOS: backup, download ISO, ridimensiona APFS, crea `COSLIVE` + partizione Linux, estrae ISO |
-| `scripts/` | `lib.sh`, `backup-esp.sh`, `install-touchbar.sh`, `install-audio.sh`, `install-wifi-nvram.sh`, `d3cold-nvme.sh`, `t1-reenumerate.sh` |
-| `config/` | mkinitcpio, libinput, sleep, systemd, modprobe, `sources.conf` (sorgenti esterne, non pinnate) |
+| `scripts/` | `lib.sh`, `backup-esp.sh`, `install-touchbar.sh`, `install-audio.sh`, `install-wifi-nvram.sh`, `install-sleep.sh`, `sleep-test.sh`, `t1-reenumerate.sh` |
+| `config/` | mkinitcpio, libinput, sleep, udev, tmpfiles, modprobe, `sources.conf` (sorgenti esterne; Touch Bar pinnata) |
 | `pkgs/`, `dkms/` | PKGBUILD (`macbookpro14-3-meta`, `apple-ibridge-dkms`) e `dkms.conf` di riserva |
-| `patches/` | patch kernel/moduli: vuota, con README sulle candidate |
+| `patches/` | `touchbar/`: port di apple-ibridge a Linux 7.3 + `LLVM=1` automatico; README con le candidate |
 | `docs/` | report di ricerca e note per componente; indice in `docs/README.md` |
 
 ## Regole per chi lavora qui
@@ -34,7 +34,8 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
    `--execute` di tua iniziativa: serve una richiesta esplicita dell'utente nella chat, backup fatto e
    alimentatore collegato. Le conferme scritte (`RIDIMENSIONA`, `ROLLBACK`) le scrive l'utente, non tu.
    Non cancellare mai la ESP di macOS (`disk0s1`): contiene il firmware T1 (Touch Bar, webcam, ALS).
-2. **Onestà sullo stato.** Nulla di quanto c'è qui è stato provato su Linux o su hardware reale.
+2. **Onestà sullo stato.** Quasi nulla è stato provato su hardware reale: fanno eccezione Touch Bar (`docs/touchbar.md`)
+   sospensione (`docs/sleep.md`) e audio (`docs/audio.md`).
    Marca come **[F] fatto / [I] inferenza / [NV] non verificato / [C] conflitto**. Non dichiarare "risolto"
    ciò che deriva solo da fonti secondarie.
 3. **Non inventare.** Nomi di moduli, branch, URL, parametri: se non sono in `docs/`, verificali o marcali [NV].
@@ -47,18 +48,31 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
 
 ## Fatti da non dimenticare (correzioni emerse dalla ricerca)
 
-- Codec audio: con ogni probabilità **CS8409**, non CS4208. Va confermato con `grep -i cs8409` sulla macchina.
+- Codec audio: **CS8409** [F] (subsystem `0x106b3900`), non CS4208. **Audio [F] funziona** (speaker, cuffie, microfoni)
+  con dnlbtz `offlineDkmsDeb` `11febcf` + `patches/audio/`; il fork ha sorgenti kernel solo per la serie 7.3.
 - Webcam: USB dietro l'iBridge → `uvcvideo`. **`facetimehd` non serve.**
 - Il 14,3 **non ha il T2**: ignora `t2linux` e le pagine CachyOS sui T2.
 - Bootloader su EFI Apple: rEFInd o GRUB `--removable`. systemd-boot e Limine sconsigliati.
 - Il kernel `linux-cachyos` non ha una cartella di patch utente: preferire DKMS + header.
 - L'ISO desktop più recente trovata sul mirror a fine novembre 2026 è `261122` (3,2 GB, entra in FAT32); lo script
   risolve da solo la cartella più nuova.
+- **Touch Bar [F] funziona** sul 14,3 con `nonderbe` branch **`t1-fixes`** + `patches/touchbar/`, installata con DKMS e
+  provata dopo riavvio (23/11/2026).
+  Il branch di default di nonderbe NON ha le correzioni. Linux 7.3 ha tolto `struct acpi_driver`.
+  `linux-cachyos` è compilato con clang (serve `LLVM=1`), `linux-cachyos-lts` con gcc.
+- **Sospensione [F] funziona** (s2idle + rimozione dei port Thunderbolt `8086:1578` + NVMe senza D3cold): prove
+  pm_test, RTC e coperchio riuscite il 23/11/2026. Default del firmware è S3 (`deep`), che con la Radeon non riparte.
+- `sudo` non funziona dalla shell di Claude né dal pannello Terminale dell'app: i comandi root li lancia l'utente in Konsole.
 - Il vecchio submodule `macbook-pro-touchbar-driver` (commit `42034ae`) è stato rimosso: senza `.gitmodules` e senza commit pubblico.
 - Il dry-run su questo Mac ha mostrato: container APFS `disk1` da ~500 GB, **7 snapshot locali di Time Machine**
   (il limite minimo del resize è uguale alla dimensione attuale finché non vengono eliminati).
 
 ## Stato della sessione (aggiornato il 23 novembre 2026)
+
+- **CachyOS è installato e avviato sul 14,3** (kernel 7.3.5-2-cachyos + LTS 6.18, KDE Plasma 6.8 Wayland).
+  Funzionano: Wi-Fi, Touch Bar + sensore di luce (DKMS, dopo riavvio), webcam, sospensione s2idle (coperchio),
+  audio (speaker, cuffie, microfono interno e cuffie; DKMS installato, avvio a freddo da confermare).
+  Le note sotto su `prepare.sh` sono storiche.
 
 - Repo pubblicata su `DriftDeV/Macbook14-3-cachyOS`, branch `main`. Le modifiche a `macos/prepare.sh` (creazione della
   partizione Linux con `diskutil addPartition ... %noformat% 0`, flag `--no-target`) possono non essere ancora in un commit.
@@ -74,8 +88,8 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
 ## Da fare (priorità)
 
 1. Verificare l'avvio live dal disco interno e correggere `prepare.sh` secondo quanto emerge.
-2. Pinnare `TOUCHBAR_REF` e `AUDIO_REF` a commit funzionanti su un 14,3 (provare nonderbe, F13+PR, AJ-dev-i60).
-3. Filter-chain PipeWire di `dnlbtz/mbp143-audio`; gestione porte Thunderbolt in sospensione; override `39-usbmuxd.rules`
+2. Driver Touch Bar e audio anche per il kernel LTS 6.18 (audio: `vendorKernel 6.18`); entrambi i REF sono pinnati.
+3. Filter-chain PipeWire di `dnlbtz/mbp143-audio`; sospensioni lunghe e USB-C collegato in sleep; override `39-usbmuxd.rules`
    senza rompere gli iPhone; PKGBUILD per l'audio; repo pacman firmata con CI.
 4. Ricerca kernel: patch `amdgpu` "reset VI ASIC on Apple boards" (ibernazione), runtime PM della dGPU.
 

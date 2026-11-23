@@ -1,0 +1,4 @@
+# L'SSD Samsung SM961/PM961 dei MacBook Pro 2016-2017 non torna da D3cold dopo lo sleep.
+# Si cerca per classe PCI (0x010802 = NVMe), non per indirizzo: sul 14,3 01:00.0 è la Radeon
+# e l'SSD sta a 02:00.0. Fonte: mihneadevries/mbp14-3-linux-sleep-fix.
+ACTION=="add|bind", SUBSYSTEM=="pci", ATTR{class}=="0x010802", ATTR{d3cold_allowed}="0"

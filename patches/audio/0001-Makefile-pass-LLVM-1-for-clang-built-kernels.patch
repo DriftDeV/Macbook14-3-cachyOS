@@ -1,0 +1,43 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: DriftDeV <noreply@users.noreply.github.com>
+Date: Mon, 23 Nov 2026 15:30:35 +0100
+Subject: [PATCH] Makefile: pass LLVM=1 for clang-built kernels
+
+linux-cachyos is built with clang + ThinLTO; gcc rejects its flags
+(-fms-anonymous-structs, -mstack-alignment). Pick the flag from the kernel
+.config so the same tree still builds for gcc kernels.
+
+Upstream for: dnlbtz/snd_hda_macbookpro offlineDkmsDeb @ 11febcf.
+Tested on 7.3.5-2-cachyos (clang 23, ThinLTO), MacBookPro14,3.
+---
+ Makefile | 11 ++++++++---
+ 1 file changed, 8 insertions(+), 3 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 486ad44..dbf6831 100644
+--- a/Makefile
++++ b/Makefile
+@@ -12,12 +12,17 @@ endif
+ 
+ KERNELBUILD := $(KERNELDIR)/build
+ 
++# Kernels built with clang (e.g. linux-cachyos) need LLVM=1, gcc ones must not get it.
++ifneq ($(shell grep -s '^CONFIG_CC_IS_CLANG=y' $(KERNELBUILD)/.config),)
++LLVM_FLAG := LLVM=1
++endif
++
+ all:
+-	make -C $(KERNELBUILD) CFLAGS_MODULE=$(KBUILD_EXTRA_CFLAGS) M=$(shell pwd)/build/hda modules
++	make -C $(KERNELBUILD) $(LLVM_FLAG) CFLAGS_MODULE=$(KBUILD_EXTRA_CFLAGS) M=$(shell pwd)/build/hda modules
+ 
+ clean:
+-	make -C $(KERNELBUILD) M=$(shell pwd)/build/hda clean
++	make -C $(KERNELBUILD) $(LLVM_FLAG) M=$(shell pwd)/build/hda clean
+ 
+ install:
+-	make INSTALL_MOD_DIR=updates -C $(KERNELBUILD) M=$(shell pwd)/build/hda CONFIG_MODULE_SIG_ALL=n modules_install
++	make INSTALL_MOD_DIR=updates -C $(KERNELBUILD) $(LLVM_FLAG) M=$(shell pwd)/build/hda CONFIG_MODULE_SIG_ALL=n modules_install
+ 	depmod -a
+-- 
+2.56.1
+

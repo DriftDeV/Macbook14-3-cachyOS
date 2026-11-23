@@ -1,0 +1,38 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: DriftDeV <noreply@users.noreply.github.com>
+Date: Mon, 23 Nov 2026 15:08:23 +0100
+Subject: [PATCH 2/2] Makefile: pass LLVM=1 for clang-built kernels
+
+linux-cachyos is built with clang + ThinLTO; linux-cachyos-lts with gcc.
+Pick the flag from the kernel .config so one tree builds for both.
+---
+ Makefile | 11 ++++++++---
+ 1 file changed, 8 insertions(+), 3 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 20a4cf9..65d524a 100644
+--- a/Makefile
++++ b/Makefile
+@@ -9,11 +9,16 @@ endif
+ KDIR := /lib/modules/$(KVERSION)/build
+ PWD := $(shell pwd)
+ 
++# Kernels built with clang (e.g. linux-cachyos) need LLVM=1, gcc ones must not get it.
++ifneq ($(shell grep -s '^CONFIG_CC_IS_CLANG=y' $(KDIR)/.config),)
++LLVM_FLAG := LLVM=1
++endif
++
+ all:
+-	$(MAKE) -C $(KDIR) M=$(PWD) modules
++	$(MAKE) -C $(KDIR) M=$(PWD) $(LLVM_FLAG) modules
+ 
+ clean:
+-	$(MAKE) -C $(KDIR) M=$(PWD) clean
++	$(MAKE) -C $(KDIR) M=$(PWD) $(LLVM_FLAG) clean
+ 
+ install:
+-	$(MAKE) -C $(KDIR) M=$(PWD) modules_install
++	$(MAKE) -C $(KDIR) M=$(PWD) $(LLVM_FLAG) modules_install
+-- 
+2.56.1
+

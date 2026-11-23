@@ -34,7 +34,7 @@ Il codec audio è probabilmente **CS8409**, non CS4208; non è confermato sulla 
 ```
 install.sh                  installazione su CachyOS già installato (--dry-run!)
 macos/prepare.sh            da macOS: ridimensiona APFS, prepara il live dal disco interno
-scripts/                    backup ESP, Touch Bar, audio, Wi-Fi NVRAM, d3cold, T1
+scripts/                    backup ESP, Touch Bar, audio, Wi-Fi NVRAM, sospensione (install + test), T1
 config/                     mkinitcpio, libinput, sleep, systemd, modprobe, sources.conf
 dkms/apple-ibridge/         dkms.conf di riserva per la Touch Bar
 pkgs/                       PKGBUILD: macbookpro14-3-meta, apple-ibridge-dkms

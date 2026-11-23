@@ -10,13 +10,21 @@ url="https://github.com/nonderbe/macbook-pro-touchbar-driver"
 license=('GPL2')
 depends=('dkms')
 makedepends=('git')
-# Sostituisci '#commit=' con lo SHA che hai verificato funzionante sul tuo 14,3.
-source=("apple-ibridge::git+https://github.com/nonderbe/macbook-pro-touchbar-driver.git")
+# Branch t1-fixes di nonderbe (vedi config/sources.conf) + patches/touchbar/.
+source=("apple-ibridge::git+https://github.com/nonderbe/macbook-pro-touchbar-driver.git#commit=2677d711a273fe8de07ba66a3f72b5ce7118e50c")
 sha256sums=('SKIP')
 
 pkgver() {
     cd "$srcdir/apple-ibridge"
     printf '0.git.%s' "$(git rev-parse --short HEAD)"
+}
+
+prepare() {
+    cd "$srcdir/apple-ibridge"
+    local p
+    for p in "$startdir"/../../patches/touchbar/*.patch; do
+        git apply "$p"
+    done
 }
 
 package() {
@@ -32,6 +40,10 @@ package() {
     v="$(awk -F'"' '/^PACKAGE_VERSION=/{print $2; exit}' "$dest/dkms.conf")"
     if [ -n "$v" ] && [ "$v" != "$pkgver" ]; then
         mv "$dest" "$pkgdir/usr/src/apple-ibridge-$v"
+    fi
+    if [ -f "$srcdir/apple-ibridge/udev/90-apple-ibridge-t1.rules" ]; then
+        install -Dm644 "$srcdir/apple-ibridge/udev/90-apple-ibridge-t1.rules" \
+            "$pkgdir/usr/lib/udev/rules.d/90-apple-ibridge-t1.rules"
     fi
     install -Dm644 /dev/stdin "$pkgdir/etc/modules-load.d/apple-ibridge.conf" <<EOF
 apple-ibridge

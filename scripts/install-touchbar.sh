@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Compila e installa via DKMS i moduli Touch Bar T1 (apple-ibridge, apple-ib-tb, apple-ib-als).
-# La sorgente è scelta in config/sources.conf. Se la build fallisce lo script
+# La sorgente è scelta in config/sources.conf; le patch in patches/touchbar/ vengono
+# applicate sopra (port a Linux 7.3, LLVM=1 per kernel clang). Se la build fallisce lo script
 # esce con errore SENZA toccare il resto del sistema: la Touch Bar è la parte più fragile.
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -12,8 +13,10 @@ source "$REPO_DIR/config/sources.conf"
 
 [ "${1:-}" = "--dry-run" ] && DRY_RUN=1
 need_root
-command -v dkms >/dev/null || die "dkms non installato."
-command -v git  >/dev/null || die "git non installato."
+for c in dkms git; do
+    command -v "$c" >/dev/null && continue
+    if [ "$DRY_RUN" = 1 ]; then warn "$c non installato (serve: pacman -S $c)."; else die "$c non installato."; fi
+done
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
@@ -29,12 +32,26 @@ SHA="$(git -C "$WORK/src" rev-parse --short HEAD)"
 VERSION="git.$SHA"
 DEST="/usr/src/apple-ibridge-$VERSION"
 
-# Rimuove vecchie versioni dello stesso pacchetto.
-for old in $(dkms status 2>/dev/null | awk -F'[,/: ]+' '$1=="apple-ibridge"{print $2}' | sort -u); do
-    log "Rimuovo versione DKMS precedente: $old"
-    dkms remove "apple-ibridge/$old" --all >/dev/null 2>&1 || true
-    rm -rf "/usr/src/apple-ibridge-$old"
+for p in "$REPO_DIR"/patches/touchbar/*.patch; do
+    [ -e "$p" ] || continue
+    log "Applico $(basename "$p")"
+    git -C "$WORK/src" apply "$p" || die "Patch $(basename "$p") non applicabile su $SHA."
 done
+
+# Rimuove vecchie versioni (il nome DKMS dipende dal fork: apple-ibridge o appleibridge).
+dkms status 2>/dev/null | awk -F'[,/: ]+' '$1=="apple-ibridge"||$1=="appleibridge"{print $1" "$2}' | sort -u |
+while read -r name old; do
+    log "Rimuovo versione DKMS precedente: $name/$old"
+    dkms remove "$name/$old" --all >/dev/null 2>&1 || true
+    rm -rf "/usr/src/$name-$old"
+done
+
+# Regola udev del fork: toglie a hid-sensor-hub l'interfaccia HID della Touch Bar
+# (sul T1 porta anche il sensore di luce, e senza questa regola la barra resta spenta).
+if [ -f "$WORK/src/udev/90-apple-ibridge-t1.rules" ]; then
+    install_file 644 "$WORK/src/udev/90-apple-ibridge-t1.rules" /etc/udev/rules.d/90-apple-ibridge-t1.rules
+    udevadm control --reload || true
+fi
 
 rm -rf "$DEST"
 mkdir -p "$DEST"
@@ -71,6 +88,12 @@ done
 : > /etc/modules-load.d/apple-ibridge.conf
 for m in apple-ibridge apple-ib-tb apple-ib-als; do
     if modinfo "$m" >/dev/null 2>&1; then echo "$m" >> /etc/modules-load.d/apple-ibridge.conf; fi
+done
+# usbmuxd 1.1.1 mette il T1 in configurazione 0 (niente Touch Bar, ALS, webcam).
+for r in /usr/lib/udev/rules.d/39-usbmuxd.rules /etc/udev/rules.d/39-usbmuxd.rules; do
+    if [ -f "$r" ] && grep -q '5ac/8600' "$r"; then
+        warn "$r cita 05ac:8600: può spegnere il T1. Vedi docs (Touch Bar, usbmuxd)."
+    fi
 done
 ok "Touch Bar: moduli installati ($PKGNAME $PKGVER). Riavvia per caricarli."
 warn "Se la barra non si accende: vedi scripts/t1-reenumerate.sh e docs/research-report.md (sezione Touch Bar)."

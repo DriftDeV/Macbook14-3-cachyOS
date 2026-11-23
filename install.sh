@@ -63,12 +63,12 @@ if [ "$DO_INITRAMFS" = 1 ]; then
     install_file 644 "$REPO_DIR/config/mkinitcpio/macbookpro14-3.conf" /etc/mkinitcpio.conf.d/macbookpro14-3.conf
 fi
 if [ "$DO_SLEEP" = 1 ]; then
-    install_file 644 "$REPO_DIR/config/sleep/s2idle.conf" /etc/systemd/sleep.conf.d/10-macbookpro14-3.conf
-    install_file 755 "$REPO_DIR/scripts/d3cold-nvme.sh" /usr/local/lib/macbookpro14-3/d3cold-nvme.sh
-    install_file 644 "$REPO_DIR/config/systemd/macbookpro14-3-d3cold.service" /etc/systemd/system/macbookpro14-3-d3cold.service
-    install_file 755 "$REPO_DIR/config/sleep/macbookpro14-3-sleep.sh" /usr/lib/systemd/system-sleep/macbookpro14-3-sleep.sh
-    run systemctl daemon-reload
-    run systemctl enable macbookpro14-3-d3cold.service
+    step "Sospensione"
+    if [ "$DRY_RUN" = 1 ]; then
+        bash "$REPO_DIR/scripts/install-sleep.sh" --dry-run
+    else
+        bash "$REPO_DIR/scripts/install-sleep.sh" || FAILED="$FAILED sleep"
+    fi
 fi
 
 if [ -n "$WIFI_FILE" ]; then
