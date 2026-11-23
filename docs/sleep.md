@@ -29,7 +29,8 @@ Identica a quella della fonte.
 | File | Effetto |
 |---|---|
 | `config/sleep/macbookpro14-3-sleep.sh` → `/usr/lib/systemd/system-sleep/` | prima: rimuove gli upstream port TB (cercati come `8086:1578`) e scarica `brcmfmac`; dopo: rescan dei root port e ricarica `brcmfmac` |
-| `config/sleep/s2idle.conf` → `/etc/systemd/sleep.conf.d/10-macbookpro14-3.conf` | `MemorySleepMode=s2idle`, ibernazione/ibride disattivate |
+| `config/sleep/s2idle.conf` → `/etc/systemd/sleep.conf.d/10-macbookpro14-3.conf` | `MemorySleepMode=s2idle` di ripiego, ibernazione/ibride disattivate |
+| `config/systemd/macbookpro14-3-sleep-mode.service` + `config/sleep/deep.conf` | sui kernel >= 7.3 copia `MemorySleepMode=deep` in `/run/systemd/sleep.conf.d/20-macbookpro14-3-deep.conf` (vince sul file sopra); `systemctl stop` torna a s2idle fino al riavvio |
 | `config/udev/90-macbookpro14-3-nvme-no-d3cold.rules` | `d3cold_allowed=0` sulle classi `0x010802` |
 | `config/tmpfiles/macbookpro14-3-pm.conf` | `pm_async=0` |
 
@@ -50,9 +51,38 @@ Identica a quella della fonte.
 
 Nota: nel journal i timestamp monotonic non avanzano durante lo sleep; per le durate usare `journalctl -o short-iso`.
 
+## s2idle non è un vero sonno su questo Mac → S3 (23/11/2026) [F]
+
+Segnalato dall'utente: dopo una lunga sospensione a coperchio chiuso ventole accese e Mac tiepido (rischio in uno zaino).
+
+| Misura (s2idle) | Risultato |
+|---|---|
+| FADT, flag `LOW_POWER_S0_IDLE` (bit 21) | assente (`flags=0x0000c4a5`); niente tabella LPIT né dispositivo LPS0 (`PNP0D80`) |
+| Package C-state più profondo (`pmc_core`) | **C3**; C6-C10 sempre a 0 |
+| Ventole | restano al minimo (~2160 rpm): l'SMC non vede la piattaforma ferma |
+| Risvegli spontanei | 2 in ~1 h 40 min, dopo 31 e 40 min di sospensione; logind risospende dopo ~18 s perché il coperchio è chiuso |
+| Causa dell'ultimo risveglio | IRQ 9 (ACPI SCI, controller embedded) |
+
+Conclusione: senza S0ix nel firmware, s2idle lascia piattaforma, ventole e Radeon accese. Lo stato "congelato"
+come su macOS è S3.
+
+| Prova S3 (`deep`), kernel 7.3.5-2-cachyos, Touch Bar in modalità display | Risultato |
+|---|---|
+| sveglia RTC 60 s | `ACPI: PM: Preparing to enter system sleep state S3`, ripresa riuscita. amdgpu fa `PCI CONFIG reset` prima dello sleep e riparte (GART, UVD, VCE) **senza** l'errore SMU -22 della fonte (kernel 7.2); Radeon in D0. Svegliato dopo ~30 s invece di 60, causa ignota (la sveglia RTC è scattata dopo il risveglio; vedi la stessa anomalia con s2idle sopra) |
+| coperchio chiuso ~1 min | sospeso 10 s dopo la chiusura, ripreso all'apertura; Touch Bar (display), Wi-Fi, Thunderbolt tornati |
+| ventole | **ferme** durante la sospensione (sentito dall'utente) |
+
+La Radeon `1002:67ef`, subsystem `106b:0179`, rev `c0` non è nella tabella `vi_reset_quirks` di v7.3 e il commit
+generico `92a5184787b8` non è in v7.3 [F dal sorgente]: la ripresa funziona comunque [F], meccanismo non chiarito [I].
+Per prudenza S3 si attiva solo sui kernel >= 7.3 (servizio con `ConditionKernelVersion`); LTS 6.18 resta su s2idle.
+
+Controllo dopo una notte: `scripts/sleep-test.sh report` (senza root) elenca ogni sospensione con durata, modalità,
+batteria (l'hook scrive % e mAh prima e dopo) e se il Mac si è svegliato **senza** aprire il coperchio.
+
 ## Da verificare [NV]
 
-- Sospensioni lunghe (notte, a batteria): consumo e risvegli spuri (la prova `real` è finita 24 s prima della sveglia RTC).
+- S3 a lungo (notte, zaino): risvegli spuri e consumo (atteso molto più basso di s2idle).
+
 - Kernel LTS 6.18.
 - Periferiche USB-C/Thunderbolt collegate durante lo sleep (la fonte dice che possono sparire fino al prossimo sleep).
 - Molti cicli di fila (il report di ricerca indica 20 cicli come obiettivo).

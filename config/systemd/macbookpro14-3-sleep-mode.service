@@ -1,0 +1,16 @@
+# S3 (deep) invece di s2idle sui kernel dove è provato (7.3.5, 23/11/2026: Radeon ripresa, ventole ferme).
+# Su questo Mac s2idle non è un vero sonno (niente S0ix nel firmware: ventole al minimo, CPU in Package C3,
+# risvegli ogni 30-40 minuti). Sui kernel più vecchi (LTS 6.18, mai provato) resta s2idle.
+# Tornare a s2idle subito, fino al riavvio:  sudo systemctl stop macbookpro14-3-sleep-mode
+[Unit]
+Description=MacBookPro14,3: sospensione S3 (deep) sui kernel provati
+ConditionKernelVersion=>=7.3
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/install -Dm644 /usr/local/lib/macbookpro14-3/sleep-deep.conf /run/systemd/sleep.conf.d/20-macbookpro14-3-deep.conf
+ExecStop=/usr/bin/rm -f /run/systemd/sleep.conf.d/20-macbookpro14-3-deep.conf
+
+[Install]
+WantedBy=multi-user.target

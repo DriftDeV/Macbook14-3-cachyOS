@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Sospensione sul MacBookPro14,3: s2idle, hook Thunderbolt/Wi-Fi, NVMe senza D3cold,
-# pm_async=0, ibernazione disattivata. Non serve riavviare.
+# Sospensione sul MacBookPro14,3: S3 (deep) sui kernel provati (>= 7.3), altrimenti s2idle; hook Thunderbolt/Wi-Fi,
+# NVMe senza D3cold, pm_async=0, ibernazione disattivata. Non serve riavviare.
 #   sudo scripts/install-sleep.sh            installa
 #   sudo scripts/install-sleep.sh --dry-run  mostra soltanto
 #   sudo scripts/install-sleep.sh --undo     rimuove quanto installato
@@ -14,6 +14,8 @@ HOOK=/usr/lib/systemd/system-sleep/macbookpro14-3-sleep.sh
 SLEEPCONF=/etc/systemd/sleep.conf.d/10-macbookpro14-3.conf
 UDEV=/etc/udev/rules.d/90-macbookpro14-3-nvme-no-d3cold.rules
 TMPF=/etc/tmpfiles.d/macbookpro14-3-pm.conf
+DEEP=/usr/local/lib/macbookpro14-3/sleep-deep.conf
+MODEUNIT=/etc/systemd/system/macbookpro14-3-sleep-mode.service
 # Installati da versioni precedenti di questa repo.
 OLD=(/usr/local/lib/macbookpro14-3/d3cold-nvme.sh /etc/systemd/system/macbookpro14-3-d3cold.service)
 
@@ -28,7 +30,9 @@ done
 need_root
 
 if [ "$UNDO" = 1 ]; then
-    run rm -fv "$HOOK" "$SLEEPCONF" "$UDEV" "$TMPF"
+    run systemctl disable --now macbookpro14-3-sleep-mode.service 2>/dev/null || true
+    run rm -fv "$HOOK" "$SLEEPCONF" "$UDEV" "$TMPF" "$DEEP" "$MODEUNIT"
+    run systemctl daemon-reload
     run udevadm control --reload
     run sh -c 'echo 1 > /sys/power/pm_async'
     ok "Rimosso. D3cold dell'NVMe resta disattivato fino al prossimo riavvio."
@@ -50,8 +54,15 @@ done
 log "Hook system-sleep (Thunderbolt remove/rescan, Wi-Fi)"
 run install -Dm755 "$REPO_DIR/config/sleep/macbookpro14-3-sleep.sh" "$HOOK"   # niente .bak: systemd-sleep eseguirebbe anche la copia
 
-log "s2idle, ibernazione disattivata"
+log "s2idle di ripiego, ibernazione disattivata"
 install_file 644 "$REPO_DIR/config/sleep/s2idle.conf" "$SLEEPCONF"
+
+log "S3 (deep) sui kernel provati (>= 7.3): ventole e piattaforma spente come su macOS"
+run install -Dm644 "$REPO_DIR/config/sleep/deep.conf" "$DEEP"
+install_file 644 "$REPO_DIR/config/systemd/macbookpro14-3-sleep-mode.service" "$MODEUNIT"
+run systemctl daemon-reload
+run systemctl enable macbookpro14-3-sleep-mode.service
+run systemctl restart macbookpro14-3-sleep-mode.service
 
 log "NVMe senza D3cold (per classe PCI)"
 install_file 644 "$REPO_DIR/config/udev/90-macbookpro14-3-nvme-no-d3cold.rules" "$UDEV"
@@ -71,4 +82,8 @@ for r in /usr/lib/udev/rules.d/39-usbmuxd.rules /etc/udev/rules.d/39-usbmuxd.rul
     fi
 done
 
-ok "Sospensione configurata. Prova: sudo scripts/sleep-test.sh platform, poi real."
+if [ "${DRY_RUN:-0}" != 1 ]; then
+    log "Modalità usata alla prossima sospensione: $(systemd-analyze cat-config systemd/sleep.conf 2>/dev/null | grep '^MemorySleepMode=' | tail -1)"
+fi
+ok "Sospensione configurata. Prova: sudo scripts/sleep-test.sh real 60; dopo una notte: scripts/sleep-test.sh report"
+log "Tornare a s2idle fino al riavvio: sudo systemctl stop macbookpro14-3-sleep-mode"

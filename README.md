@@ -25,7 +25,7 @@ passaggi provati su questa macchina: driver DKMS, patch, configurazioni, servizi
 | Bluetooth: musica | ✅ | kernel (Broadcom su UART) | A2DP con AAC |
 | Bluetooth: chiamate (cuffie + microfono) | 🟡 | comando Broadcom per l'audio SCO via HCI | solo CVSD (qualità telefonica); mSBC muto |
 | Webcam | ✅ | `uvcvideo` (**non** `facetimehd`) | in modalità display solo H.264: Discord con `t1-webcam on` |
-| Sospensione (coperchio, s2idle) | ✅ | s2idle + Thunderbolt scollegato prima dello sleep + NVMe senza D3cold | ripresa in ~1 s ([sleep](docs/sleep.md)) |
+| Sospensione (coperchio, S3) | ✅ | S3 (`deep`) come macOS, ventole ferme; Thunderbolt scollegato prima dello sleep + NVMe senza D3cold | provata il 23/11 (RTC e coperchio); notte intera da confermare ([sleep](docs/sleep.md)) |
 | Energia | 🟡 | a batteria Radeon in risparmio, CPU senza turbo | ~18 W a riposo ≈ 4 ore ([power](docs/power.md)) |
 | Grafica | 🟡 | sempre sulla Radeon | la Intel non può pilotare lo schermo; nessuno switch ([gpu](docs/gpu.md)) |
 | Thunderbolt / USB-C, monitor esterni | ❓ | kernel | non provati |
@@ -88,7 +88,7 @@ Alla fine **spegni completamente** il Mac, aspetta ~30 secondi e riaccendi (il T
 | `input` | quirk libinput (trackpad disattivato mentre scrivi) |
 | `touchbar` | Touch Bar in modalità tastiera (DKMS), sempre installata: è la base di sicurezza |
 | `audio` | driver CS8409 (DKMS) |
-| `sleep` | s2idle, hook Thunderbolt/Wi-Fi, NVMe senza D3cold, ibernazione disattivata |
+| `sleep` | S3 sui kernel >= 7.3 (s2idle di ripiego), hook Thunderbolt/Wi-Fi, NVMe senza D3cold, ibernazione disattivata |
 | `power` | a batteria Radeon in risparmio e CPU senza turbo; piena potenza con l'alimentatore |
 | `bluetooth` | audio delle chiamate (SCO via HCI), mSBC disattivato in WirePlumber |
 | `brightness` | curva di partenza della luminosità automatica di KWin |
@@ -114,7 +114,8 @@ Se un passo fallisce gli altri proseguono; il riepilogo dice cosa rifare. Regist
 | Webcam per Discord/browser (modalità display) | `t1-webcam on` / `t1-webcam off`, poi scegli "T1 camera (Discord)" |
 | Renderer fnstrip | `scripts/install-fnstrip.sh` (`--undo` per togliere); configurazione in `~/.config/fnstrip/config.toml`, poi `systemctl --user restart macbookpro14-3-touchbar-renderer` |
 | Energia a batteria | `/etc/macbookpro14-3/power.conf`; registro `journalctl -t macbookpro14-3-power` |
-| Prova della sospensione | `scripts/sleep-test.sh check` · `sudo scripts/sleep-test.sh platform` · `sudo scripts/sleep-test.sh real 60` |
+| Prova della sospensione | `scripts/sleep-test.sh check` · `sudo scripts/sleep-test.sh real 60` · dopo una notte: `scripts/sleep-test.sh report` |
+| Tornare a s2idle (fino al riavvio) | `sudo systemctl stop macbookpro14-3-sleep-mode` |
 | Curva della luminosità automatica | `scripts/set-kwin-brightness-curve.sh --force` (poi logout/login) |
 
 ## 4. Problemi noti e rimedi

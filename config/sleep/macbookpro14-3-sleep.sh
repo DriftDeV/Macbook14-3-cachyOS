@@ -18,6 +18,16 @@
 
 STATE=/run/macbookpro14-3-sleep
 log() { echo "$*" | systemd-cat -t macbookpro14-3-sleep; }
+# Batteria e causa del risveglio nel journal: le legge scripts/sleep-test.sh report.
+battery() {
+    local b=/sys/class/power_supply/BAT0
+    echo "batteria $(cat $b/capacity 2>/dev/null)% $(( $(cat $b/charge_now 2>/dev/null || echo 0) / 1000 )) mAh ac=$(cat /sys/class/power_supply/ADP1/online 2>/dev/null)"
+}
+wake_irq() {
+    local irq
+    irq="$(cat /sys/power/pm_wakeup_irq 2>/dev/null)" || { echo "irq di risveglio: -"; return; }
+    echo "irq di risveglio: $irq ($(awk -v i="$irq:" '$1==i {print $NF}' /proc/interrupts))"
+}
 
 pre() {
     mkdir -p "$STATE"
@@ -42,11 +52,12 @@ pre() {
         timeout 15 modprobe -r brcmfmac_wcc brcmfmac || log "pre $1: scaricamento brcmfmac fallito"
         : > "$STATE/wifi"
     fi
-    log "pre $1: fatto"
+    log "pre $1: fatto, $(battery)"
 }
 
 post() {
     local r
+    log "post $1: $(battery), $(wake_irq)"
     sort -u "$STATE/rootports" 2>/dev/null | while read -r r; do
         [ -n "$r" ] || continue
         log "post $1: rescan root port $r"

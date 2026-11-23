@@ -66,8 +66,10 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
   provata dopo riavvio (23/11/2026).
   Il branch di default di nonderbe NON ha le correzioni. Linux 7.3 ha tolto `struct acpi_driver`.
   `linux-cachyos` è compilato con clang (serve `LLVM=1`), `linux-cachyos-lts` con gcc.
-- **Sospensione [F] funziona** (s2idle + rimozione dei port Thunderbolt `8086:1578` + NVMe senza D3cold): prove
-  pm_test, RTC e coperchio riuscite il 23/11/2026. Default del firmware è S3 (`deep`), che con la Radeon non riparte.
+- **Sospensione [F]: S3 (`deep`)** + rimozione dei port Thunderbolt `8086:1578` + NVMe senza D3cold. s2idle NON è un vero
+  sonno qui (niente S0ix nel firmware: ventole accese, Package C3, risvegli ogni 30-40 min). S3 sul 7.3.5: Radeon riparte,
+  ventole ferme (23/11/2026); attivato solo su kernel >= 7.3 da `macbookpro14-3-sleep-mode.service`. Notte intera [NV]:
+  `scripts/sleep-test.sh report`.
 - **Wi-Fi 5 GHz [F] funziona** con `scripts/install-wifi.sh` (dnlbtz/mbp143-wifi v1.1.0: NVRAM dalla SROM + firmware
   patchato): da ~21 a ~290 Mbit/s, -45 dBm. Resta a 40 MHz invece di 80 (ipotesi: regdom IT, vedi `docs/wifi.md`).
 - **Trackpad [F]**: quirk `config/libinput/local-overrides.quirks` (tastiera SPI e Touch Bar interne) installato in

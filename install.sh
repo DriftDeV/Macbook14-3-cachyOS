@@ -225,7 +225,7 @@ run_step packages "Pacchetti" step_packages
 run_step input "Trackpad (quirk libinput)" step_input
 run_step touchbar "Touch Bar, modalità tastiera (apple-ibridge, DKMS)" step_touchbar
 run_step audio "Audio CS8409 (DKMS)" step_audio
-run_step sleep "Sospensione (s2idle, Thunderbolt, NVMe)" step_sleep
+run_step sleep "Sospensione (S3, Thunderbolt, NVMe)" step_sleep
 run_step power "Energia (batteria/alimentatore)" step_power
 run_step bluetooth "Bluetooth (audio delle chiamate)" step_bluetooth
 run_step brightness "Luminosità automatica (curva KWin)" step_brightness

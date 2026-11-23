@@ -5,6 +5,8 @@
 #   sudo scripts/sleep-test.sh platform    il kernel fa tutte le fasi e riprende da solo dopo ~5 s,
 #                                          senza dormire davvero (pm_test=platform)
 #   sudo scripts/sleep-test.sh real [s]    sospensione vera, sveglia RTC dopo s secondi (default 60)
+#   scripts/sleep-test.sh report [boot]    senza root: ogni sospensione dell'avvio attuale (o -1, -2...):
+#                                          durata, modalità, causa del risveglio, batteria consumata
 # Se non torna: aspetta almeno 3 minuti prima di forzare lo spegnimento
 # (lo stallo Thunderbolt dura 80-100 s). Dopo uno spegnimento forzato, fai uno
 # spegnimento pulito e riaccendi: Wi-Fi e T1 possono restare in uno stato strano.
@@ -72,9 +74,54 @@ run_cycle() {   # $1 = livello pm_test o "none"
     state
 }
 
+report() {   # dati dal journal: logind (coperchio), systemd-sleep, kernel, hook macbookpro14-3-sleep
+    journalctl -b "${1:-0}" -o short-unix --no-pager -q 2>/dev/null \
+        | grep -E 'Lid (closed|opened)|Performing sleep operation|returned from sleep operation|PM: suspend entry|macbookpro14-3-sleep.*(pre suspend: fatto|post suspend: batteria)' \
+        | python3 -I -c '
+import re, sys, time
+cyc, cur, lid, opened = [], None, "?", 0.0
+for l in sys.stdin:
+    t, msg = float(l.split()[0]), l
+    if "Lid closed" in msg: lid = "chiuso"
+    elif "Lid opened" in msg:
+        lid, opened = "aperto", t
+        if cur and cur.get("end") and t - cur["end"] <= 5: cur["cause"] = "coperchio aperto"
+    elif "Performing sleep operation" in msg:
+        cur = {"start": t, "lid": lid, "mode": "?"}; cyc.append(cur)
+    elif cur and "PM: suspend entry" in msg: cur["mode"] = re.search(r"\((\w+)\)", msg).group(1)
+    elif cur and "pre suspend: fatto" in msg:
+        m = re.search(r"(\d+)% (\d+) mAh ac=(\d)", msg)   # le righe dei vecchi hook non hanno la batteria
+        if m: cur["b0"] = m.groups()
+    elif cur and "returned from sleep" in msg:
+        cur["end"] = t
+        if t - opened <= 5: cur["cause"] = "coperchio aperto"   # logind può scriverlo prima di systemd-sleep
+    elif cur and "post suspend: batteria" in msg:
+        m = re.search(r"(\d+)% (\d+) mAh", msg)
+        if m: cur["b1"] = m.groups()
+        m = re.search(r"irq di risveglio: (.*)", msg); cur["irq"] = m.group(1).strip() if m else "-"
+if not cyc: print("Nessuna sospensione in questo avvio."); sys.exit()
+spont = 0
+print("%-14s %7s %-7s %-9s %-26s %s" % ("inizio", "durata", "modo", "coperchio", "batteria", "risveglio"))
+for c in cyc:
+    if "end" not in c: print(time.strftime("%d/%m %H:%M:%S", time.localtime(c["start"])), "  nessun ritorno registrato"); continue
+    d = (c["end"] - c["start"]) / 60
+    cause = c.get("cause") or ("SENZA aprire il coperchio" if c["lid"] == "chiuso" else "tasto, sveglia o altro")
+    if c["lid"] == "chiuso" and not c.get("cause"): spont += 1
+    bat = "-"
+    if "b0" in c and "b1" in c:
+        dm = int(c["b0"][1]) - int(c["b1"][1])
+        bat = "%s%%->%s%% %d mAh" % (c["b0"][0], c["b1"][0], dm) + (" (%.0f mAh/h)" % (dm / (d / 60)) if d >= 10 and c["b0"][2] == "0" else "")
+    print("%-14s %5.0fm  %-7s %-9s %-26s %s [irq %s]" % (time.strftime("%d/%m %H:%M:%S", time.localtime(c["start"])), d, c["mode"], c["lid"], bat, cause, c.get("irq", "-")))
+print()
+print("Sospensioni: %d, risvegli a coperchio chiuso senza aprirlo: %d" % (len(cyc), spont))
+print("Consumo atteso a batteria (mAh/h, solo sospensioni >= 10 min): S3 poche decine; s2idle diverse centinaia.")
+'
+}
+
 note "=== $(date -Is) mode=$mode kernel=$(uname -r) ac=$(cat /sys/class/power_supply/ADP1/online 2>/dev/null) batt=$(cat /sys/class/power_supply/BAT0/capacity 2>/dev/null)%"
 case "$mode" in
     check) state ;;
+    report) report "${2:-0}"; exit 0 ;;
     platform|devices)
         [ "$(id -u)" -eq 0 ] || { echo "Serve sudo." >&2; exit 1; }
         state; run_cycle "$mode" ;;
@@ -83,7 +130,7 @@ case "$mode" in
         state
         rtcwake -m no -s "$secs" >/dev/null && note "sveglia RTC tra $secs s"
         run_cycle none ;;
-    *) echo "Uso: $0 check | platform | real [secondi]" >&2; exit 1 ;;
+    *) echo "Uso: $0 check | report [boot] | platform | real [secondi]" >&2; exit 1 ;;
 esac
 [ "$(id -u)" -eq 0 ] && chmod 644 "$LOG" && echo "Log: $LOG"
 exit 0
