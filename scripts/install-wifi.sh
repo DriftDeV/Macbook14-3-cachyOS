@@ -88,5 +88,9 @@ if ! echo "$OUT" | grep -q 'wrote the board file and the firmware'; then
 fi
 
 sleep 15
-iw phy 2>/dev/null | grep -q 'Band 2' && ok "5 GHz disponibili." || warn "Band 2 (5 GHz) non ancora visibile: controlla con 'iw phy | grep Band'."
+if iw phy 2>/dev/null | grep -q 'Band 2'; then
+    ok "5 GHz disponibili."
+else
+    warn "Band 2 (5 GHz) non ancora visibile: controlla con 'iw phy | grep Band'."
+fi
 ok "Wi-Fi: NVRAM e firmware in /usr/lib/firmware/updates/brcm, valori del chip in /var/lib/mbp143-wifi."

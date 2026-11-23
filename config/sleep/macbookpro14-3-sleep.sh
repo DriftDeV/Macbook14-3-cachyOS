@@ -47,7 +47,8 @@ pre() {
 
 post() {
     local r
-    for r in $(sort -u "$STATE/rootports" 2>/dev/null); do
+    sort -u "$STATE/rootports" 2>/dev/null | while read -r r; do
+        [ -n "$r" ] || continue
         log "post $1: rescan root port $r"
         echo 1 > "/sys/bus/pci/devices/$r/rescan"
     done
@@ -57,7 +58,8 @@ post() {
     fi
     # Riapplica le impostazioni energetiche (scripts/install-power.sh), se installate.
     [ -x /usr/local/lib/macbookpro14-3/power-source.sh ] && /usr/local/lib/macbookpro14-3/power-source.sh
-    log "post $1: fatto ($(ls /sys/bus/pci/devices | wc -l) funzioni PCI)"
+    set -- "$1" /sys/bus/pci/devices/*
+    log "post $1: fatto ($(($# - 1)) funzioni PCI)"
 }
 
 case "${1:-}" in

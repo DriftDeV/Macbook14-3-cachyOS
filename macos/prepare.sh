@@ -96,7 +96,8 @@ preflight() {
 
 # ------------------------------------------------------------------- backup
 do_backup() {
-    local out="$WORKDIR/backup-$(date +%Y%m%d-%H%M%S)"
+    local out
+    out="$WORKDIR/backup-$(date +%Y%m%d-%H%M%S)"
     log "Backup mappa partizioni ed ESP in $out"
     run mkdir -p "$out"
     if [ "$EXECUTE" = 1 ]; then

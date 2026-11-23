@@ -13,6 +13,11 @@ LOG=/var/tmp/macbookpro14-3-sleep-test.log
 mode="${1:-check}"
 secs="${2:-60}"
 
+count() {   # quanti percorsi esistono tra quelli dati (glob)
+    local n=0 f
+    for f in "$@"; do [ -e "$f" ] && n=$((n + 1)); done
+    echo "$n"
+}
 note() {   # il log lo scrive solo root: in /var/tmp un file di un altro utente non è scrivibile
     if [ "$(id -u)" -eq 0 ]; then echo "$*" | tee -a "$LOG"; else echo "$*"; fi
 }
@@ -25,8 +30,8 @@ state() {
     done
     note "hook=$( [ -x /usr/lib/systemd/system-sleep/macbookpro14-3-sleep.sh ] && echo si || echo NO)" \
          "sleep.conf: $(systemd-analyze cat-config systemd/sleep.conf 2>/dev/null | grep -E '^(MemorySleepMode|AllowHibernation)=' | tr '\n' ' ')"
-    note "pci=$(ls /sys/bus/pci/devices | wc -l) xhci=$(ls /sys/bus/pci/drivers/xhci_hcd 2>/dev/null | grep -c 0000)" \
-         "wifi=$(ls /sys/bus/pci/drivers/brcmfmac 2>/dev/null | grep -c 0000) t1=$(cat /sys/bus/usb/devices/1-3/idProduct 2>/dev/null)/cfg$(cat /sys/bus/usb/devices/1-3/bConfigurationValue 2>/dev/null)" \
+    note "pci=$(count /sys/bus/pci/devices/*) xhci=$(count /sys/bus/pci/drivers/xhci_hcd/0000:*)" \
+         "wifi=$(count /sys/bus/pci/drivers/brcmfmac/0000:*) t1=$(cat /sys/bus/usb/devices/1-3/idProduct 2>/dev/null)/cfg$(cat /sys/bus/usb/devices/1-3/bConfigurationValue 2>/dev/null)" \
          "touchbar_hid=$(for h in /sys/bus/hid/devices/*05AC:8600*; do basename "$(readlink "$h/driver")"; done | sort | uniq -c | tr -s ' \n' ' ')"
     note "suspend_stats success=$(cat /sys/power/suspend_stats/success) fail=$(cat /sys/power/suspend_stats/fail)"
 }
