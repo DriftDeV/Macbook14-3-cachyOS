@@ -51,7 +51,8 @@ I commenti scritti a mano nel file vengono rigenerati; le chiavi che il manager 
 Pulsante **Touch Bar in diretta…** nella scheda Touch Bar (o voce del menu dell'icona): una finestra mostra lo schermo
 della barra in tempo reale, ingrandito, con il punto toccato in rosso; **Cattura PNG** salva il fotogramma a
 risoluzione piena (2170×60) in Immagini, **Registra video** un MP4 (H.264, 30 fps) in Video. Da terminale:
-`macbook-manager touchbar-screenshot [file.png]`.
+`macbook-manager touchbar-screenshot [file.png]`. [F] Provata sul 14,3 il 24/11/2026: vista in diretta controllata dall'utente; PNG,
+video di 3 s a 30 fps e pulizia della RAM verificati.
 
 Come funziona: usa la registrazione di debug di fnstrip (`src/record.rs`): finché esiste `$XDG_RUNTIME_DIR/fnstrip-record`,
 fnstrip aggiunge ogni fotogramma inviato alla barra a `~/.cache/fnstrip-record/frames.raw` (XRGB8888) e scrive tocchi e

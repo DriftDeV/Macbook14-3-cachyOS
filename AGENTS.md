@@ -83,8 +83,8 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
   (`disabling eDP`), Radeon 7-9 W a riposo, runtime PM non disponibile. Opzioni in `docs/gpu.md`.
 - **Consumi [F]** (`docs/power.md`): unica leva netta a riposo = Radeon `manual`+`POWER_SAVING`+PCIe 2,5 GT/s (-1,5 W);
   `scripts/install-power.sh` la applica a batteria. Slider KDE e turbo non cambiano nulla a riposo. ~18 W ≈ 4 h.
-- **MacBook Manager [F]** (`manager/`, 23/11/2026): GUI, icona nella barra di sistema, azioni con password via polkit
-  provate (Touch Bar display/tastiera, spegnimento). Il T1 si azzera SOLO con lo spegnimento completo (porta USB, reset
+- **MacBook Manager [F]** (`manager/`, 23-24/11/2026): GUI, icona nella barra di sistema, azioni con password via polkit
+  provate (Touch Bar display/tastiera, spegnimento), editor fnstrip + preset OLED, Touch Bar in diretta/PNG/video. Il T1 si azzera SOLO con lo spegnimento completo (porta USB, reset
   USB, S3 provati invano; ACPI `FRST` = recovery, da non usare): `touchbar-mode set keyboard` salva soltanto.
 - `sudo` non funziona dalla shell di Claude (serve la password). Dal 23/11 pomeriggio funziona nel pannello Terminale
   dell'app (`run_in_terminal`, l'utente scrive la password); altrimenti Konsole.
