@@ -83,7 +83,8 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(scroll, QIcon.fromTheme("dialog-information"), "Stato")
         self.tabs.addTab(self._actions_tab(), QIcon.fromTheme("system-run"), "Azioni")
         from .gui_fnstrip import FnstripEditor
-        self.fnstrip = FnstripEditor(lambda t: self.log.appendPlainText(t))
+        self.live = None
+        self.fnstrip = FnstripEditor(lambda t: self.log.appendPlainText(t), self.open_live)
         self.tabs.addTab(self.fnstrip, QIcon.fromTheme("input-keyboard"), "Touch Bar")
         self.sleep_table = QTableWidget(0, 6)
         self.sleep_table.setHorizontalHeaderLabels(["Inizio", "Durata", "Modo", "Coperchio", "Batteria", "Risveglio"])
@@ -215,6 +216,15 @@ class MainWindow(QMainWindow):
         self.last = time.monotonic()
         self.pool.start(Job("status", lambda: (status.collect(), active_ids()), self.sig))
 
+    def open_live(self):
+        from .gui_live import LiveWindow
+        if self.live is None:
+            self.live = LiveWindow()
+            self.app.aboutToQuit.connect(self.live.shutdown)
+        self.live.show()
+        self.live.raise_()
+        self.live.activateWindow()
+
     def _tab_changed(self, i):
         w = self.tabs.widget(i)
         if w is self.fnstrip:
@@ -334,6 +344,7 @@ class Tray(QSystemTrayIcon):
         self.win = win
         menu = QMenu()
         menu.addAction(QIcon.fromTheme("computer-laptop"), "Apri MacBook Manager", win.show_front)
+        menu.addAction(QIcon.fromTheme("camera-video"), "Touch Bar in diretta", win.open_live)
         menu.addSeparator()
         self.acts = {}
         for aid in TRAY_ACTIONS:

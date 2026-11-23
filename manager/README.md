@@ -46,6 +46,22 @@ colore delle scritte. Si riconosce rileggendo il file; cambiando un colore a man
 
 I commenti scritti a mano nel file vengono rigenerati; le chiavi che il manager non conosce vengono conservate.
 
+## Touch Bar in diretta, screenshot e video
+
+Pulsante **Touch Bar in diretta…** nella scheda Touch Bar (o voce del menu dell'icona): una finestra mostra lo schermo
+della barra in tempo reale, ingrandito, con il punto toccato in rosso; **Cattura PNG** salva il fotogramma a
+risoluzione piena (2170×60) in Immagini, **Registra video** un MP4 (H.264, 30 fps) in Video. Da terminale:
+`macbook-manager touchbar-screenshot [file.png]`.
+
+Come funziona: usa la registrazione di debug di fnstrip (`src/record.rs`): finché esiste `$XDG_RUNTIME_DIR/fnstrip-record`,
+fnstrip aggiunge ogni fotogramma inviato alla barra a `~/.cache/fnstrip-record/frames.raw` (XRGB8888) e scrive tocchi e
+invii in `events.log`. Per non consumare l'SSD (~0,5 MB a fotogramma, fino a 60 al secondo nelle animazioni) quella cartella
+diventa un collegamento a `/run/user/<uid>` (RAM) finché la cattura è attiva, e i file ripartono da zero oltre 64 MB;
+chiudendo la finestra tutto viene rimosso. Solo in modalità display con fnstrip, senza root.
+
+Limite: fnstrip invia un fotogramma solo quando qualcosa cambia; all'apertura, finché la barra è ferma, la finestra chiede
+di toccarla (o di cambiare volume/luminosità). Poi mostra sempre l'ultimo, che è quello sullo schermo.
+
 ## Azioni (`macbook-manager actions`, `macbook-manager run <id>`)
 
 | Gruppo | Azioni |

@@ -78,6 +78,28 @@ def cmd_sleep_report(args):
     return 0
 
 
+def cmd_touchbar_screenshot(args):
+    from . import tbcapture as T
+    if not T.renderer_active():
+        print("La Touch Bar non è in modalità display con il renderer attivo: niente da catturare.", file=sys.stderr)
+        return 1
+    cap = T.Capture()
+    cap.start()
+    try:
+        print("Tocca la Touch Bar (o cambia volume/luminosità) entro %d s: fnstrip invia l'immagine solo quando "
+              "qualcosa cambia." % args.timeout, flush=True)
+        if not cap.wait_frame(args.timeout):
+            print("Nessun fotogramma ricevuto.", file=sys.stderr)
+            return 1
+        path = args.file or T.default_path()
+        with open(path, "wb") as f:
+            f.write(T.png_bytes(cap.frame))
+        print("Salvato: %s (%dx%d)" % (path, T.WIDTH, T.HEIGHT))
+        return 0
+    finally:
+        cap.stop()
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(prog="macbook-manager", description="Stato e azioni rapide del MacBookPro14,3.")
     p.add_argument("--version", action="version", version=VERSION)
@@ -89,6 +111,9 @@ def main(argv=None):
     sub.add_parser("actions", help="elenca le azioni")
     r = sub.add_parser("run", help="esegue un'azione (quelle root chiedono la password con polkit)")
     r.add_argument("action")
+    ts = sub.add_parser("touchbar-screenshot", help="salva l'immagine della Touch Bar (modalità display) in PNG")
+    ts.add_argument("file", nargs="?")
+    ts.add_argument("--timeout", type=int, default=15)
     sr = sub.add_parser("sleep-report", help="sospensioni dell'avvio attuale (o -1, -2...)")
     sr.add_argument("boot", nargs="?", default="0")
     args = p.parse_args(argv)
@@ -106,6 +131,8 @@ def main(argv=None):
         return cmd_actions(args)
     if args.cmd == "run":
         return run_action(args.action)
+    if args.cmd == "touchbar-screenshot":
+        return cmd_touchbar_screenshot(args)
     if args.cmd == "sleep-report":
         return cmd_sleep_report(args)
     return 0

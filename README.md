@@ -118,6 +118,7 @@ Touch Bar, sospensione, Wi-Fi, batteria e temperature, con le azioni qui sotto a
 |---|---|
 | Modalità della Touch Bar | `sudo touchbar-mode status` · `sudo touchbar-mode set display` · `sudo touchbar-mode set keyboard` (salva; attiva dopo uno spegnimento completo, l'unico modo di azzerare il T1) |
 | Webcam per Discord/browser (modalità display) | `t1-webcam on` / `t1-webcam off`, poi scegli "T1 camera (Discord)" |
+| Screenshot/video della Touch Bar (modalità display) | MacBook Manager → Touch Bar → **Touch Bar in diretta…**, oppure `macbook-manager touchbar-screenshot` |
 | Renderer fnstrip | `scripts/install-fnstrip.sh` (`--undo` per togliere); configurazione dalla scheda **Touch Bar** di MacBook Manager, oppure a mano in `~/.config/fnstrip/config.toml` e poi `systemctl --user restart macbookpro14-3-touchbar-renderer` |
 | Energia a batteria | `/etc/macbookpro14-3/power.conf`; registro `journalctl -t macbookpro14-3-power` |
 | Prova della sospensione | `scripts/sleep-test.sh check` · `sudo scripts/sleep-test.sh real 60` · dopo una notte: `scripts/sleep-test.sh report` |

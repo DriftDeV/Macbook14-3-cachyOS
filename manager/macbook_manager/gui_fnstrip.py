@@ -17,7 +17,7 @@ SHORT = {"mic": "mic", "camera": "cam", "vpn": "vpn", "cpu": "cpu", "mem": "mem"
 
 
 class FnstripEditor(QScrollArea):
-    def __init__(self, log):
+    def __init__(self, log, open_live=None):
         super().__init__()
         self.log = log  # funzione(testo) per il registro della finestra
         self.setWidgetResizable(True)
@@ -28,7 +28,14 @@ class FnstripEditor(QScrollArea):
 
         self.info = QLabel()
         self.info.setWordWrap(True)
-        lay.addWidget(self.info)
+        top = QHBoxLayout()
+        top.addWidget(self.info, 1)
+        if open_live:
+            live = QPushButton(QIcon.fromTheme("camera-video"), "Touch Bar in diretta…")
+            live.setToolTip("Immagine della barra in tempo reale, cattura PNG e video")
+            live.clicked.connect(open_live)
+            top.addWidget(live)
+        lay.addLayout(top)
 
         # --- aspetto
         look = QGroupBox("Aspetto")
