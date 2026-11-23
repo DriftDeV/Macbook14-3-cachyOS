@@ -151,6 +151,20 @@ In modalità display `iio-sensor-proxy` viene riavviato sul sensore esposto da `
 - Al login il renderer può risultare "skipped" (`ConditionPathExists`): la sessione parte prima del servizio di avvio;
   poi `touchbar-mode` lo avvia da sé.
 
+### Sospensione lunga: barra spenta al risveglio [F] (corretto)
+
+Sospensione di ~18 minuti (20:51-21:08 del 23/11/2026) in modalità display: al risveglio la Touch Bar è rimasta spenta.
+- `macbookpro14-3-touchbar-sleep.service: Stopping timed out. Terminating` dopo **10 s**: CachyOS imposta
+  `DefaultTimeoutStopSec=10s`. Il ritorno a `display` (ExecStop) era fermo su `udevadm settle`, che dopo una
+  sospensione lunga ha molti eventi da smaltire; lo schermo (`appletbdrm`, `card0`) c'era già, il servizio della barra
+  non è stato avviato.
+- Prima dello sleep `uvcvideo_t1` era aperto da un programma (sconosciuto): non scaricabile, e `uvcvideo` non poteva
+  registrarsi (`Driver 'uvcvideo' is already registered`). Nessun danno alla sospensione.
+- Correzioni: `TimeoutStartSec=120`/`TimeoutStopSec=120` nell'unit di sospensione; `touchbar-mode keyboard` lascia
+  caricato `uvcvideo_t1` se è in uso (gestisce anche la configurazione 1) e non tenta `modprobe uvcvideo`.
+- Ripristino senza riavvio: `sudo touchbar-mode display` (lo schermo era già in configurazione 2).
+- [NV] Nuova prova di sospensione lunga con le correzioni.
+
 ## Da seguire
 
 Issue #18 (sospensione) e #2 (14,3). Quando la sospensione funzionerà, valutare una prova reversibile su un'installazione

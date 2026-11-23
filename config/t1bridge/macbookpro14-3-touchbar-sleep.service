@@ -8,6 +8,10 @@ StopWhenUnneeded=yes
 [Service]
 Type=oneshot
 RemainAfterExit=yes
+# CachyOS imposta DefaultTimeoutStopSec=10s: al risveglio da una sospensione lunga udev ha molti eventi da
+# smaltire e il ritorno alla modalità display veniva interrotto a metà (barra spenta). Visto il 23/11/2026.
+TimeoutStartSec=120
+TimeoutStopSec=120
 ExecStart=/usr/local/bin/touchbar-mode sleep-pre
 ExecStop=/usr/local/bin/touchbar-mode sleep-post
 

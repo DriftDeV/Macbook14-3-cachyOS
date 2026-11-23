@@ -111,7 +111,11 @@ to_keyboard() {
     user_systemctl stop macbookpro14-3-touchbar-renderer.service macbookpro14-3-webcam.service 2>/dev/null || true
     systemctl stop macbookpro14-3-touchbar-hw.service macbookpro14-3-touchbar-hw.socket 2>/dev/null || true
     mod_loaded appletbdrm && rmmod appletbdrm
-    mod_loaded uvcvideo_t1 && rmmod uvcvideo_t1
+    # uvcvideo_t1 gestisce anche la configurazione 1: se un programma tiene aperta la webcam lo si lascia
+    # caricato (scaricarlo fallirebbe e uvcvideo non potrebbe registrarsi con lo stesso nome).
+    if mod_loaded uvcvideo_t1 && ! rmmod uvcvideo_t1 2>/dev/null; then
+        log "keyboard: webcam in uso, uvcvideo_t1 resta caricato (funziona anche in configurazione 1)"
+    fi
     if [ -e "$STATE/v4l2loopback" ] && [ "$SLEEP_CALL" = 0 ]; then
         rmmod v4l2loopback 2>/dev/null && rm -f "$STATE/v4l2loopback"
     fi
@@ -120,7 +124,7 @@ to_keyboard() {
     log "keyboard: T1 in configurazione 1 e stack della repo"
     [ "$(cat "$usb/bConfigurationValue")" = 1 ] || echo 1 > "$usb/bConfigurationValue"
     sleep 1
-    mod_loaded uvcvideo || modprobe uvcvideo
+    mod_loaded uvcvideo || mod_loaded uvcvideo_t1 || modprobe uvcvideo
     modprobe apple_ibridge && modprobe apple_ib_tb && modprobe apple_ib_als
     systemctl unmask --runtime iio-sensor-proxy.service >/dev/null 2>&1 || true
     systemctl start iio-sensor-proxy.service 2>/dev/null || true
