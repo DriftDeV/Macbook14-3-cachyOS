@@ -22,7 +22,7 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
 |---|---|
 | `install.sh` | installazione su CachyOS già installato; usa sempre `--dry-run` prima |
 | `macos/prepare.sh` | da macOS: backup, download ISO, ridimensiona APFS, crea `COSLIVE` + partizione Linux, estrae ISO |
-| `scripts/` | `lib.sh`, `backup-esp.sh`, `install-touchbar.sh`, `install-audio.sh`, `install-wifi.sh`, `install-wifi-nvram.sh`, `install-sleep.sh`, `sleep-test.sh`, `install-power.sh`, `set-kwin-brightness-curve.sh`, `t1-reenumerate.sh` |
+| `scripts/` | `lib.sh`, `backup-esp.sh`, `install-touchbar.sh`, `install-audio.sh`, `install-wifi.sh`, `install-wifi-nvram.sh`, `install-sleep.sh`, `sleep-test.sh`, `install-power.sh`, `install-bt.sh`, `bt-sco-route.py`, `set-kwin-brightness-curve.sh`, `t1-reenumerate.sh` |
 | `config/` | mkinitcpio, libinput, kde, sleep, power, systemd, udev, tmpfiles, networkmanager, modprobe, `sources.conf` (sorgenti esterne; Touch Bar pinnata) |
 | `pkgs/`, `dkms/` | PKGBUILD (`macbookpro14-3-meta`, `apple-ibridge-dkms`) e `dkms.conf` di riserva |
 | `patches/` | `touchbar/`: port di apple-ibridge a Linux 7.3 + `LLVM=1` automatico; README con le candidate |
@@ -70,6 +70,8 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
   `/etc/libinput/` e funzionante (disabilita durante la digitazione). Vedi `docs/input.md`.
 - **Luminosità automatica [F]**: sensore Touch Bar 0-5000 lux (stanza 1-4); KWin 6.8 la gestisce con una curva
   appresa: `scripts/set-kwin-brightness-curve.sh` scrive una curva di partenza prima di KWin. Provata: 35-100 %.
+- **Bluetooth [F]**: A2DP (AAC) OK; profilo headset (audio + microfono) funziona solo con CVSD dopo `scripts/install-bt.sh` (comando Broadcom
+  SCO via HCI, chip su UART `BCM2E7C`); mSBC muto e disattivato in WirePlumber. Vedi `docs/audio.md`.
 - **GPU [F]**: nessuno switch automatico; schermo e desktop sempre sulla Radeon (`card2`, eDP-2), Intel sospesa e senza eDP
   (`disabling eDP`), Radeon 7-9 W a riposo, runtime PM non disponibile. Opzioni in `docs/gpu.md`.
 - **Consumi [F]** (`docs/power.md`): unica leva netta a riposo = Radeon `manual`+`POWER_SAVING`+PCIe 2,5 GT/s (-1,5 W);

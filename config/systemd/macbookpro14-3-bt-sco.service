@@ -1,0 +1,13 @@
+[Unit]
+Description=Bluetooth Broadcom del MacBookPro14,3: audio delle chiamate (SCO) via HCI
+After=bluetooth.service
+BindsTo=bluetooth.service
+
+[Service]
+Type=oneshot
+# Aspetta che bluetoothd abbia acceso il controller (max 20 s): il comando si perde a ogni reset.
+ExecStartPre=/bin/sh -c 'for i in $(seq 40); do [ -e /sys/class/bluetooth/hci0 ] && bluetoothctl show 2>/dev/null | grep -q "Powered: yes" && exit 0; sleep 0.5; done; exit 0'
+ExecStart=/usr/bin/python3 -I /usr/local/lib/macbookpro14-3/bt-sco-route.py hci0
+
+[Install]
+WantedBy=bluetooth.service

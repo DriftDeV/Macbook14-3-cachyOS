@@ -48,3 +48,27 @@ Il modulo del kernel `snd-hda-codec-cs8409` riconosce il codec ma lo configura i
 - Audio dopo la sospensione s2idle (il fork ha la correzione per S3/ibernazione; in s2idle il codec dovrebbe restare alimentato).
 - Filter-chain PipeWire `dnlbtz/mbp143-audio` (DSP per gli speaker, +35 dB al microfono cuffie): non ancora valutato.
 - Volume del microfono basso (segnalato nel README davidjo).
+
+## Bluetooth audio [F]
+
+- Prova del 23/11/2026 con cuffie Nothing Ear: riproduzione OK in **A2DP con codec AAC** (PipeWire, 48 kHz).
+  Profili offerti: SBC, SBC-XQ, AAC; per le chiamate HSP/HFP con mSBC (banda larga) o CVSD.
+- `libldac` e `libfreeaptx` sono installati ma LDAC/aptX non compaiono: li decide il dispositivo (per LDAC di solito
+  va attivato nell'app del produttore) [I].
+- Il Wi-Fi era a 5 GHz: nessuna contesa con il Bluetooth, che condivide l'antenna con il Wi-Fi a 2,4 GHz.
+- Profilo headset (HSP/HFP): **muto** in partenza. Il Bluetooth è un Broadcom su UART (ACPI `BCM2E7C`, `hci_uart` +
+  `btbcm`, firmware della ROM: `brcm/BCM.hcd` non trovato) che manda l'audio SCO alla sua interfaccia PCM invece che
+  all'host [I].
+- **Correzione [F]**: comando del produttore `Write_SCO_PCM_Int_Param` (OGF 0x3F, OCF 0x001C, parametri
+  `01 02 00 01 01`, routing via HCI) inviato da `scripts/bt-sco-route.py` (socket HCI grezzo, Python, niente
+  `hcitool`). Il chip risponde `0x00`; da lì il profilo headset con **codec CVSD funziona** (audio e microfono),
+  **mSBC resta muto** (servirebbe la modalità wideband speech del chip, non provata).
+- `scripts/install-bt.sh`: servizio `macbookpro14-3-bt-sco` legato a `bluetooth.service` (aspetta che il controller sia
+  acceso, poi invia il comando) + riapplicazione nell'hook di sleep. Il comando si perde a ogni reset del controller.
+- WirePlumber: `config/wireplumber/51-macbookpro14-3-bluetooth.conf` (`bluez5.enable-msbc = false`, installato da
+  `install-bt.sh` in `/etc/wireplumber/wireplumber.conf.d/`). Senza, il profilo `headset-head-unit` predefinito è
+  mSBC, che le app (es. Discord) attivano da sole e resta muto (`link failed` di WirePlumber). Con l'opzione resta un
+  solo profilo headset, con CVSD [F] (verificato su `pactl list cards`). Audio e microfono delle cuffie nel profilo
+  headset confermati dall'utente il 23/11/2026.
+- [NV] Se il comando sopravvive allo spegnimento/riaccensione del Bluetooth da KDE (spegnere il Bluetooth non riavvia
+  `bluetooth.service`).

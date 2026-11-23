@@ -78,6 +78,13 @@ else
     bash "$REPO_DIR/scripts/install-power.sh" || FAILED="$FAILED power"
 fi
 
+step "Bluetooth (audio delle chiamate)"
+if [ "$DRY_RUN" = 1 ]; then
+    bash "$REPO_DIR/scripts/install-bt.sh" --dry-run
+else
+    bash "$REPO_DIR/scripts/install-bt.sh" || FAILED="$FAILED bluetooth"
+fi
+
 if [ -n "$WIFI_FILE" ]; then
     step "Wi-Fi NVRAM"
     bash "$REPO_DIR/scripts/install-wifi-nvram.sh" --file "$WIFI_FILE" || FAILED="$FAILED wifi"

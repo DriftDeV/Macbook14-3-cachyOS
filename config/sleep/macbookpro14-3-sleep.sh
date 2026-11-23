@@ -56,6 +56,9 @@ post() {
         modprobe brcmfmac || log "post $1: ricaricamento brcmfmac fallito"
         rm -f "$STATE/wifi"
     fi
+    # Bluetooth: audio delle chiamate via HCI (scripts/install-bt.sh), se installato.
+    [ -x /usr/local/lib/macbookpro14-3/bt-sco-route.py ] && \
+        python3 -I /usr/local/lib/macbookpro14-3/bt-sco-route.py hci0 >/dev/null 2>&1
     # Riapplica le impostazioni energetiche (scripts/install-power.sh), se installate.
     [ -x /usr/local/lib/macbookpro14-3/power-source.sh ] && /usr/local/lib/macbookpro14-3/power-source.sh
     set -- "$1" /sys/bus/pci/devices/*
