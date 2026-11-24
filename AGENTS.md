@@ -69,8 +69,8 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
   `linux-cachyos` è compilato con clang (serve `LLVM=1`), `linux-cachyos-lts` con gcc.
 - **Sospensione [F]: S3 (`deep`)** + rimozione dei port Thunderbolt `8086:1578` + NVMe senza D3cold. s2idle NON è un vero
   sonno qui (niente S0ix nel firmware: ventole accese, Package C3, risvegli ogni 30-40 min). S3 sul 7.3.5: Radeon riparte,
-  ventole ferme (23/11/2026); attivato solo su kernel >= 7.3 da `macbookpro14-3-sleep-mode.service`. Notte intera [NV]:
-  `scripts/sleep-test.sh report`.
+  ventole ferme (23/11/2026); attivato solo su kernel >= 7.3 da `macbookpro14-3-sleep-mode.service`. Notte intera [F]
+  24/11: 481 min, 17 mAh (~0,03 W), 0 risvegli spontanei, tutto ripartito (`macbook-manager sleep-report`).
 - **Wi-Fi 5 GHz [F] funziona** con `scripts/install-wifi.sh` (dnlbtz/mbp143-wifi v1.1.0: NVRAM dalla SROM + firmware
   patchato): da ~21 a ~290 Mbit/s, -45 dBm. Resta a 40 MHz invece di 80 (ipotesi: regdom IT, vedi `docs/wifi.md`).
 - **Trackpad [F]**: quirk `config/libinput/local-overrides.quirks` (tastiera SPI e Touch Bar interne) installato in
@@ -123,7 +123,6 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
    10 passi dal passo 0: backup ESP con verifica di `FDRData`, solo componenti userspace, **mai `t1bridge-dkms`**, regola
    ufw limitata all'interfaccia del T1, un dito diverso da quelli di macOS, spegnimento completo a ogni cambio di sistema,
    PAM solo per sudo alla fine). Prima da preparare: uno script annullabile `scripts/install-touchid.sh --undo`.
-   Prima ancora, la prova notturna di S3 (`macbook-manager sleep-report`).
 1. Verificare l'avvio live dal disco interno e correggere `prepare.sh` secondo quanto emerge.
 2. Driver Touch Bar e audio anche per il kernel LTS 6.18 (audio: `vendorKernel 6.18`); entrambi i REF sono pinnati.
 3. Filter-chain PipeWire di `dnlbtz/mbp143-audio`; sospensioni lunghe e USB-C collegato in sleep; override `39-usbmuxd.rules`

@@ -79,9 +79,20 @@ Per prudenza S3 si attiva solo sui kernel >= 7.3 (servizio con `ConditionKernelV
 Controllo dopo una notte: `scripts/sleep-test.sh report` (senza root) elenca ogni sospensione con durata, modalità,
 batteria (l'hook scrive % e mAh prima e dopo) e se il Mac si è svegliato **senza** aprire il coperchio.
 
+### Notte intera in S3 [F] (23-24/11/2026)
+
+| Sospensione | Durata | Batteria | Risvegli spontanei |
+|---|---|---|---|
+| coperchio chiuso, 01:32 → 09:33, a batteria | **481 min** | 1845 → 1828 mAh: **17 mAh** (~2 mAh/h, ~0,03 W) | **0** (risveglio solo all'apertura) |
+
+Dati dall'hook (`macbook-manager sleep-report`). Al risveglio [F]: Touch Bar di nuovo in modalità display con renderer
+attivo, Wi-Fi 5 GHz riconnesso, audio, Bluetooth acceso, webcam (`/dev/video0`, `video1`, `video10`), Radeon in
+risparmio, nessun errore del kernel oltre ai soliti messaggi del Wi-Fi. Con s2idle la stessa notte avrebbe avuto
+risvegli ogni 30-40 minuti con ventole accese. A questo ritmo la batteria piena reggerebbe in teoria settimane in
+sospensione (autoscarica e precisione dell'indicatore a parte) [I].
+
 ## Da verificare [NV]
 
-- S3 a lungo (notte, zaino): risvegli spuri e consumo (atteso molto più basso di s2idle).
 
 - Kernel LTS 6.18.
 - Periferiche USB-C/Thunderbolt collegate durante lo sleep (la fonte dice che possono sparire fino al prossimo sleep).
