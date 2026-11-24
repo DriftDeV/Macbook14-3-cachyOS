@@ -84,6 +84,8 @@ batteria (l'hook scrive % e mAh prima e dopo) e se il Mac si è svegliato **senz
 | Sospensione | Durata | Batteria | Risvegli spontanei |
 |---|---|---|---|
 | coperchio chiuso, 01:32 → 09:33, a batteria | **481 min** | 1845 → 1828 mAh: **17 mAh** (~2 mAh/h, ~0,03 W) | **0** (risveglio solo all'apertura) |
+| coperchio chiuso, 24/11 12:06 → 14:13, con Touch ID attivo | 127 min | 5324 → 5316 mAh: **8 mAh** (~4 mAh/h) | **0** |
+| coperchio chiuso, 24/11 14:13 → 17:53, con Touch ID attivo | 219 min | 5302 → 5292 mAh: **10 mAh** (~3 mAh/h) | **0** |
 
 Dati dall'hook (`macbook-manager sleep-report`). Al risveglio [F]: Touch Bar di nuovo in modalità display con renderer
 attivo, Wi-Fi 5 GHz riconnesso, audio, Bluetooth acceso, webcam (`/dev/video0`, `video1`, `video10`), Radeon in
