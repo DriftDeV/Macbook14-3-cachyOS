@@ -4,9 +4,9 @@ Tutto quello che serve per usare **CachyOS** (Arch) sul **MacBookPro14,3**: 15" 
 Intel i7 Kaby Lake, Radeon Pro 555/560, **senza chip T2**. Un solo script di post-installazione applica i
 passaggi provati su questa macchina: driver DKMS, patch, configurazioni, servizi.
 
-> **Stato (23 novembre 2026):** provato su un MacBookPro14,3 reale con CachyOS, kernel `7.3.5-2-cachyos`
-> (clang + ThinLTO), KDE Plasma 6.8 Wayland. Quasi tutto funziona; restano limiti veri (Touch ID, ibernazione,
-> consumo della Radeon). È un progetto personale, scritto con l'aiuto di un assistente IA e provato su **una sola
+> **Stato (24 novembre 2026):** provato su un MacBookPro14,3 reale con CachyOS, kernel `7.3.5-2-cachyos`
+> (clang + ThinLTO), KDE Plasma 6.8 Wayland. Quasi tutto funziona, **Touch ID compreso** (in modalità display);
+> restano limiti veri (ibernazione, consumo della Radeon). È un progetto personale, scritto con l'aiuto di un assistente IA e provato su **una sola
 > macchina**: leggi gli script prima di usarli. I dettagli di ogni componente sono in [`docs/`](docs/README.md).
 
 ![Touch Bar in modalità display: renderer fnstrip con il tema OLED](docs/media/touchbar-oled.png)
@@ -21,7 +21,7 @@ della tastiera, media, volume. Screenshot reale a 2170×60, catturato con *Touch
 |---|---|---|---|
 | Tastiera e trackpad | ✅ | `applespi` (kernel) + quirk libinput | il trackpad si disattiva mentre scrivi ([input](docs/input.md)) |
 | Touch Bar, modalità **tastiera** | ✅ | `apple-ibridge` (fork nonderbe `t1-fixes`) + 3 patch nostre, DKMS | i tasti disegnati dal firmware, come in Boot Camp ([touchbar](docs/touchbar.md)) |
-| Touch Bar, modalità **display** | ✅ facoltativa | driver e servizi di [T1Bridge](https://github.com/standardagents/t1bridge) compilati da sorgente | grafica, cursori, temi, renderer [fnstrip](https://github.com/acmccubbin/fnstrip) ([t1bridge](docs/t1bridge.md)) |
+| Touch Bar, modalità **display** | ✅ predefinita | driver e servizi di [T1Bridge](https://github.com/standardagents/t1bridge) compilati da sorgente | grafica, cursori, temi, renderer [fnstrip](https://github.com/acmccubbin/fnstrip) ([t1bridge](docs/t1bridge.md)); necessaria per Touch ID |
 | Tasti funzione e multimediali | ✅ | Touch Bar | luminosità, tastiera, volume, media, F1-F12 con Fn |
 | Sensore di luce + luminosità automatica | ✅ | `apple-ib-als` / `hid_sensor_als` → `iio-sensor-proxy` → KWin | serve una curva di partenza: il sensore legge poco in luce ambiente |
 | Audio: speaker, cuffie, microfono interno e cuffie | ✅ | codec **CS8409**, driver davidjo (fork dnlbtz), DKMS | ([audio](docs/audio.md)) |
@@ -36,7 +36,7 @@ della tastiera, media, volume. Screenshot reale a 2170×60, catturato con *Touch
 | Kernel LTS (`linux-cachyos-lts`) | ❓ | | mai avviato; DKMS compila la Touch Bar in modalità tastiera, non l'audio né la modalità display |
 | Ibernazione | ❌ | | `amdgpu` non riparte (serve una patch non ancora nel kernel) |
 | Spegnere la Radeon | ❌ | | 7-9 W anche a riposo, è la causa principale dell'autonomia ridotta |
-| Touch ID | ❌ | | T1Bridge lo supporta, ma non è integrato (richiede la modalità display e dati Apple) |
+| Touch ID | ✅ solo in modalità display | servizi Touch ID di T1Bridge + libfprint/fprintd patchati, dati di fabbrica dalla ESP Apple | registrazione, verifica, sudo, schermata di blocco, dopo la sospensione (~10 s per tornare pronto). **Non disponibile in modalità tastiera** (il T1 espone il Secure Enclave solo nella configurazione USB 2). Limite noto: ~68 riconoscimenti per avvio, poi serve uno spegnimento completo ([touchid](docs/touchid-t1.md)) |
 
 ## 1. Installare CachyOS su questo Mac
 
@@ -78,7 +78,7 @@ Su CachyOS appena installato (collegato all'alimentatore, Wi-Fi 2,4 GHz già fun
 sudo pacman -Syu        # poi riavvia: il kernel in uso deve essere quello installato
 git clone https://github.com/DriftDeV/Macbook14-3-cachyOS && cd Macbook14-3-cachyOS
 sudo ./install.sh --dry-run     # mostra cosa farà
-sudo ./install.sh               # chiede la modalità della Touch Bar
+sudo ./install.sh               # chiede la modalità della Touch Bar (predefinita: display, con Touch ID)
 ```
 
 Alla fine **spegni completamente** il Mac, aspetta ~30 secondi e riaccendi (il T1 riparte pulito).
@@ -96,15 +96,16 @@ Alla fine **spegni completamente** il Mac, aspetta ~30 secondi e riaccendi (il T
 | `power` | a batteria Radeon in risparmio e CPU senza turbo; piena potenza con l'alimentatore |
 | `bluetooth` | audio delle chiamate (SCO via HCI), mSBC disattivato in WirePlumber |
 | `brightness` | curva di partenza della luminosità automatica di KWin |
-| `touchbar-display` | solo se scegli la modalità display: compila T1Bridge, installa driver e servizi (e fnstrip) |
+| `touchbar-display` | modalità display (predefinita): compila T1Bridge, installa driver e servizi (e fnstrip) |
+| `touchid` | solo in modalità display: servizi Touch ID di T1Bridge, rete privata del T1, libfprint/fprintd, regola ufw per xART, interruttori PAM (`touchid-pam`); sudo e schermata di blocco restano con la password finché non li attivi |
 | `manager` | MacBook Manager: GUI e icona nella barra di sistema con stato e azioni rapide ([manager/README.md](manager/README.md)) |
 | `wifi` | per ultimo (la connessione cade ~20 s): NVRAM dal chip, firmware, impostazioni NetworkManager |
 
 Opzioni utili:
 
 ```bash
-sudo ./install.sh --yes --touchbar keyboard         # senza domande, Touch Bar come in Boot Camp
-sudo ./install.sh --yes --touchbar display --fnstrip
+sudo ./install.sh --yes --fnstrip                   # senza domande: display, Touch ID, fnstrip
+sudo ./install.sh --yes --touchbar keyboard         # Touch Bar come in Boot Camp, niente Touch ID
 sudo ./install.sh --only audio,bluetooth            # rifà solo alcuni passi
 sudo ./install.sh --skip wifi
 ```
@@ -120,6 +121,7 @@ Touch Bar, sospensione, Wi-Fi, batteria e temperature, con le azioni qui sotto a
 
 | Cosa | Comando |
 |---|---|
+| Touch ID (modalità display) | dopo il primo riavvio: `sudo scripts/install-touchid.sh import`; registra un dito da **Impostazioni di sistema → Utenti** (o MacBook Manager → Azioni → Touch ID); prova con `fprintd-verify`; sudo e schermata di blocco: MacBook Manager → Azioni → Touch ID, oppure `sudo touchid-pam sudo on`, `sudo touchid-pam lockscreen on`; rollback: `sudo scripts/install-touchid.sh undo` |
 | Modalità della Touch Bar | `sudo touchbar-mode status` · `sudo touchbar-mode set display` · `sudo touchbar-mode set keyboard` (salva; attiva dopo uno spegnimento completo, l'unico modo di azzerare il T1) |
 | Webcam per Discord/browser (modalità display) | `t1-webcam on` / `t1-webcam off`, poi scegli "T1 camera (Discord)" |
 | Screenshot/video della Touch Bar (modalità display) | MacBook Manager → Touch Bar → **Touch Bar in diretta…**, oppure `macbook-manager touchbar-screenshot` |
@@ -141,6 +143,11 @@ Touch Bar, sospensione, Wi-Fi, batteria e temperature, con le azioni qui sotto a
   hanno sorgenti solo per la serie 7.3: con una serie nuova servirà aggiornarli (la Touch Bar torna in modalità
   tastiera da sola se la modalità display non compila).
 - **`usbmuxd`** (iPhone): la sua regola udev può spegnere il T1; gli script avvisano se lo trovano.
+- **Touch ID non riconosce più il dito** dopo un uso intenso: è il limite di ~68 riconoscimenti per avvio di T1Bridge
+  (issue #14; il contatore è in MacBook Manager). Si sblocca con la password; per riaverlo serve uno spegnimento
+  completo. Con l'impronta nella schermata di blocco il limite arriva prima. Dopo la sospensione Touch ID torna pronto
+  in ~10 s: la schermata di blocco riprova da sola.
+- **Touch ID in modalità tastiera**: non disponibile. Si torna alla modalità display con `sudo touchbar-mode set display`.
 
 ## Struttura della repo
 

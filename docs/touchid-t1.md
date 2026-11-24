@@ -66,6 +66,27 @@ Fonti: [architecture.md](https://github.com/standardagents/t1bridge/blob/81cbdf8
 
 Il release gate del progetto lascia aperte prove essenziali: duplicati, dita piene, cancellazione sui pacchetti pubblicati, password di ripiego con il broker spento per Polkit e schermata di blocco, validazione del peer xART tra macchine diverse. I test di fallback sono dichiaratamente sintetici ([release-gate/v1.md](https://github.com/standardagents/t1bridge/blob/v0.1.12/docs/release-gate/v1.md); [security-review/v1.md](https://github.com/standardagents/t1bridge/blob/v0.1.12/docs/security-review/v1.md)) [F]. Il disegno è prudente: fallisce chiuso, tiene lo stato in `0700 root` e non modifica il PAM. Non esiste però un audit esterno [F/I].
 
+## Prova sul 14,3 del 24/11/2026: Touch ID funziona [F]
+
+Con `scripts/install-touchid.sh`, kernel `7.3.5-2-cachyos` (clang), KDE Plasma 6.8, Touch Bar in modalità display.
+
+| Passo | Esito |
+|---|---|
+| Installazione | riuscita dopo tre correzioni allo script: fprintd si compila solo con libfprint-t1bridge già installata; `pod2man` sta in `/usr/bin/core_perl` (PATH completo); la regola udev di T1Bridge **non avvia xART sull'evento reale** (la rete nasce `eth0` e udev la rinomina `t1ncm`; `udevadm test` invece produce `SYSTEMD_WANTS`) → lo avvia `touchbar-mode` a ogni passaggio in display |
+| Rete `t1ncm` | il file `.link` la rinomina; regola ufw solo su `t1ncm` e dal peer: nessun blocco su 61500 nel log di ufw |
+| Import dei dati di fabbrica | riuscito dal backup della ESP (`EFI-APPLE-…/EMBEDDEDOS/FDRData`) |
+| Prima registrazione | fallita: `t1bridge keybag: prepare device keybag failed` (6 s dopo l'avvio del broker); la seconda, subito dopo, **riuscita** (5 stadi) e la keybag è stata creata; poi il relay parte da solo |
+| Verifica | `verify-match` con il dito registrato, `verify-no-match` con un altro |
+| Sospensione S3 (2→1→2) | `touchbar-mode` ferma il relay prima della configurazione 1; al risveglio xART e relay ripartono; verifica riuscita |
+| sudo | `pam_fprintd` `sufficient` (`touchid-pam sudo on`): riuscito con il dito, password come ripiego |
+| Schermata di blocco KDE | riuscita (`touchid-pam lockscreen on`). Dopo la sospensione kscreenlocker riprova l'impronta ogni ~3 s finché Touch ID è pronto |
+| Tempi dopo il risveglio | prima: grafica +12,8 s, xART +14,7 s, relay +15,6 s, sblocco ~+19,7 s (`udevadm settle` al limite di 10 s, xART avviato dopo la grafica). Dopo la correzione di `touchbar-mode` (xART appena compare `t1ncm`, niente settle): grafica +7,7 s, xART +9,0 s, relay +9,9 s, sblocco ~+12,5 s. Resta il ritardo di udev nel rinominare la rete (~+7 s) |
+| Registrazione da KDE | Impostazioni di sistema → Utenti ha il supporto impronte (fprintd) [I: parole chiave di `kcm_users`]; usata dall'utente per un secondo dito [NV: da confermare] |
+| Ogni riconoscimento | ferma e riavvia il relay (journal): conta per il limite di ~68 per avvio (#14), mostrato da MacBook Manager |
+
+Ancora da provare [NV]: riavvio di Linux con le impronte salvate; **spegnimento → macOS (Touch ID di macOS intatto?
+quante dita?) → ritorno a Linux**; un giorno intero di uso con la schermata di blocco (limite #14).
+
 ## Su questa macchina metà dello stack c'è già, i rischi stanno nel dual boot e nello sleep
 
 ### Cosa c'è e cosa manca
@@ -91,6 +112,17 @@ T1Bridge dichiara la sospensione 🔴 ([README](https://github.com/standardagent
 Su questa macchina `ufw` è attivo con `DEFAULT_INPUT_POLICY="DROP"`, `IPV6=yes` e nessuna regola per la 61500 (`/etc/default/ufw`) [F, locale]. È esattamente la configurazione che ha fatto fallire i primi 14,3 [F]. La regola va limitata a interfaccia e peer, come `ufw allow in on <if_apple_t1_ncm> proto tcp from fe80::aede:48ff:fe33:4455 to any port 61500`, mai globale ([#2](https://github.com/standardagents/t1bridge/issues/2)) [F]. È fragile perché legata al nome dell'interfaccia, effimero (spesso `eth0`) e possibilmente diverso dopo un passaggio di configurazione [I]. La validazione del peer su macchine diverse è ancora aperta [F]. Sul PAM la sorpresa è già in casa: `/usr/lib/pam.d/kde-fingerprint` contiene `-auth required pam_fprintd.so` dopo `pam_faillock.so preauth` [F, locale]. Appena si installa fprintd, la schermata di blocco KDE offre l'impronta senza toccare alcun file [I]. Così ogni blocco schermo consuma il budget di #14 e un broker guasto rischia di innescare `pam_faillock` [I].
 
 ### Procedura di prova reversibile
+
+> **Script pronto (24/11/2026): [`scripts/install-touchid.sh`](../scripts/install-touchid.sh)** [F: `bash -n`, shellcheck,
+> `--dry-run` di installazione e rollback; mai eseguito davvero]. Copre i passi 1-4 (`install`), 5 (`status`), 6 (`import`,
+> dal backup più recente in `/var/backups/macbookpro14-3`) e il rollback (`undo`); i passi 7-10 restano a mano e lo script
+> li stampa alla fine. Scelte rispetto alla tabella: la rete del T1 prende il nome fisso **`t1ncm`** con
+> `config/t1bridge/touchid/49-macbookpro14-3-t1ncm.link`, così la regola ufw (solo `t1ncm`, solo da
+> `fe80::aede:48ff:fe33:4455`) non dipende dal nome del kernel [NV: che `$name` nella regola udev di T1Bridge veda già il
+> nuovo nome; lo script avvisa se la rinomina non avviene]. Il driver di rete è il DKMS `dkms/t1bridge-ncm` (sorgente
+> invariato, compilato e provato qui per 7.3.5 con `LLVM=1`). libfprint/fprintd sono costruiti con `makepkg --nocheck` dai
+> PKGBUILD di T1Bridge. `touchbar-mode` ferma broker e relay prima di passare alla configurazione 1 (passo 4).
+> Fuori dallo script, di proposito: `install.sh` non lo lancia; nessun file PAM di sudo/Polkit viene toccato.
 
 Tutti i comandi root li esegue l'utente nel pannello Terminale o in Konsole. Ogni passo ha una condizione di arresto [I].
 

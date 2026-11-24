@@ -314,7 +314,52 @@ def energy():
     return items
 
 
-COLLECTORS = [drivers, touchbar, sleep, wifi, battery, energy]
+# --- Touch ID (scripts/install-touchid.sh) ----------------------------------------------------------
+
+TOUCHID_PAM = "/usr/local/bin/touchid-pam"
+PAM_MARKS = ("# macbookpro14-3 touchid-pam", "scripts/install-touchid.sh")
+RELAY_LIMIT = 68  # blocco osservato da due tester (T1Bridge issue #14), si recupera solo con lo spegnimento completo
+
+
+def touchid_lockscreen_on():
+    return not any(m in (_read("/etc/pam.d/kde-fingerprint", "") or "") for m in PAM_MARKS)
+
+
+def touchid_sudo_on():
+    return PAM_MARKS[0] in (_read("/etc/pam.d/sudo", "") or "")
+
+
+def relay_activations():
+    out = _run(["journalctl", "-b", "--no-pager", "-q", "-u", "t1bridge-keybag.service"], timeout=10)
+    return out.count("Started T1Bridge existing-keybag")
+
+
+def touchid():
+    if not os.path.exists(TOUCHID_PAM):
+        return []
+    items = []
+    if touchbar_mode() != "display":
+        items.append(_item("Touch ID", "touchid", "Servizi", "fermi (serve la modalità display)", INFO,
+                           "Touch ID usa la configurazione USB 2 del T1."))
+    else:
+        xart = system_unit_active("t1-xart-storage@t1ncm.service")
+        relay = system_unit_active("t1bridge-keybag.service")
+        val = "xART %s, relay %s" % ("attivo" if xart else "fermo", "attivo" if relay else "fermo")
+        lvl = OK if xart and relay else (WARN if xart else ERR)
+        items.append(_item("Touch ID", "touchid", "Servizi", val, lvl,
+                           "" if xart else "xART fermo: il passaggio in modalità display lo riavvia (touchbar-mode)."))
+    n = _cached("relay", 60, relay_activations)
+    lvl = ERR if n >= RELAY_LIMIT - 3 else WARN if n >= 50 else INFO
+    items.append(_item("Touch ID", "relaycount", "Attivazioni del relay", "%d in questo avvio (blocco a ~%d)" % (n, RELAY_LIMIT),
+                       lvl, "" if lvl == INFO else "Vicino al limite della issue #14: se l'impronta smette di funzionare "
+                       "serve uno spegnimento completo. La password resta valida."))
+    items.append(_item("Touch ID", "tid-lock", "Schermata di blocco", "impronta attiva" if touchid_lockscreen_on() else
+                       "solo password", INFO, "Ogni sblocco con l'impronta consuma un'attivazione del relay."))
+    items.append(_item("Touch ID", "tid-sudo", "sudo", "impronta o password" if touchid_sudo_on() else "solo password", INFO))
+    return items
+
+
+COLLECTORS = [drivers, touchbar, touchid, sleep, wifi, battery, energy]
 
 
 def collect():

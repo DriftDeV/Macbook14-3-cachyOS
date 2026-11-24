@@ -1,21 +1,22 @@
 #!/usr/bin/env bash
 # Post-installazione per MacBookPro14,3 (15" 2017, Touch Bar T1) su CachyOS appena installato.
 # Applica, nell'ordine, i passaggi provati su questa macchina (vedi README e docs/):
-#   backup ESP Apple + firmware T1 -> pacchetti -> trackpad -> Touch Bar (modalità tastiera) -> audio ->
-#   sospensione -> energia -> Bluetooth -> luminosità automatica -> [Touch Bar in modalità display] ->
-#   MacBook Manager (GUI, icona nella barra di sistema) -> Wi-Fi
+#   backup ESP Apple + firmware T1 -> pacchetti -> trackpad -> Touch Bar (modalità tastiera, base) -> audio ->
+#   sospensione -> energia -> Bluetooth -> luminosità automatica -> Touch Bar in modalità display (predefinita) ->
+#   Touch ID (solo in modalità display) -> MacBook Manager (GUI, icona nella barra di sistema) -> Wi-Fi
 # Prima: sudo pacman -Syu e un riavvio (il kernel in uso deve essere quello installato).
 #
 #   sudo ./install.sh --dry-run          mostra cosa farebbe
-#   sudo ./install.sh                    interattivo (chiede la modalità della Touch Bar)
-#   sudo ./install.sh --yes --touchbar display --fnstrip
+#   sudo ./install.sh                    interattivo (chiede la modalità della Touch Bar, predefinita display)
+#   sudo ./install.sh --yes --fnstrip    tutto, Touch Bar in display con Touch ID e fnstrip
+#   sudo ./install.sh --yes --touchbar keyboard   Touch Bar come Boot Camp (niente Touch ID)
 #   sudo ./install.sh --only audio,bluetooth      rifà solo alcuni passi (si può rilanciare)
 set -euo pipefail
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/lib.sh
 source "$REPO_DIR/scripts/lib.sh"
 
-STEPS="backup packages input touchbar audio sleep power bluetooth brightness touchbar-display manager wifi"
+STEPS="backup packages input touchbar audio sleep power bluetooth brightness touchbar-display touchid manager wifi"
 LOG=/var/log/macbookpro14-3-install.log
 TOUCHBAR_CHOICE=""      # keyboard | display
 FNSTRIP=""              # yes | no
@@ -27,9 +28,9 @@ usage() {
     cat <<EOF
 Uso: sudo ./install.sh [opzioni]
   --dry-run                 mostra cosa verrebbe fatto, senza modificare nulla
-  --yes                     non chiedere niente (Touch Bar: keyboard, salvo --touchbar)
-  --touchbar keyboard       Touch Bar con i tasti del firmware (come Boot Camp), predefinita
-  --touchbar display        Touch Bar disegnata da T1Bridge (grafica, cursori, temi)
+  --yes                     non chiedere niente (Touch Bar: display con Touch ID, salvo --touchbar)
+  --touchbar display        Touch Bar disegnata da T1Bridge (grafica, cursori, temi) + Touch ID, predefinita
+  --touchbar keyboard       Touch Bar con i tasti del firmware (come Boot Camp): niente Touch ID
   --fnstrip | --no-fnstrip  con display: installa il renderer fnstrip (temi, grafici)
   --only PASSI              solo questi passi (separati da virgole)
   --skip PASSI              salta questi passi
@@ -97,23 +98,23 @@ as_user() {
 # ------------------------------------------------------------------ scelte
 if wanted touchbar-display && [ -z "$TOUCHBAR_CHOICE" ]; then
     if [ "$ASSUME_YES" = 1 ] || [ ! -t 0 ]; then
-        TOUCHBAR_CHOICE=keyboard
+        TOUCHBAR_CHOICE=display
     else
         cat <<'EOF'
 
 Modalità della Touch Bar:
-  1) keyboard  tasti disegnati dal firmware del T1 (come in Boot Camp): Esc, F1-F12, luminosità,
-               volume, media. La più provata: funziona anche dopo la sospensione e con ogni kernel.
-  2) display   grafica di T1Bridge: cursori, temi, renderer personalizzati (fnstrip). La webcam passa
-               in H.264 (Discord con "t1-webcam on"). Prima e dopo la sospensione passa da sola alla
-               modalità tastiera. Richiede Rust e compila da sorgente (~5 minuti).
+  1) display   (predefinita) grafica di T1Bridge: cursori, temi, renderer personalizzati (fnstrip) e
+               Touch ID (sudo, schermata di blocco). La webcam passa in H.264 (Discord con "t1-webcam on").
+               Durante la sospensione passa da sola alla modalità tastiera. Compila da sorgente (~10 minuti).
+  2) keyboard  tasti disegnati dal firmware del T1 (come in Boot Camp): Esc, F1-F12, luminosità,
+               volume, media. Niente Touch ID: in questa modalità il T1 non espone il Secure Enclave.
 Si cambia in seguito con: sudo touchbar-mode set keyboard|display
 EOF
         read -r -p "Scelta [1/2, predefinita 1]: " a
-        case "$a" in 2|display) TOUCHBAR_CHOICE=display ;; *) TOUCHBAR_CHOICE=keyboard ;; esac
+        case "$a" in 2|keyboard) TOUCHBAR_CHOICE=keyboard ;; *) TOUCHBAR_CHOICE=display ;; esac
     fi
 fi
-[ -n "$TOUCHBAR_CHOICE" ] || TOUCHBAR_CHOICE=keyboard
+[ -n "$TOUCHBAR_CHOICE" ] || TOUCHBAR_CHOICE=display
 if [ "$TOUCHBAR_CHOICE" = display ] && [ -z "$FNSTRIP" ]; then
     if [ "$ASSUME_YES" = 1 ] || [ ! -t 0 ]; then FNSTRIP=no
     else confirm "Installare anche fnstrip (temi, cursori, grafici di sistema sulla Touch Bar)?" && FNSTRIP=yes || FNSTRIP=no
@@ -200,6 +201,14 @@ step_touchbar_display() {
     log "Modalità display salvata: parte al prossimo avvio."
 }
 
+step_touchid() {
+    if [ "$TOUCHBAR_CHOICE" != display ]; then
+        log "Modalità tastiera: Touch ID non disponibile (serve la configurazione USB 2 del T1, cioè la modalità display)."
+        return 0
+    fi
+    sub install-touchid.sh
+}
+
 step_wifi() {
     if [ -n "$WIFI_FILE" ]; then
         sub install-wifi-nvram.sh --file "$WIFI_FILE"
@@ -233,6 +242,7 @@ run_step power "Energia (batteria/alimentatore)" step_power
 run_step bluetooth "Bluetooth (audio delle chiamate)" step_bluetooth
 run_step brightness "Luminosità automatica (curva KWin)" step_brightness
 run_step touchbar-display "Touch Bar, modalità display (T1Bridge)" step_touchbar_display
+run_step touchid "Touch ID (T1Bridge: rete privata, xART, broker, fprintd)" step_touchid
 run_step manager "MacBook Manager (stato e azioni rapide, GUI)" step_manager
 run_step wifi "Wi-Fi 5 GHz (NVRAM dal chip)" step_wifi
 
@@ -247,6 +257,8 @@ ok "Fatto. Ora SPEGNI completamente il Mac, aspetta ~30 s e riaccendi (il T1 rip
 cat <<'EOF'
 Dopo il riavvio, controlli rapidi:
   macbook-manager status                        # tutto in una schermata (o apri "MacBook Manager" dal menu)
+  sudo scripts/install-touchid.sh import        # solo display: dati di fabbrica del sensore, poi registra un dito
+                                                # (Impostazioni di sistema > Utenti, o MacBook Manager > Azioni)
   dkms status                                   # appleibridge, snd_hda_macbookpro (+ t1bridge-* in modalità display)
   grep Subsystem /proc/asound/card*/codec#0     # 0x106b3900 = audio a posto
   iw dev wlan0 link                             # 5 GHz se il router li offre

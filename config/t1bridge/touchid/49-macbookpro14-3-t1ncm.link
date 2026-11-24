@@ -1,0 +1,10 @@
+# Nome fisso "t1ncm" per la rete privata del T1 (Touch ID), così la regola ufw per xART (TCP 61500, solo da
+# fe80::aede:48ff:fe33:4455) resta valida a ogni avvio e risveglio. Precede 50-t1bridge-ncm.link di T1Bridge
+# (non installato) e ne riprende le proprietà: niente NetworkManager su questa interfaccia.
+[Match]
+Driver=apple_t1_ncm
+Type=ether
+
+[Link]
+Name=t1ncm
+Property=ID_NET_MANAGED_BY=org.t1bridge NM_UNMANAGED=1

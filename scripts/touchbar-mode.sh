@@ -44,6 +44,21 @@ t1_usb() {
 }
 current_mode() { cat "$STATE/mode" 2>/dev/null || echo keyboard; }
 
+# Touch ID (scripts/install-touchid.sh): la rete privata del T1 (t1ncm) nasce con la configurazione 2. La regola udev di
+# T1Bridge non avvia xART sull'evento reale (eth0 rinominata t1ncm, visto il 24/11/2026): lo avviamo noi appena compare
+# l'interfaccia, in parallelo all'attesa dello schermo della barra, senza bloccare avvio e risveglio. Il relay della
+# keybag parte con xART (Wants). La schermata di blocco di KDE riprova l'impronta ogni ~3 s finché Touch ID è pronto.
+touchid_installed() { [ -e /etc/systemd/system/t1-xart-storage@.service ]; }
+touchid_kick() {
+    [ "${TID_STARTED:-0}" = 0 ] && touchid_installed && [ -e /sys/class/net/t1ncm ] || return 0
+    if systemctl start --no-block t1-xart-storage@t1ncm.service; then
+        TID_STARTED=1; log "Touch ID: avvio xART su t1ncm"
+    else
+        TID_STARTED=1; log "Touch ID: xART non avviato"
+    fi
+    return 0
+}
+
 to_display() {
     local usb card c
     usb="$(t1_usb)" || { log "T1 (05ac:8600) non trovato (05ac:1281 = recovery: spegnimento completo)"; return 1; }
@@ -79,7 +94,9 @@ to_display() {
     log "display: T1 in configurazione 2"
     [ "$(cat "$usb/bConfigurationValue")" = 2 ] || echo 2 > "$usb/bConfigurationValue"
     card=""
+    TID_STARTED=0
     for _ in $(seq 40); do
+        touchid_kick
         for c in /sys/class/drm/card*; do
             [ "$(basename "$(readlink "$c/device/driver" 2>/dev/null)")" = appletbdrm ] && card="$c" && break 2
         done
@@ -89,9 +106,11 @@ to_display() {
     # Il servizio dipende da dev-dri-touchbar.device, che systemd conosce solo se l'ultimo evento udev
     # dello schermo è passato dalla nostra regola (TAG+="systemd"): rielabora l'evento (come un rebind)
     # e aspetta il dispositivo, invece di restare appeso sull'avvio del servizio.
+    # Niente "udevadm settle": al risveglio udev resta occupato con le altre interfacce del T1 e settle arrivava al
+    # limite di 10 s (24/11/2026); si aspetta solo il dispositivo che serve.
     udevadm trigger --action=change "$card"
-    udevadm settle -t 10 || true
-    for _ in $(seq 20); do
+    for _ in $(seq 60); do
+        touchid_kick
         systemctl -q is-active dev-dri-touchbar.device && break
         sleep 0.25
     done
@@ -101,6 +120,10 @@ to_display() {
     # Sensore di luce: in configurazione 2 lo espone hid_sensor_als (driver del kernel).
     systemctl unmask --runtime iio-sensor-proxy.service >/dev/null 2>&1 || true
     systemctl start iio-sensor-proxy.service 2>/dev/null || true
+    if touchid_installed && [ "$TID_STARTED" = 0 ]; then
+        for _ in $(seq 20); do touchid_kick; [ "$TID_STARTED" = 1 ] && break; sleep 0.25; done
+        [ "$TID_STARTED" = 1 ] || log "Touch ID: rete t1ncm non comparsa (modulo apple_t1_ncm?)"
+    fi
     echo display > "$STATE/mode"
     touch "$STATE/display" "$STATE/display-this-boot"   # il secondo resta fino al riavvio (barra spenta in keyboard)
     user_systemctl start macbookpro14-3-touchbar-renderer.service || log "renderer non avviato"
@@ -112,6 +135,12 @@ to_keyboard() {
     usb="$(t1_usb)" || { log "T1 (05ac:8600) non trovato"; return 1; }
     log "keyboard: fermo renderer, webcam virtuale e servizio Touch Bar"
     rm -f "$STATE/display"
+    # Touch ID (scripts/install-touchid.sh): broker e relay della keybag si fermano in modo pulito prima che la
+    # configurazione 1 tolga rete privata e Secure Enclave; xART si ferma da solo con l'interfaccia (BindsTo) e al
+    # ritorno in configurazione 2 udev lo riavvia, insieme al relay.
+    if [ -e /etc/systemd/system/t1-touchid-auth.service ]; then
+        systemctl stop t1-touchid-auth.service t1bridge-keybag.service 2>/dev/null || true
+    fi
     user_systemctl stop macbookpro14-3-touchbar-renderer.service macbookpro14-3-webcam.service 2>/dev/null || true
     systemctl stop macbookpro14-3-touchbar-hw.service macbookpro14-3-touchbar-hw.socket 2>/dev/null || true
     mod_loaded appletbdrm && rmmod appletbdrm

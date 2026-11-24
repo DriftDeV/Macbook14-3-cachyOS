@@ -63,6 +63,14 @@ chiudendo la finestra tutto viene rimosso. Solo in modalità display con fnstrip
 Limite: fnstrip invia un fotogramma solo quando qualcosa cambia; all'apertura, finché la barra è ferma, la finestra chiede
 di toccarla (o di cambiare volume/luminosità). Poi mostra sempre l'ultimo, che è quello sullo schermo.
 
+## Touch ID (modalità display, dopo `scripts/install-touchid.sh`)
+
+Scheda **Stato**, gruppo Touch ID: servizi (xART, relay della keybag), **attivazioni del relay in questo avvio** (giallo da
+50, rosso da 65: T1Bridge si blocca a ~68 per avvio, issue #14) e stato di sudo e schermata di blocco. Scheda **Azioni**:
+impronta per sudo sì/no, impronta nella schermata di blocco sì/no (con avviso sul limite), **Gestisci impronte** (apre
+Impostazioni di sistema → Utenti, dove si registrano e cancellano le dita), **Prova impronta** (`fprintd-verify`, esito nel
+registro), **Impronte registrate** (`fprintd-list`). Gli interruttori usano `/usr/local/bin/touchid-pam`.
+
 ## Azioni (`macbook-manager actions`, `macbook-manager run <id>`)
 
 | Gruppo | Azioni |

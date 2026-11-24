@@ -15,6 +15,7 @@ _webcam = lambda: status.user_unit_active("macbookpro14-3-webcam.service")  # no
 
 TBMODE = "/usr/local/bin/touchbar-mode"
 POWER_APPLY = [LIBDIR + "/power-source.sh"]
+TIDPAM = "/usr/local/bin/touchid-pam"
 
 ACTIONS = [
     # Touch Bar
@@ -32,6 +33,23 @@ ACTIONS = [
          steps=[["/usr/local/bin/t1-webcam", "on"]], active=_webcam, needs=["/usr/local/bin/t1-webcam"]),
     dict(id="webcam-off", group="Touch Bar", label="Webcam virtuale spenta", root=False,
          steps=[["/usr/local/bin/t1-webcam", "off"]], active=lambda: not _webcam(), needs=["/usr/local/bin/t1-webcam"]),
+    # Touch ID (scripts/install-touchid.sh, interruttori /usr/local/bin/touchid-pam)
+    dict(id="touchid-kde", group="Touch ID", label="Gestisci impronte (Impostazioni di KDE)", root=False,
+         steps=[["sh", "-c", "setsid -f systemsettings kcm_users >/dev/null 2>&1"]], needs=[TIDPAM, "/usr/bin/systemsettings"]),
+    dict(id="touchid-verify", group="Touch ID", label="Prova impronta (appoggia il dito)", root=False,
+         steps=[["fprintd-verify"]], needs=[TIDPAM, "/usr/bin/fprintd-verify"]),
+    dict(id="touchid-list", group="Touch ID", label="Impronte registrate", root=False,
+         steps=[["fprintd-list", "@USER@"]], needs=[TIDPAM, "/usr/bin/fprintd-list"]),
+    dict(id="touchid-lock-on", group="Touch ID", label="Impronta nella schermata di blocco", root=True,
+         steps=[[TIDPAM, "lockscreen", "on"]], needs=[TIDPAM], active=lambda: status.touchid_lockscreen_on(),
+         confirm="Ogni sblocco con l'impronta consuma un'attivazione del relay: dopo ~68 in un avvio Touch ID si blocca "
+                 "fino a uno spegnimento completo (T1Bridge issue #14). La password resta sempre valida. Attivare?"),
+    dict(id="touchid-lock-off", group="Touch ID", label="Schermata di blocco solo con password", root=True,
+         steps=[[TIDPAM, "lockscreen", "off"]], needs=[TIDPAM], active=lambda: not status.touchid_lockscreen_on()),
+    dict(id="touchid-sudo-on", group="Touch ID", label="Impronta per sudo", root=True,
+         steps=[[TIDPAM, "sudo", "on"]], needs=[TIDPAM], active=lambda: status.touchid_sudo_on()),
+    dict(id="touchid-sudo-off", group="Touch ID", label="sudo solo con password", root=True,
+         steps=[[TIDPAM, "sudo", "off"]], needs=[TIDPAM], active=lambda: not status.touchid_sudo_on()),
     # Sospensione
     dict(id="sleep-deep", group="Sospensione", label="S3 (deep): Mac freddo a coperchio chiuso", root=True,
          steps=[["systemctl", "enable", "--now", "macbookpro14-3-sleep-mode.service"]],
@@ -85,4 +103,6 @@ def active_ids():
 
 
 def expand(argv):
-    return [os.uname().release if a == "@KERNEL@" else a for a in argv]
+    import pwd
+    repl = {"@KERNEL@": os.uname().release, "@USER@": pwd.getpwuid(os.getuid()).pw_name}
+    return [repl.get(a, a) for a in argv]

@@ -8,9 +8,9 @@ Riunire in una sola repo tutto ciò che serve (pacchetti, moduli DKMS, patch, co
 script) per avere **CachyOS (Arch) il più possibile funzionante sul MacBook Pro 14,3**
 (15" 2017, Touch Bar con chip **T1**, i7-7820HQ, Radeon Pro 555/560, **senza T2**).
 L'utente vuole abbandonare macOS (Mac non più supportato) e punta al "100% senza compromessi".
-**Non è raggiungibile oggi**: Touch ID, ibernazione, grafica della Touch Bar e il consumo della dGPU
-restano limiti. Non promettere il 100%. Touch ID e grafica della Touch Bar esistono sul T1 tramite T1Bridge
-(configurazione USB 2), ma sono incompatibili con lo stack attuale e senza sospensione: vedi `docs/t1bridge.md`.
+**Non è raggiungibile oggi**: ibernazione e il consumo della dGPU restano limiti. Non promettere il 100%.
+**Touch ID [F] funziona** (24/11/2026) solo in modalità display (configurazione USB 2), con i servizi Touch ID di T1Bridge
+installati da `scripts/install-touchid.sh`: vedi `docs/touchid-t1.md`. In modalità tastiera non è disponibile.
 **Grafica della Touch Bar [F] provata a runtime** (23/11/2026; ora `scripts/install-touchbar-display.sh` + `touchbar-mode`):
 grafica, tocco, volume, sospensione (passaggio automatico a modalità tastiera) e webcam (H.264; Discord via v4l2loopback).
 Renderer fnstrip (`scripts/install-fnstrip.sh`) provato e funzionante.
@@ -26,10 +26,10 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
 |---|---|
 | `install.sh` | post-installazione su CachyOS appena installato: passi in ordine, scelta Touch Bar keyboard/display, `--only/--skip`, riepilogo, registro in `/var/log/macbookpro14-3-install.log`; prima `--dry-run` |
 | `macos/prepare.sh` | da macOS: backup, download ISO, ridimensiona APFS, crea `COSLIVE` + partizione Linux, estrae ISO |
-| `scripts/` | `lib.sh`, `backup-esp.sh`, `install-touchbar.sh`, `install-audio.sh`, `install-wifi.sh`, `install-wifi-nvram.sh`, `install-sleep.sh`, `sleep-test.sh`, `install-power.sh`, `install-bt.sh`, `bt-sco-route.py`, `build-t1bridge.sh`, `install-touchbar-display.sh`, `touchbar-mode.sh`, `install-fnstrip.sh`, `set-kwin-brightness-curve.sh`, `t1-reenumerate.sh`, `install-manager.sh` |
+| `scripts/` | `lib.sh`, `backup-esp.sh`, `install-touchbar.sh`, `install-audio.sh`, `install-wifi.sh`, `install-wifi-nvram.sh`, `install-sleep.sh`, `sleep-test.sh`, `install-power.sh`, `install-bt.sh`, `bt-sco-route.py`, `build-t1bridge.sh`, `install-touchbar-display.sh`, `touchbar-mode.sh`, `install-fnstrip.sh`, `set-kwin-brightness-curve.sh`, `t1-reenumerate.sh`, `install-manager.sh`, `install-touchid.sh` (prova Touch ID, non in `install.sh`) |
 | `config/` | mkinitcpio, libinput, kde, sleep, power, systemd, udev, tmpfiles, networkmanager, modprobe, `sources.conf` (sorgenti esterne; Touch Bar pinnata) |
 | `manager/` | MacBook Manager: `macbook-manager` (stato/azioni, CLI + GUI PySide6 con icona nella barra di sistema, editor di fnstrip in `fnstrip.py`/`gui_fnstrip.py`, Touch Bar in diretta/screenshot/video in `tbcapture.py`/`gui_live.py` dalla registrazione di debug di fnstrip), helper root via pkexec che accetta solo gli id di `actions.py`; installato da `scripts/install-manager.sh` |
-| `pkgs/`, `dkms/` | PKGBUILD (`macbookpro14-3-meta`, `apple-ibridge-dkms`), `dkms.conf` di riserva, `t1bridge-appletbdrm`, `t1bridge-uvc` |
+| `pkgs/`, `dkms/` | PKGBUILD (`macbookpro14-3-meta`, `apple-ibridge-dkms`), `dkms.conf` di riserva, `t1bridge-appletbdrm`, `t1bridge-uvc`, `t1bridge-ncm` (rete privata per Touch ID) |
 | `patches/` | `touchbar/`: port di apple-ibridge a Linux 7.3 + `LLVM=1` automatico; README con le candidate |
 | `docs/` | report di ricerca e note per componente; indice in `docs/README.md` |
 
@@ -83,6 +83,10 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
   (`disabling eDP`), Radeon 7-9 W a riposo, runtime PM non disponibile. Opzioni in `docs/gpu.md`.
 - **Consumi [F]** (`docs/power.md`): unica leva netta a riposo = Radeon `manual`+`POWER_SAVING`+PCIe 2,5 GT/s (-1,5 W);
   `scripts/install-power.sh` la applica a batteria. Slider KDE e turbo non cambiano nulla a riposo. ~18 W ≈ 4 h.
+- **Touch ID [F]** (24/11/2026): `scripts/install-touchid.sh` (install/status/import/undo, passo `touchid` di `install.sh`
+  in modalità display, ora predefinita) + `touchid-pam` (interruttori sudo e schermata di blocco, anche nel manager).
+  xART lo avvia `touchbar-mode` (la regola udev di T1Bridge non scatta con la rete rinominata `t1ncm`); la prima
+  registrazione fallisce con "prepare device keybag failed", la seconda riesce. Mai il pacchetto `t1bridge-dkms`.
 - **MacBook Manager [F]** (`manager/`, 23-24/11/2026): GUI, icona nella barra di sistema, azioni con password via polkit
   provate (Touch Bar display/tastiera, spegnimento), editor fnstrip + preset OLED, Touch Bar in diretta/PNG/video. Il T1 si azzera SOLO con lo spegnimento completo (porta USB, reset
   USB, S3 provati invano; ACPI `FRST` = recovery, da non usare): `touchbar-mode set keyboard` salva soltanto.
@@ -119,10 +123,13 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
 
 ## Da fare (priorità)
 
-0. **25/11/2026, primo passo: prova di Touch ID con T1Bridge**, seguendo `docs/touchid-t1.md` (procedura reversibile in
+0. ~~Prova di Touch ID~~ **fatta il 24/11/2026 [F]** (registrazione, verifica, sospensione, sudo, schermata di blocco).
+   Restano: riavvio con impronte salvate e **coesistenza con macOS** (spegnimento → macOS → Linux), giornata intera
+   con la schermata di blocco (limite #14). Procedura originale:, seguendo `docs/touchid-t1.md` (procedura reversibile in
    10 passi dal passo 0: backup ESP con verifica di `FDRData`, solo componenti userspace, **mai `t1bridge-dkms`**, regola
    ufw limitata all'interfaccia del T1, un dito diverso da quelli di macOS, spegnimento completo a ogni cambio di sistema,
-   PAM solo per sudo alla fine). Prima da preparare: uno script annullabile `scripts/install-touchid.sh --undo`.
+   PAM solo per sudo alla fine). Script pronto (solo dry-run): `sudo scripts/install-touchid.sh` → `status` → spegnimento
+   completo → `import` → registrazione a mano; rollback `sudo scripts/install-touchid.sh undo`.
 1. Verificare l'avvio live dal disco interno e correggere `prepare.sh` secondo quanto emerge.
 2. Driver Touch Bar e audio anche per il kernel LTS 6.18 (audio: `vendorKernel 6.18`); entrambi i REF sono pinnati.
 3. Filter-chain PipeWire di `dnlbtz/mbp143-audio`; sospensioni lunghe e USB-C collegato in sleep; override `39-usbmuxd.rules`

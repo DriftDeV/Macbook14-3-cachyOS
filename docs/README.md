@@ -42,7 +42,8 @@ Correzione: il T1 ha solo layout fissi nella configurazione USB 1; nella 2 espon
 rischi e rollback, altri progetti). In breve: Touch ID sul T1 funziona sotto Linux solo con T1Bridge v0.1.12 (comandi
 biometrici BridgeXPC in chiaro su TCP 52032, xART su TCP 61500, prerequisito i dati FDR della ESP Apple); su questa
 macchina il trasporto (configurazione USB 2) c'è già. Incognite: convivenza con le impronte di macOS e sospensione
-2→1→2. Contiene la procedura di prova reversibile in 10 passi e il rollback. Prova pianificata per il 25/11/2026.
+2→1→2. Contiene la procedura di prova reversibile in 10 passi e il rollback. Prova pianificata per il 25/11/2026
+con `scripts/install-touchid.sh` (install/status/import/undo).
 
 ## Conflitti aperti tra le fonti
 
