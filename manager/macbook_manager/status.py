@@ -8,7 +8,7 @@ import re
 import subprocess
 import time
 
-from . import CONFDIR
+from . import CONFDIR, LIBDIR
 
 OK, WARN, ERR, INFO = "ok", "warn", "err", "info"
 _cache = {}
@@ -359,7 +359,46 @@ def touchid():
     return items
 
 
-COLLECTORS = [drivers, touchbar, touchid, sleep, wifi, battery, energy]
+# --- app Chromium/Electron (docs/gpu.md, scripts/fix-chromium-gpu.sh) --------------------------------
+
+CHROMIUM_FIX = next((p for p in (LIBDIR + "/manager/fix-chromium-gpu",
+                                  os.path.expanduser("~/.local/lib/macbookpro14-3/fix-chromium-gpu"))
+                     if os.path.exists(p)), LIBDIR + "/manager/fix-chromium-gpu")
+SHELLS = {"sh", "bash", "zsh", "fish", "dash", "python3", "pgrep", "grep"}
+
+
+def chromium_gpu_processes():
+    """[(app, accelerata, x11)] per ogni processo GPU di Chromium/Electron in esecuzione."""
+    out = []
+    for d in glob.glob("/proc/[0-9]*"):
+        try:
+            with open(d + "/cmdline", "rb") as f:
+                cmd = f.read().replace(b"\0", b" ")   # Chromium riscrive argv come un'unica stringa
+            app = os.path.basename(os.readlink(d + "/exe"))
+        except OSError:
+            continue
+        if b" --type=gpu-process" not in cmd or app in SHELLS:
+            continue
+        out.append((app, b"--use-gl=disabled" not in cmd, b"--ozone-platform=x11" in cmd))
+    return out
+
+
+def chromium():
+    procs = chromium_gpu_processes()
+    if not procs:
+        return []
+    off = sorted({a for a, acc, _x in procs if not acc})
+    on = sorted({a for a, acc, _x in procs if acc})
+    if off:
+        return [_item("App", "chromium", "App Chromium/Electron", "GPU spenta: " + ", ".join(off), WARN,
+                      "Sotto Wayland il loro processo GPU crolla con i buffer tiled della Radeon. Dopo la correzione "
+                      "(AMD_DEBUG=notiling solo per loro) chiudile e riaprile; Claude Desktop riattiva l'accelerazione "
+                      "al prossimo avvio.",
+                      "chromium-fix" if os.path.exists(CHROMIUM_FIX) else None)]
+    return [_item("App", "chromium", "App Chromium/Electron", "GPU attiva: " + ", ".join(on), OK)]
+
+
+COLLECTORS = [drivers, touchbar, touchid, sleep, wifi, battery, energy, chromium]
 
 
 def collect():

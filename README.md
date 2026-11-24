@@ -98,6 +98,7 @@ Alla fine **spegni completamente** il Mac, aspetta ~30 secondi e riaccendi (il T
 | `brightness` | curva di partenza della luminosità automatica di KWin |
 | `touchbar-display` | modalità display (predefinita): compila T1Bridge, installa driver e servizi (e fnstrip) |
 | `touchid` | solo in modalità display: servizi Touch ID di T1Bridge, rete privata del T1, libfprint/fprintd, regola ufw per xART, interruttori PAM (`touchid-pam`); sudo e schermata di blocco restano con la password finché non li attivi |
+| `apps` | da utente: app Chromium/Electron (Brave, Discord, web app…) con `AMD_DEBUG=notiling`, perché sotto Wayland il loro processo GPU crolla con i buffer tiled della Radeon; servizio che lo riapplica alle app nuove |
 | `manager` | MacBook Manager: GUI e icona nella barra di sistema con stato e azioni rapide ([manager/README.md](manager/README.md)) |
 | `wifi` | per ultimo (la connessione cade ~20 s): NVRAM dal chip, firmware, impostazioni NetworkManager |
 
@@ -115,7 +116,8 @@ Se un passo fallisce gli altri proseguono; il riepilogo dice cosa rifare. Regist
 ## 3. Uso quotidiano
 
 Il modo più semplice è **MacBook Manager** (menu delle applicazioni o icona nella barra di sistema): stato di driver,
-Touch Bar, sospensione, Wi-Fi, batteria e temperature, con le azioni qui sotto a un clic. Da terminale:
+Touch Bar, sospensione, Wi-Fi, batteria e temperature, con le azioni qui sotto a un clic; nella scheda
+**Ottimizzazione** un pulsante ottimizza tutte le app Chromium/Electron e le web app. Da terminale:
 `macbook-manager status`, `macbook-manager actions`, `macbook-manager run <azione>`. Dettagli in
 [manager/README.md](manager/README.md).
 
@@ -147,6 +149,12 @@ Touch Bar, sospensione, Wi-Fi, batteria e temperature, con le azioni qui sotto a
   (issue #14; il contatore è in MacBook Manager). Si sblocca con la password; per riaverlo serve uno spegnimento
   completo. Con l'impronta nella schermata di blocco il limite arriva prima. Dopo la sospensione Touch ID torna pronto
   in ~10 s: la schermata di blocco riprova da sola.
+- **Brave (e altre app Chromium/Electron) a scatti, CPU alta**: sotto Wayland il loro processo GPU crolla con i buffer
+  "tiled" della Radeon e l'accelerazione si spegne. Rimedio provato, restando su Wayland: `scripts/fix-chromium-gpu.sh`
+  (passo `apps` di `install.sh`, da utente, `--undo` per togliere) dà `AMD_DEBUG=notiling` solo a queste app, web app di
+  Brave comprese, e un servizio lo riapplica alle app che installi dopo; MacBook Manager segnala quelle ancora con la GPU
+  spenta. YouTube in VP9 lo decodifica la CPU (la Radeon non sa farlo); in H.264 la Radeon (CPU 24 % invece di ~80 %)
+  ([gpu](docs/gpu.md)).
 - **Touch ID in modalità tastiera**: non disponibile. Si torna alla modalità display con `sudo touchbar-mode set display`.
 
 ## Struttura della repo

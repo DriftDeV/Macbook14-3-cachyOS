@@ -76,6 +76,8 @@ ACTIONS = [
     dict(id="bt-headset", group="Rete e audio", label="Ripristina audio cuffie Bluetooth (chiamate)", root=True,
          steps=[["python3", "-I", LIBDIR + "/bt-sco-route.py", "hci0"]], needs=[LIBDIR + "/bt-sco-route.py"]),
     # Manutenzione
+    dict(id="chromium-fix", group="Manutenzione", label="App Chromium/Electron: correzione GPU (Wayland)", root=False,
+         steps=[[status.CHROMIUM_FIX]], needs=[status.CHROMIUM_FIX]),
     dict(id="poweroff", group="Manutenzione", label="Spegni il Mac (riavvia anche il T1)", root=False,
          steps=[["systemctl", "poweroff"]], needs=[],
          confirm="Il Mac si spegne: salva il lavoro. Riaccendilo dopo ~30 s (il T1 riparte pulito). Spegnere?"),

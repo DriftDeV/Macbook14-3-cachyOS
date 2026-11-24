@@ -43,6 +43,8 @@ run rm -rf "$DEST"
 run install -d -m755 "$DEST/macbook_manager"
 run install -m644 "$REPO_DIR"/manager/macbook_manager/*.py "$DEST/macbook_manager/"
 run install -m755 "$REPO_DIR/manager/macbook-manager" "$REPO_DIR/manager/macbook-manager-helper" "$DEST/"
+# Ottimizzazione delle app Chromium/Electron (scheda Ottimizzazione): lo script gira come utente.
+run install -m755 "$REPO_DIR/scripts/fix-chromium-gpu.sh" "$DEST/fix-chromium-gpu"
 run ln -sfn "$DEST/macbook-manager" "$BIN"
 
 log "Polkit: password di amministratore solo per l'helper"

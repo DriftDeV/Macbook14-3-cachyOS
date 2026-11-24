@@ -3,7 +3,8 @@
 # Applica, nell'ordine, i passaggi provati su questa macchina (vedi README e docs/):
 #   backup ESP Apple + firmware T1 -> pacchetti -> trackpad -> Touch Bar (modalità tastiera, base) -> audio ->
 #   sospensione -> energia -> Bluetooth -> luminosità automatica -> Touch Bar in modalità display (predefinita) ->
-#   Touch ID (solo in modalità display) -> MacBook Manager (GUI, icona nella barra di sistema) -> Wi-Fi
+#   Touch ID (solo in modalità display) -> MacBook Manager (GUI, icona nella barra di sistema) ->
+#   app Chromium/Electron con la GPU sotto Wayland (da utente) -> Wi-Fi
 # Prima: sudo pacman -Syu e un riavvio (il kernel in uso deve essere quello installato).
 #
 #   sudo ./install.sh --dry-run          mostra cosa farebbe
@@ -16,7 +17,7 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/lib.sh
 source "$REPO_DIR/scripts/lib.sh"
 
-STEPS="backup packages input touchbar audio sleep power bluetooth brightness touchbar-display touchid manager wifi"
+STEPS="backup packages input touchbar audio sleep power bluetooth brightness touchbar-display touchid manager apps wifi"
 LOG=/var/log/macbookpro14-3-install.log
 TOUCHBAR_CHOICE=""      # keyboard | display
 FNSTRIP=""              # yes | no
@@ -209,6 +210,8 @@ step_touchid() {
     sub install-touchid.sh
 }
 
+step_apps() { as_user bash "$REPO_DIR/scripts/fix-chromium-gpu.sh"; }
+
 step_wifi() {
     if [ -n "$WIFI_FILE" ]; then
         sub install-wifi-nvram.sh --file "$WIFI_FILE"
@@ -244,6 +247,7 @@ run_step brightness "Luminosità automatica (curva KWin)" step_brightness
 run_step touchbar-display "Touch Bar, modalità display (T1Bridge)" step_touchbar_display
 run_step touchid "Touch ID (T1Bridge: rete privata, xART, broker, fprintd)" step_touchid
 run_step manager "MacBook Manager (stato e azioni rapide, GUI)" step_manager
+run_step apps "App Chromium/Electron: GPU Radeon sotto Wayland (AMD_DEBUG=notiling)" step_apps
 run_step wifi "Wi-Fi 5 GHz (NVRAM dal chip)" step_wifi
 
 summary

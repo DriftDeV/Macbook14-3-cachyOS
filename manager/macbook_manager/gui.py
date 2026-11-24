@@ -86,6 +86,9 @@ class MainWindow(QMainWindow):
         self.live = None
         self.fnstrip = FnstripEditor(lambda t: self.log.appendPlainText(t), self.open_live)
         self.tabs.addTab(self.fnstrip, QIcon.fromTheme("input-keyboard"), "Touch Bar")
+        from .gui_optimize import OptimizeTab
+        self.optimize = OptimizeTab(lambda t: self.log.appendPlainText(t))
+        self.tabs.addTab(self.optimize, QIcon.fromTheme("speedometer"), "Ottimizzazione")
         self.sleep_table = QTableWidget(0, 6)
         self.sleep_table.setHorizontalHeaderLabels(["Inizio", "Durata", "Modo", "Coperchio", "Batteria", "Risveglio"])
         self.sleep_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)

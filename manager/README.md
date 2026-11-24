@@ -63,6 +63,22 @@ chiudendo la finestra tutto viene rimosso. Solo in modalità display con fnstrip
 Limite: fnstrip invia un fotogramma solo quando qualcosa cambia; all'apertura, finché la barra è ferma, la finestra chiede
 di toccarla (o di cambiare volume/luminosità). Poi mostra sempre l'ultimo, che è quello sullo schermo.
 
+## Ottimizzazione (scheda Ottimizzazione)
+
+Elenca le app Chromium/Electron e le **web app** installate dal browser (Brave, Discord, Claude Desktop, Sidra, …) con
+lo stato di ciascuna (ottimizzata / da ottimizzare), le app in esecuzione con la GPU attiva o spenta e lo stato del
+servizio. **Ottimizza tutte** applica in un colpo le correzioni verificate il 24/11/2026 (`docs/gpu.md`):
+`AMD_DEBUG=notiling` solo per queste app (restano su Wayland e usano la Radeon), riattivazione dell'accelerazione di
+Claude Desktop, servizio utente che ottimizza le app installate dopo. **Annulla ottimizzazioni** toglie tutto. Usa
+`fix-chromium-gpu` installato accanto al manager (copia di `scripts/fix-chromium-gpu.sh`, gira come utente). Dopo
+l'ottimizzazione le app vanno chiuse del tutto e riaperte.
+
+## App Chromium/Electron (gruppo App)
+
+Controlla dal vivo i processi GPU di Chromium/Electron (Brave, Discord, Claude Desktop, …) e segnala quelli con
+l'accelerazione spenta (`--use-gl=disabled`: sotto Wayland crollano con i buffer tiled della Radeon, vedi `docs/gpu.md`), con l'azione che
+rilancia `~/.local/lib/macbookpro14-3/fix-chromium-gpu` (installato da `scripts/fix-chromium-gpu.sh`).
+
 ## Touch ID (modalità display, dopo `scripts/install-touchid.sh`)
 
 Scheda **Stato**, gruppo Touch ID: servizi (xART, relay della keybag), **attivazioni del relay in questo avvio** (giallo da
@@ -79,7 +95,7 @@ registro), **Impronte registrate** (`fprintd-list`). Gli interruttori usano `/us
 | Sospensione | S3 (deep) / s2idle |
 | Energia | Radeon in risparmio a batteria sì/no, turbo CPU a batteria sì/no (`power.conf` + riapplica) |
 | Rete e audio | ricarica il driver Wi-Fi, ripristina l'audio delle chiamate Bluetooth (CVSD) |
-| Manutenzione | ricompila i driver DKMS per il kernel in uso, spegni il Mac (azzera anche il T1) |
+| Manutenzione | app Chromium/Electron: correzione GPU (`fix-chromium-gpu`), ricompila i driver DKMS per il kernel in uso, spegni il Mac (azzera anche il T1) |
 
 L'opzione già attiva è spuntata e non cliccabile. Le azioni non disponibili (componente non installato) non compaiono.
 
