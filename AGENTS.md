@@ -119,6 +119,11 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
 
 ## Da fare (priorità)
 
+0. **25/11/2026, primo passo: prova di Touch ID con T1Bridge**, seguendo `docs/touchid-t1.md` (procedura reversibile in
+   10 passi dal passo 0: backup ESP con verifica di `FDRData`, solo componenti userspace, **mai `t1bridge-dkms`**, regola
+   ufw limitata all'interfaccia del T1, un dito diverso da quelli di macOS, spegnimento completo a ogni cambio di sistema,
+   PAM solo per sudo alla fine). Prima da preparare: uno script annullabile `scripts/install-touchid.sh --undo`.
+   Prima ancora, la prova notturna di S3 (`macbook-manager sleep-report`).
 1. Verificare l'avvio live dal disco interno e correggere `prepare.sh` secondo quanto emerge.
 2. Driver Touch Bar e audio anche per il kernel LTS 6.18 (audio: `vendorKernel 6.18`); entrambi i REF sono pinnati.
 3. Filter-chain PipeWire di `dnlbtz/mbp143-audio`; sospensioni lunghe e USB-C collegato in sleep; override `39-usbmuxd.rules`

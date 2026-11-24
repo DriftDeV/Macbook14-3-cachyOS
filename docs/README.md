@@ -35,6 +35,15 @@ recenti sono su 14,2 o 13,x, non su 14,3.
 [`t1bridge.md`](t1bridge.md): analisi in sola lettura di `standardagents/t1bridge` e del renderer `acmccubbin/fnstrip`.
 Correzione: il T1 ha solo layout fissi nella configurazione USB 1; nella 2 espone un display come i T2.
 
+## Touch ID sul T1 (ricerca del 24 novembre 2026)
+
+[`touchid-t1.md`](touchid-t1.md): report in italiano con tag [F]/[I]/[NV]/[C], da 4 ricerche parallele (note grezze in
+[`research_notes/Touch ID T1 su Linux/`](research_notes/Touch%20ID%20T1%20su%20Linux/): protocollo, stato di T1Bridge,
+rischi e rollback, altri progetti). In breve: Touch ID sul T1 funziona sotto Linux solo con T1Bridge v0.1.12 (comandi
+biometrici BridgeXPC in chiaro su TCP 52032, xART su TCP 61500, prerequisito i dati FDR della ESP Apple); su questa
+macchina il trasporto (configurazione USB 2) c'è già. Incognite: convivenza con le impronte di macOS e sospensione
+2→1→2. Contiene la procedura di prova reversibile in 10 passi e il rollback. Prova pianificata per il 25/11/2026.
+
 ## Conflitti aperti tra le fonti
 
 - Indirizzo PCI per `d3cold_allowed`: su 14,3 `01:00.0` è la Radeon, non l'SSD → si cerca per classe PCI (`config/udev/90-macbookpro14-3-nvme-no-d3cold.rules`).

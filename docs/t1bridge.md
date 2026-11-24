@@ -187,6 +187,13 @@ Sospensione di ~18 minuti (20:51-21:08 del 23/11/2026) in modalità display: al 
 - Ripristino senza riavvio: `sudo touchbar-mode display` (lo schermo era già in configurazione 2).
 - [NV] Nuova prova di sospensione lunga con le correzioni.
 
+## Touch ID: quadro aggiornato al 24/11/2026
+
+Vedi [`touchid-t1.md`](touchid-t1.md). Il punto 1 e 2 di "Perché non installarlo adesso" valgono solo per il pacchetto
+completo: la modalità display fornisce già la configurazione 2 e la sospensione funziona passando alla 1. Per Touch ID
+mancano solo `apple-t1-ncm`, xART, relay keybag, broker e la coppia fprintd/libfprint di T1Bridge. **`t1bridge-dkms`
+resta escluso** (blocca `apple_ibridge`, necessario alla sospensione).
+
 ## Da seguire
 
 Issue #18 (sospensione) e #2 (14,3). Quando la sospensione funzionerà, valutare una prova reversibile su un'installazione
