@@ -60,4 +60,10 @@ else
 fi
 command -v update-desktop-database >/dev/null && run update-desktop-database -q /usr/local/share/applications || true
 
+# Un manager già aperto (anche solo come icona nella barra di sistema) userebbe ancora il codice vecchio: riaprendolo
+# dal menu tornerebbe in primo piano quello. Lo chiudo.
+if [ "$DRY_RUN" != 1 ] && pgrep -f '/usr/local/bin/macbook-manager gui' >/dev/null 2>&1; then
+    pkill -f '/usr/local/bin/macbook-manager gui' || true
+    warn "Il manager aperto è stato chiuso per caricare la versione nuova: riaprilo dal menu."
+fi
 ok "Installato. Apri \"MacBook Manager\" dal menu, oppure: macbook-manager status"
