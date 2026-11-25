@@ -17,6 +17,8 @@ Renderer fnstrip (`scripts/install-fnstrip.sh`) provato e funzionante.
 **tiny-dfr [F]** (25/11/2026) come renderer alternativo in modalità display: `scripts/install-tiny-dfr.sh` +
 `touchbar-mode renderer tiny-dfr|t1bridge`, con `patches/tiny-dfr/` (nome del sensore, luminosità in software per non
 togliere l'ALS a `hid-sensor-hub`) e tocco via `hid-multitouch` `new_id`. Vedi `docs/t1bridge.md`.
+Luminosità della barra in modalità display: nessun controllo hardware (report HID 2 di 0xff12 accettato ma senza effetto,
+25/11/2026); il manager la regola per entrambi i renderer (tiny-dfr: `ActiveBrightness`; fnstrip: colori scuriti).
 
 Obiettivo secondario: installare CachyOS **da macOS, senza chiavetta USB** (partizione live sul disco interno).
 
@@ -31,7 +33,7 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
 | `macos/prepare.sh` | da macOS: backup, download ISO, ridimensiona APFS, crea `COSLIVE` + partizione Linux, estrae ISO |
 | `scripts/` | `lib.sh`, `backup-esp.sh`, `install-touchbar.sh`, `install-audio.sh`, `install-wifi.sh`, `install-wifi-nvram.sh`, `install-sleep.sh`, `sleep-test.sh`, `install-power.sh`, `install-bt.sh`, `bt-sco-route.py`, `build-t1bridge.sh`, `install-touchbar-display.sh`, `touchbar-mode.sh`, `install-fnstrip.sh`, `set-kwin-brightness-curve.sh`, `t1-reenumerate.sh`, `install-manager.sh`, `install-touchid.sh`, `install-tiny-dfr.sh`, `touchid-pam.sh`, `fix-chromium-gpu.sh` (app Chromium/Electron: `AMD_DEBUG=notiling` su Wayland, da utente) |
 | `config/` | mkinitcpio, libinput, kde, sleep, power, systemd, udev, tmpfiles, networkmanager, modprobe, `sources.conf` (sorgenti esterne; Touch Bar pinnata) |
-| `manager/` | MacBook Manager: `macbook-manager` (stato/azioni, CLI + GUI PySide6 con icona nella barra di sistema, editor di fnstrip in `fnstrip.py`/`gui_fnstrip.py`, Touch Bar in diretta/screenshot/video in `tbcapture.py`/`gui_live.py` dalla registrazione di debug di fnstrip, scheda Ottimizzazione delle app Chromium/web app in `optimize.py`/`gui_optimize.py` con `fix-chromium-gpu`), helper root via pkexec che accetta solo gli id di `actions.py`; installato da `scripts/install-manager.sh` |
+| `manager/` | MacBook Manager: `macbook-manager` (stato/azioni, CLI + GUI PySide6 con icona nella barra di sistema, editor di fnstrip in `fnstrip.py`/`gui_fnstrip.py`, Touch Bar in diretta/screenshot/video in `tbcapture.py`/`gui_live.py` dalla registrazione di debug di fnstrip, scheda Touch Bar che si adatta al renderer (`gui_touchbar.py`, editor tiny-dfr in `tinydfr.py`/`gui_tinydfr.py`), scheda Ottimizzazione delle app Chromium/web app in `optimize.py`/`gui_optimize.py` con `fix-chromium-gpu`), helper root via pkexec che accetta solo gli id di `actions.py`; installato da `scripts/install-manager.sh` |
 | `pkgs/`, `dkms/` | PKGBUILD (`macbookpro14-3-meta`, `apple-ibridge-dkms`), `dkms.conf` di riserva, `t1bridge-appletbdrm`, `t1bridge-uvc`, `t1bridge-ncm` (rete privata per Touch ID) |
 | `patches/` | `touchbar/`: port di apple-ibridge a Linux 7.3 + `LLVM=1` automatico; README con le candidate; `audio/`; `tiny-dfr/` (T1) |
 | `docs/` | report di ricerca e note per componente; indice in `docs/README.md` |

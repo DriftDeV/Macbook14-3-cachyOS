@@ -111,6 +111,11 @@ if [ -e /etc/tiny-dfr/config.toml ]; then
 else
     run install -Dm644 "$C/config.toml" /etc/tiny-dfr/config.toml
 fi
+# Scrivibile dall'utente (gruppo primario, 0664): MacBook Manager lo modifica sul posto (editor e luminosità dal vivo,
+# tiny-dfr lo rilegge alla chiusura). Contiene solo etichette, icone e codici dei tasti da inviare al tocco: nessun
+# comando. La cartella resta di root.
+run chgrp "$(id -gn "$USER_NAME")" /etc/tiny-dfr/config.toml
+run chmod 664 /etc/tiny-dfr/config.toml
 run install -Dm644 "$C/macbookpro14-3-tiny-dfr.service" "$UNIT"
 run install -Dm644 "$C/99-zz-macbookpro14-3-tiny-dfr.rules" "$RULE"
 run install -Dm644 "$C/renderer-tiny-dfr.conf" "$DROPIN"

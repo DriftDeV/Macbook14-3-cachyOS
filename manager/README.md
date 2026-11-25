@@ -25,7 +25,34 @@ Semaforo: verde a posto, giallo avviso, rosso da sistemare (con il pulsante **Co
 risolve, per esempio "ricompila i driver" dopo un aggiornamento del kernel). La scheda **Sospensioni** elenca ogni
 sospensione con durata, modalità, batteria consumata e causa del risveglio (`macbook-manager sleep-report`).
 
-## Touch Bar: editor di fnstrip (scheda Touch Bar)
+## Scheda Touch Bar: si adatta al renderer
+
+In alto il menu **Renderer** (fnstrip / T1Bridge oppure tiny-dfr) mostra quello in uso e permette di passare all'altro
+(«Usa questo renderer», password via polkit: `touchbar-mode renderer ...`). Sotto compare l'editor del renderer scelto;
+si può preparare la configurazione dell'altro prima di passarci.
+
+**Luminosità**: in modalità display il T1 non ha un controllo hardware utilizzabile (provato: `docs/t1bridge.md`).
+Con tiny-dfr lo slider imposta `ActiveBrightness` (luminosità software della nostra patch) e si applica subito; con
+fnstrip lo slider scurisce i nove colori del tema (sfondo, tasti, scritte, icone, cursori) e si applica con «Salva e
+applica». La percentuale e i colori di partenza stanno in `~/.config/macbook-manager/fnstrip-brightness.json`, così
+rileggendo il file si ritrovano tema e colori originali. Con Pastello e Arcobaleno le sfumature dei tasti restano piene.
+[F] Provata dall'utente il 25/11/2026 (scheda che cambia con il renderer, editor di tiny-dfr, slider).
+
+## Touch Bar con tiny-dfr: editor di /etc/tiny-dfr/config.toml
+
+- **Luminosità** (dal vivo) e «segue la luminosità dello schermo».
+- **Comportamento**: riga principale (multimediale o F1-F12), scambio delle righe con doppio Fn, carattere, bordi dei
+  pulsanti, spostamento anti-segno per l'OLED.
+- **Tasti** delle due righe: aggiungi, togli, riordina; per ogni pulsante tipo (icona, testo, ora, batteria, spazio),
+  tasto o combinazione (`LeftCtrl+C`) e larghezza; anteprima; «Tasti predefiniti».
+- Prima di salvare controlla nomi dei tasti (elenco di input-linux in `tinydfr_keys.py`), icone e formati: un valore
+  sbagliato farebbe scartare a tiny-dfr l'intero file (e un formato dell'ora non valido lo farebbe crollare).
+  Scrive solo ciò che differisce da `/usr/share/tiny-dfr/config.toml`; copia precedente in
+  `~/.config/macbook-manager/tiny-dfr.toml.bak`. tiny-dfr rilegge il file da solo.
+- Il file è scrivibile dall'utente (gruppo, 0664) grazie a `scripts/install-tiny-dfr.sh`: contiene solo etichette, icone
+  e codici dei tasti, nessun comando.
+
+## Touch Bar: editor di fnstrip
 
 Modifica `~/.config/fnstrip/config.toml` (renderer fnstrip della modalità display) senza scrivere TOML:
 

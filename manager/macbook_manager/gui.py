@@ -82,10 +82,11 @@ class MainWindow(QMainWindow):
         scroll.setWidget(self.status_box)
         self.tabs.addTab(scroll, QIcon.fromTheme("dialog-information"), "Stato")
         self.tabs.addTab(self._actions_tab(), QIcon.fromTheme("system-run"), "Azioni")
-        from .gui_fnstrip import FnstripEditor
+        from .gui_touchbar import TouchBarTab
         self.live = None
-        self.fnstrip = FnstripEditor(lambda t: self.log.appendPlainText(t), self.open_live)
-        self.tabs.addTab(self.fnstrip, QIcon.fromTheme("input-keyboard"), "Touch Bar")
+        self.touchbar = TouchBarTab(lambda t: self.log.appendPlainText(t), self.open_live, self.run_action)
+        self.fnstrip = self.touchbar.fnstrip
+        self.tabs.addTab(self.touchbar, QIcon.fromTheme("input-keyboard"), "Touch Bar")
         from .gui_optimize import OptimizeTab
         self.optimize = OptimizeTab(lambda t: self.log.appendPlainText(t))
         self.tabs.addTab(self.optimize, QIcon.fromTheme("speedometer"), "Ottimizzazione")
@@ -205,6 +206,8 @@ class MainWindow(QMainWindow):
                                   QSystemTrayIcon.Warning, 5000)
         status.invalidate()
         self.refresh(force=True)
+        if hasattr(self, "touchbar"):
+            self.touchbar.sync()
         then = getattr(self, "current", {}).get("then") if rc == 0 else None
         if then and then[0] in BY_ID:
             nxt = BY_ID[then[0]]
@@ -230,8 +233,8 @@ class MainWindow(QMainWindow):
 
     def _tab_changed(self, i):
         w = self.tabs.widget(i)
-        if w is self.fnstrip:
-            self.fnstrip._update_info()
+        if w is self.touchbar:
+            self.touchbar.sync()
         elif self.tabs.tabText(i) == "Sospensioni":
             self.load_sleep()
 

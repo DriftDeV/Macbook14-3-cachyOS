@@ -5,6 +5,7 @@ chiavi in testa (theme, default_row, startup_animation, temperature_unit, debug_
 e fino a 10 tabelle [[extras]] (icon, command, status, interface). Le chiavi sconosciute vengono conservate; i commenti
 del file vengono rigenerati (la versione precedente resta in config.toml.bak).
 """
+import json
 import os
 import re
 import shutil
@@ -56,6 +57,70 @@ ICONS = {
     "fan": ("meter", "Ventole", "Giri delle due ventole (applesmc).", {}),
 }
 TOP_KEYS = ["theme", "default_row", "startup_animation", "temperature_unit", "debug_gestures"]
+
+# --- luminosità ------------------------------------------------------------------------------------------
+# fnstrip non ha una luminosità e in modalità display il T1 non ne offre una hardware (provato il 25/11/2026: il report
+# HID 2 dell'interfaccia 0xff12 accetta i valori ma la barra non cambia). Il manager scurisce allora i nove colori del
+# tema (sfondo, tasti, scritte, icone, cursori): li scrive in [colors] moltiplicati per la percentuale e ricorda in
+# BRIGHTNESS la percentuale e i colori di partenza, per ritrovarli rileggendo il file. Restano come sono le sfumature
+# per tasto dei temi Pastello e Arcobaleno, l'animazione iniziale e lo screensaver.
+# Palette dei temi: fnstrip src/theme.rs (commit in config/sources.conf).
+_DEF = {"background": "#000000", "plate": "#353535", "pressed": "#4c4c4c", "label": "#f2f2f2", "dim": "#969696",
+        "lit": "#208040", "lit_pressed": "#3aa45c", "fill": "#6e6e6e", "muted": "#484848"}
+THEME_COLORS = {
+    "default": _DEF,
+    "mono": dict(_DEF, plate="#1a1a1a", pressed="#464646", label="#ffffff", dim="#6e6e6e", lit="#767676",
+                 lit_pressed="#969696", fill="#585858", muted="#2c2c2c"),
+    "pastel": {"background": "#1a1820", "plate": "#cdcdcd", "pressed": "#ececec", "label": "#2e283c",
+               "dim": "#787084", "lit": "#60b288", "lit_pressed": "#80c8a2", "fill": "#a0a0a0", "muted": "#bebebe"},
+    "rainbow": dict(_DEF, plate="#424242", pressed="#646464", fill="#6c6c6c", muted="#505050", lit="#e11e78",
+                    lit_pressed="#f5509b"),
+}
+BRIGHTNESS = os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"),
+                          "macbook-manager", "fnstrip-brightness.json")
+MIN_BRIGHTNESS = 20
+
+
+def effective_colors(cfg):
+    """I nove colori che fnstrip userà: palette del tema più le voci di [colors]."""
+    c = dict(THEME_COLORS.get(cfg.get("theme", "default"), _DEF))
+    c.update({k: v for k, v in (cfg.get("colors") or {}).items() if k in c and HEX.match(str(v))})
+    return c
+
+
+def _scale(hexcol, pct):
+    v = int(hexcol[1:], 16)
+    r, g, b = (v >> 16) & 255, (v >> 8) & 255, v & 255
+    return "#%02x%02x%02x" % tuple(round(x * pct / 100) for x in (r, g, b))
+
+
+def with_brightness(cfg, pct):
+    """Copia di cfg da scrivere: colori scuriti alla percentuale (100 = invariata)."""
+    out = dict(cfg)
+    if pct < 100:
+        out["colors"] = {k: _scale(v, pct) for k, v in effective_colors(cfg).items()}
+    return out
+
+
+def split_brightness(cfg):
+    """(cfg con i colori di partenza, percentuale) dal file letto e da BRIGHTNESS; 100 se il file è stato cambiato
+    a mano dopo l'ultimo salvataggio del manager."""
+    try:
+        with open(BRIGHTNESS, encoding="utf-8") as f:
+            st = json.load(f)
+        pct, base = int(st["percent"]), dict(cfg, theme=st["theme"], colors=dict(st["colors"]))
+    except (OSError, ValueError, KeyError, TypeError):
+        return cfg, 100
+    if MIN_BRIGHTNESS <= pct < 100 and cfg.get("theme") == base["theme"] \
+            and (cfg.get("colors") or {}) == with_brightness(base, pct)["colors"]:
+        return base, pct
+    return cfg, 100
+
+
+def save_brightness(cfg, pct):
+    os.makedirs(os.path.dirname(BRIGHTNESS), exist_ok=True)
+    with open(BRIGHTNESS, "w", encoding="utf-8") as f:
+        json.dump({"percent": pct, "theme": cfg.get("theme", "default"), "colors": cfg.get("colors") or {}}, f)
 
 
 def preset_of(cfg):

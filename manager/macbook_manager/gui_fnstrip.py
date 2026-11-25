@@ -6,7 +6,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QIcon
 from PySide6.QtWidgets import (QCheckBox, QColorDialog, QComboBox, QFormLayout, QGridLayout, QGroupBox, QHBoxLayout,
                                QLabel, QLineEdit, QListWidget, QListWidgetItem, QMenu, QMessageBox, QPushButton,
-                               QScrollArea, QVBoxLayout, QWidget)
+                               QScrollArea, QSlider, QVBoxLayout, QWidget)
 
 from . import fnstrip as F
 
@@ -52,6 +52,27 @@ class FnstripEditor(QScrollArea):
             w.currentIndexChanged.connect(self._changed)
         self.anim.toggled.connect(self._changed)
         lay.addWidget(look)
+
+        # --- luminosità (colori scuriti: fnstrip e il T1 in modalità display non ne hanno una)
+        lum = QGroupBox("Luminosità della Touch Bar")
+        ll = QGridLayout(lum)
+        self.pct = 100
+        self.bright = QSlider(Qt.Horizontal)
+        self.bright.setRange(F.MIN_BRIGHTNESS, 100)
+        self.bright.setPageStep(10)
+        self.bright_lbl = QLabel("100 %")
+        self.bright_lbl.setMinimumWidth(48)
+        note = QLabel("fnstrip non ha una luminosità e in modalità display il T1 non ne offre una hardware: il manager "
+                      "scurisce i colori del tema (tasti, scritte, icone, cursori). Con Pastello e Arcobaleno le "
+                      "sfumature dei tasti restano piene. Si applica con «Salva e applica».")
+        note.setWordWrap(True)
+        note.setStyleSheet("color: palette(placeholder-text);")
+        ll.addWidget(QLabel("Luminosità"), 0, 0)
+        ll.addWidget(self.bright, 0, 1)
+        ll.addWidget(self.bright_lbl, 0, 2)
+        ll.addWidget(note, 1, 0, 1, 3)
+        self.bright.valueChanged.connect(self._bright_changed)
+        lay.addWidget(lum)
 
         # --- colori
         self.colors_box = QGroupBox("Colori personalizzati (sopra il tema)")
@@ -161,16 +182,16 @@ class FnstripEditor(QScrollArea):
     # --- caricamento ---------------------------------------------------------------------------------
     def reload(self):
         try:
-            self.cfg = F.load()
+            self.cfg, self.pct = F.split_brightness(F.load())
         except Exception as e:  # noqa: BLE001 (file scritto a mano e non valido)
             QMessageBox.warning(self, "fnstrip", "Non riesco a leggere %s:\n%s\n\nUso la configurazione consigliata; "
                                 "salvando, il file attuale resta in config.toml.bak." % (F.CONFIG, e))
-            self.cfg = F.defaults()
+            self.cfg, self.pct = F.defaults(), 100
         self._fill()
         self._dirty(False)
 
     def _defaults(self):
-        self.cfg = F.defaults()
+        self.cfg, self.pct = F.defaults(), 100
         self._fill()
         self._dirty()
 
@@ -181,6 +202,8 @@ class FnstripEditor(QScrollArea):
         self._set_combo(self.row, c.get("default_row", "controls"))
         self._set_combo(self.unit, c.get("temperature_unit", "c"))
         self.anim.setChecked(str(c.get("startup_animation", "on")).lower() not in ("off", "false"))
+        self.bright.setValue(self.pct)
+        self.bright_lbl.setText("%d %%" % self.pct)
         colors = c.get("colors") or {}
         self.colors_box.setChecked(bool(colors))
         for k in self.color_btn:
@@ -206,7 +229,7 @@ class FnstripEditor(QScrollArea):
     def _update_info(self):
         from .status import touchbar_renderer
         if touchbar_renderer() == "tiny-dfr":
-            self.info.setText("La Touch Bar usa tiny-dfr (Azioni → Renderer): questa configurazione vale per fnstrip. "
+            self.info.setText("La Touch Bar usa tiny-dfr: questa configurazione vale per fnstrip (si sceglie dal menu Renderer in alto). "
                               "tiny-dfr si configura in /etc/tiny-dfr/config.toml (si ricarica da solo).")
         elif not F.installed():
             self.info.setText("⚠ fnstrip non è installato (~/.local/bin/fnstrip): installalo con scripts/install-fnstrip.sh. "
@@ -244,6 +267,12 @@ class FnstripEditor(QScrollArea):
                 self._paint_color(k, None)
         self._preview()
         self._dirty()
+
+    def _bright_changed(self, v):
+        self.bright_lbl.setText("%d %%" % v)
+        if not self.loading:
+            self.pct = v
+            self._dirty()
 
     def _pick(self, key):
         cur = (self.cfg.get("colors") or {}).get(key) or "#808080"
@@ -365,7 +394,8 @@ class FnstripEditor(QScrollArea):
             QMessageBox.warning(self, "fnstrip", "Da correggere prima di salvare:\n\n" + "\n".join(errs))
             return
         try:
-            path = F.save(cfg)
+            path = F.save(F.with_brightness(cfg, self.pct))
+            F.save_brightness(cfg, self.pct)
         except Exception as e:  # noqa: BLE001
             QMessageBox.critical(self, "fnstrip", "Salvataggio non riuscito: %s" % e)
             return

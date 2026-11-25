@@ -224,6 +224,12 @@ modalità tastiera (configurazione 1, senza schermo): in configurazione 2 lo sch
   riga principale, luminosità piena, `EnablePixelShift` contro il segno sull'OLED).
 - **Provato** il 25/11/2026: grafica, tocco, Fn/F1-F12 e tasti multimediali confermati dall'utente; ALS ancora a
   `hid-sensor-hub`. [NV]: risveglio dalla sospensione con tiny-dfr, Touch ID con tiny-dfr attivo, riavvio.
+- **Luminosità della barra** (25/11/2026): in modalità display non c'è un controllo hardware usabile [F]. Il report di
+  funzionalità 2 dell'interfaccia HID 0xff12 (gruppo sensor hub, `hidraw`), lo stesso che `hid-appletb-bl` usa sul T2
+  (usage 0xff120020/21; valori 1 accesa, 3 attenuata, 4 spenta), accetta e rilegge i valori 1-4 ma la barra non cambia
+  (prova con `HIDIOCSFEATURE`, valore originale `02 05 01 00 00 00 00 e8 03 00 00` rimesso). [I] vale solo in
+  configurazione 1, quando disegna il T1. Quindi: tiny-dfr usa la luminosità software della nostra patch
+  (`ActiveBrightness`); per fnstrip MacBook Manager scurisce i colori del tema.
 - Si perde, finché c'è tiny-dfr: editor e preset di fnstrip, Touch Bar in diretta/screenshot/video (usano la
   registrazione di fnstrip), indicatori e riga extra, riquadro di Touch ID sulla barra.
 
