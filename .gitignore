@@ -2,5 +2,7 @@
 *.img
 *.pkg.tar.*
 src/
+# ...ma i sorgenti dei moduli DKMS vanno nella repo
+!dkms/*/src/
 pkg/
 __pycache__/

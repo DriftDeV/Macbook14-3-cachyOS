@@ -1,0 +1,80 @@
+diff --color -ru a/uvc_driver.c b/uvc_driver.c
+--- a/uvc_driver.c	2026-11-25 00:20:03.490528607 +0100
++++ b/uvc_driver.c	2026-11-25 00:11:54.556646958 +0100
+@@ -2921,7 +2921,8 @@
+ 	  .bInterfaceSubClass	= 1,
+ 	  .bInterfaceProtocol	= 0,
+ 	  .driver_info		= UVC_INFO_QUIRK(UVC_QUIRK_PROBE_DEF
+-					| UVC_QUIRK_DISABLE_AUTOSUSPEND) },
++					| UVC_QUIRK_DISABLE_AUTOSUSPEND
++					| UVC_QUIRK_H264_BIG_FRAMES) },
+ 	/* Foxlink ("HP Webcam" on HP Mini 5103) */
+ 	{ .match_flags		= USB_DEVICE_ID_MATCH_DEVICE
+ 				| USB_DEVICE_ID_MATCH_INT_INFO,
+diff --color -ru a/uvc_queue.c b/uvc_queue.c
+--- a/uvc_queue.c	2026-11-25 00:20:03.490614207 +0100
++++ b/uvc_queue.c	2026-11-25 00:11:54.558336264 +0100
+@@ -87,7 +87,8 @@
+ 		break;
+ 
+ 	default:
+-		size = stream->ctrl.dwMaxVideoFrameSize;
++		size = uvc_buffer_size(stream, stream->cur_format, stream->cur_frame,
++				       stream->ctrl.dwMaxVideoFrameSize);
+ 		break;
+ 	}
+ 
+diff --color -ru a/uvc_v4l2.c b/uvc_v4l2.c
+--- a/uvc_v4l2.c	2026-11-25 00:20:03.490744559 +0100
++++ b/uvc_v4l2.c	2026-11-25 00:11:54.560442196 +0100
+@@ -382,7 +382,7 @@
+ 	fmt->fmt.pix.height = frame->wHeight;
+ 	fmt->fmt.pix.field = V4L2_FIELD_NONE;
+ 	fmt->fmt.pix.bytesperline = uvc_v4l2_get_bytesperline(format, frame);
+-	fmt->fmt.pix.sizeimage = probe->dwMaxVideoFrameSize;
++	fmt->fmt.pix.sizeimage = uvc_buffer_size(stream, format, frame, probe->dwMaxVideoFrameSize);
+ 	fmt->fmt.pix.pixelformat = format->fcc;
+ 	fmt->fmt.pix.colorspace = format->colorspace;
+ 	fmt->fmt.pix.xfer_func = format->xfer_func;
+@@ -418,7 +418,7 @@
+ 	fmt->fmt.pix.height = frame->wHeight;
+ 	fmt->fmt.pix.field = V4L2_FIELD_NONE;
+ 	fmt->fmt.pix.bytesperline = uvc_v4l2_get_bytesperline(format, frame);
+-	fmt->fmt.pix.sizeimage = stream->ctrl.dwMaxVideoFrameSize;
++	fmt->fmt.pix.sizeimage = uvc_buffer_size(stream, format, frame, stream->ctrl.dwMaxVideoFrameSize);
+ 	fmt->fmt.pix.colorspace = format->colorspace;
+ 	fmt->fmt.pix.xfer_func = format->xfer_func;
+ 	fmt->fmt.pix.ycbcr_enc = format->ycbcr_enc;
+diff --color -ru a/uvcvideo.h b/uvcvideo.h
+--- a/uvcvideo.h	2026-11-25 00:20:03.490249302 +0100
++++ b/uvcvideo.h	2026-11-25 00:11:54.555242108 +0100
+@@ -81,6 +81,7 @@
+ #define UVC_QUIRK_INVALID_DEVICE_SOF	0x00010000
+ #define UVC_QUIRK_MJPEG_NO_EOF		0x00020000
+ #define UVC_QUIRK_MSXU_META		0x00040000
++#define UVC_QUIRK_H264_BIG_FRAMES	0x00080000
+ 
+ /* Format flags */
+ #define UVC_FMT_FLAG_COMPRESSED		0x00000001
+@@ -715,6 +716,21 @@
+ int uvc_mc_register_entities(struct uvc_video_chain *chain);
+ void uvc_mc_cleanup_entity(struct uvc_entity *entity);
+ 
++/*
++ * MacBookPro14,3 (T1, 05ac:8600) in H.264: the camera reports dwMaxVideoFrameSize = 276480, but at ~30 Mbit/s its
++ * larger frames exceed it. The overflowing frame is returned with the error flag (applications drop it) and the
++ * following P-frames are decoded against a missing reference: smearing ("rain") until the next keyframe.
++ * Allocate buffers for a whole uncompressed 4:2:0 frame instead. Only buffer sizes change, nothing sent to the device.
++ */
++static inline u32 uvc_buffer_size(const struct uvc_streaming *stream, const struct uvc_format *format,
++				  const struct uvc_frame *frame, u32 size)
++{
++	if ((stream->dev->quirks & UVC_QUIRK_H264_BIG_FRAMES) && format && frame &&
++	    (format->flags & UVC_FMT_FLAG_COMPRESSED))
++		size = max_t(u32, size, (u32)frame->wWidth * frame->wHeight * 3 / 2);
++	return size;
++}
++
+ /* Video */
+ int uvc_video_init(struct uvc_streaming *stream);
+ int uvc_video_suspend(struct uvc_streaming *stream);

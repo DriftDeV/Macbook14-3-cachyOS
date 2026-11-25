@@ -1,6 +1,7 @@
 # Webcam del T1 in configurazione USB 2 (solo H.264): uvcvideo di Linux 7.3 con le due patch di
 # T1Bridge v0.1.12 (kernel/uvcvideo-t1/upstream: parser H.264, niente autosospensione per il T1).
-# Differenze rispetto a Linux 7.3: uvcvideo-t1-on-linux-7.3.patch. Modulo con nome diverso
+# Differenze rispetto a Linux 7.3: uvcvideo-t1-on-linux-7.3.patch, più uvcvideo-t1-h264-big-frames.patch
+# (nostra: buffer da un fotogramma intero, la camera ne dichiara 270 KB ma ne manda fino a ~330 KB). Modulo con nome diverso
 # (uvcvideo_t1), bloccato dal caricamento automatico: lo carica solo la modalità display.
 obj-m := uvcvideo_t1.o
 uvcvideo_t1-objs := src/uvc_driver.o src/uvc_h264.o src/uvc_queue.o src/uvc_v4l2.o src/uvc_video.o \
