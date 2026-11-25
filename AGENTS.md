@@ -34,7 +34,7 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
 | `scripts/` | `lib.sh`, `backup-esp.sh`, `install-touchbar.sh`, `install-audio.sh`, `install-wifi.sh`, `install-wifi-nvram.sh`, `install-sleep.sh`, `sleep-test.sh`, `install-power.sh`, `install-bt.sh`, `bt-sco-route.py`, `build-t1bridge.sh`, `install-touchbar-display.sh`, `touchbar-mode.sh`, `install-fnstrip.sh`, `set-kwin-brightness-curve.sh`, `t1-reenumerate.sh`, `install-manager.sh`, `install-touchid.sh`, `install-tiny-dfr.sh`, `touchid-pam.sh`, `fix-chromium-gpu.sh` (app Chromium/Electron: `AMD_DEBUG=notiling` su Wayland, da utente) |
 | `config/` | mkinitcpio, libinput, kde, sleep, power, systemd, udev, tmpfiles, networkmanager, modprobe, `sources.conf` (sorgenti esterne; Touch Bar pinnata) |
 | `manager/` | MacBook Manager: `macbook-manager` (stato/azioni, CLI + GUI PySide6 con icona nella barra di sistema, editor di fnstrip in `fnstrip.py`/`gui_fnstrip.py`, Touch Bar in diretta/screenshot/video in `tbcapture.py`/`gui_live.py` dalla registrazione di debug di fnstrip, scheda Touch Bar che si adatta al renderer (`gui_touchbar.py`, editor tiny-dfr in `tinydfr.py`/`gui_tinydfr.py`), scheda Ottimizzazione delle app Chromium/web app in `optimize.py`/`gui_optimize.py` con `fix-chromium-gpu`), helper root via pkexec che accetta solo gli id di `actions.py`; installato da `scripts/install-manager.sh` |
-| `pkgs/`, `dkms/` | PKGBUILD (`macbookpro14-3-meta`, `apple-ibridge-dkms`), `dkms.conf` di riserva, `t1bridge-appletbdrm`, `t1bridge-uvc`, `t1bridge-ncm` (rete privata per Touch ID) |
+| `pkgs/`, `dkms/` | PKGBUILD (`macbookpro14-3-meta`, `apple-ibridge-dkms`, `mbp143-audio` DSP degli altoparlanti), `dkms.conf` di riserva, `t1bridge-appletbdrm`, `t1bridge-uvc`, `t1bridge-ncm` (rete privata per Touch ID) |
 | `patches/` | `touchbar/`: port di apple-ibridge a Linux 7.3 + `LLVM=1` automatico; README con le candidate; `audio/`; `tiny-dfr/` (T1) |
 | `docs/` | report di ricerca e note per componente; indice in `docs/README.md` |
 
@@ -61,6 +61,9 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
 
 - Codec audio: **CS8409** [F] (subsystem `0x106b3900`), non CS4208. **Audio [F] funziona** (speaker, cuffie, microfoni)
   con dnlbtz `offlineDkmsDeb` `11febcf` + `patches/audio/`; il fork ha sorgenti kernel solo per la serie 7.3.
+  Altoparlanti = 2 tweeter + 2 woofer, DSP solo software (CoreAudio). **`mbp143-audio` [F]** (25/11/2026, `pkgs/mbp143-audio/`,
+  commit `aa4d8c1` letto): crossover + EQ di Apple via filter-chain, suono migliore; costo ~19 % di un core e ~+1,5 W perché
+  il filtro non si sospende mai (l'utente lo tiene così). Vedi `docs/audio.md`.
 - Webcam: USB dietro l'iBridge → `uvcvideo`. **`facetimehd` non serve.** [F] Provata in Discord il 23/11/2026.
   Glitch "a pioggia" [F] corretti il 25/11 (Discord senza glitch, confermato): buffer da 270 KB troppo piccoli per l'H.264 della camera
   (`uvcvideo-t1-h264-big-frames.patch`). I sorgenti di `dkms/*/src/` erano esclusi da `.gitignore` (regola `src/`): ora no.

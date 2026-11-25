@@ -46,8 +46,70 @@ Il modulo del kernel `snd-hda-codec-cs8409` riconosce il codec ma lo configura i
   e non esce audio. Rimedi riportati: reset NVRAM, avvio da Option, reinstallare il bootloader. Controllo:
   `grep Subsystem /proc/asound/card*/codec#0`.
 - Audio dopo la sospensione s2idle (il fork ha la correzione per S3/ibernazione; in s2idle il codec dovrebbe restare alimentato).
-- Filter-chain PipeWire `dnlbtz/mbp143-audio` (DSP per gli speaker, +35 dB al microfono cuffie): non ancora valutato.
+- Filter-chain PipeWire `dnlbtz/mbp143-audio`: valutato e installato il 25/11/2026, vedi sotto.
 - Volume del microfono basso (segnalato nel README davidjo).
+
+## Altoparlanti: tweeter, woofer e DSP (25/11/2026)
+
+**Hardware**
+- 4 altoparlanti, ognuno con il suo amplificatore: tweeter e woofer a sinistra e a destra [F dal README davidjo, che cita
+  i nomi nei layout di `AppleHDA.kext`; un utente iFixit conferma tweeter e woofer in ogni gruppo altoparlante].
+- Il CS8409 non elabora niente: converte lo stream in TDM a 4 canali verso gli amplificatori (pin 0x24 = canali 1-2,
+  0x25 = canali 3-4), che fanno la conversione D/A. Programmazione degli amplificatori fissa, niente volume né filtri in
+  hardware (`NOTES.md` di davidjo). Per `106b3900` il driver usa la sequenza `real_config` [I: MAX98706].
+- La DSP di macOS è software, in CoreAudio: il layout del 14,3 ha una catena (`Mozart`, `DualBand`, `Loudness`,
+  `BuzzKill`, `ControlFreak`, protezione termica) solo sul percorso degli altoparlanti.
+
+**Senza DSP [F]**: profilo "Stereo analogico" (2 canali, 44,1 kHz); il driver copia lo stereo su tutte e due le coppie,
+quindi tweeter e woofer ricevono lo stesso segnale a banda piena, senza crossover né EQ: suono sottile. [I] I tweeter
+ricevono anche i bassi, senza protezione termica. La scheda offre già il profilo "Surround analogico 4.0".
+
+**`dnlbtz/mbp143-audio` [F]**, commit `aa4d8c1` (v1.0.0), pacchetto da [`../pkgs/mbp143-audio/`](../pkgs/mbp143-audio/)
+(PKGBUILD originale con sorgente fissata al commit e `pkgver` fisso):
+- Codice letto: Makefile/PKGBUILD copiano solo file; regole WirePlumber legate a `HDA:10138409,106b3900`; script Lua solo
+  con l'API di WirePlumber (profilo che segue il jack, volume grezzo a 0 dB, +35 dB al microfono cuffie); plugin Rust
+  senza file/rete/processi (unico `unsafe`: flush-to-zero di MXCSR, ripristinato); dipendenze `lv2` 0.6.0 da crates.io con
+  `Cargo.lock`. Grafo: volume iniziale 12,5 %, un guadagno fisso +1,5 dB, 66 biquad dai coefficienti del layout Apple,
+  crossover ~1 kHz, FL/FR = tweeter, RL/RR = woofer (stesso ordine del driver). 13/13 test superati.
+- Installato con `sudo pacman -U`, poi `systemctl --user restart pipewire pipewire-pulse wireplumber`. Profilo 4.0,
+  "MacBook Pro 14,3 Speakers" predefinito, uscita grezza nascosta. Verificato con `pw-link`/`pw-top`: app →
+  `audio_effect.mbp143-speakers` → `effect_output` (4 canali, ~1 ms per blocco da 512) → scheda.
+- **Suono migliore**, confermato dall'utente. Attenzione: dopo il riavvio di PipeWire le app Chromium/Electron (Sidra) si
+  mettono in pausa; al primo tentativo la musica non passava dal filtro e "non cambiava nulla".
+- **Costo**: il grafo ha `session.suspend-timeout-seconds = 0` (non si sospende mai) e gira nel thread audio di
+  WirePlumber: ~19 % di un core anche in silenzio (86 risvegli/s = 44100/512), di più con un flusso aperto (Sidra in pausa
+  lo tiene aperto). Batteria a riposo: mediana 17,9 W contro 16,3 W (circa +1,5 W; misura disturbata da Sidra aperto e
+  messaggi). Possibile correzione non applicata per scelta dell'utente: timeout a 5 s nel PKGBUILD (rischi [NV]: clic alla
+  ripresa, modello termico che riparte freddo).
+- L'ingresso predefinito era rimasto "Audio interno" (predefinito salvato prima dell'installazione), non
+  `effect_output.mbp143-mic`: il microfono delle cuffie esce basso se l'app registra dalla sorgente grezza. Corretto il
+  25/11 con `wpctl set-default <id di effect_output.mbp143-mic>` (WirePlumber lo salva). I due ingressi visibili sono lo
+  stesso microfono: la sorgente grezza resta visibile di proposito perché porta la scelta interno/cuffie.
+- Togliere: `sudo pacman -R mbp143-audio`, poi riavviare i tre servizi utente.
+
+**Altoparlanti difettosi di questo Mac [F] (25/11/2026)**: a volume alto si interrompono il woofer sinistro e i due tweeter.
+Abbassando dal vivo il guadagno `f6c0gain`/`f6c1gain` (uguale sui 4 canali, `pw-cli s <id> Props`) fino a -6 dB si
+interrompono ancora; registrando l'uscita del filtro a -6 dB e volume 100 %: picchi woofer -7,5/-8,3 dBFS, tweeter
+-14 dBFS, limitatori fermi. Quindi non è il segnale al massimo [I: protezione degli amplificatori sui bassi forti, o
+difetto meccanico; i tweeter si interrompono insieme al woofer]. ControlFreak ha il tetto fisso a 0 dBFS nel codice
+(`ceiling_db`), regolabile solo ricompilando o aggiungendo guadagni nel grafo.
+
+**Non "riavviare gli amplificatori" con unbind/bind di `0000:00:1f.3` [F] (25/11/2026)**: il reset del collegamento HDA
+riporta il subsystem del codec al valore di fabbrica `0x10138409`; il driver davidjo non attiva il percorso Apple
+(`!(driver->ops && driver->ops->probe)`, probe -22, WARN del kernel), il codec passa a `snd_hda_codec_generic` (zero
+uscite) e non torna indietro nemmeno scrivendo `0x106b3900` in `/sys/class/sound/hwC1D0/subsystem_id` (il kernel ricorda
+`probe_id` generico: bind → ENODEV). Si ripristina solo riavviando (il firmware riscrive il subsystem). Il 23/11 la stessa
+procedura con rmmod/insmod aveva funzionato [C].
+
+**Dopo il riavvio (25/11/2026, 13:05) [F]**: codec `0x106b3900` legato al driver Apple, nessun errore I2C, profilo 4.0,
+filtro attivo. Toni di prova attraverso il filtro (150 Hz → woofer, 5 kHz → tweeter, un lato per volta): l'utente sente
+**solo woofer e tweeter destri**; i sinistri sono muti. Registrando `effect_output` durante i toni di sinistra il segnale
+c'è (woofer sx -15,5 dBFS, tweeter sx -33,8 dBFS), quindi il software lo manda. [I] Guasto hardware del lato sinistro:
+woofer e tweeter sinistri stanno nello stesso gruppo altoparlante (ricambio unico "Left Speaker" su iFixit), quindi il
+sospetto è il gruppo o il suo connettore/cavo. L'utente lo considera un guasto hardware anche per macOS (non provato
+in macOS). Finché il lato sinistro è muto, i contenuti solo sul canale sinistro non si sentono [I: rimedio possibile un
+downmix mono davanti al filtro, non fatto]. Poco dopo, stessa prova: sentiti woofer destro e **tutti e due i tweeter**;
+woofer sinistro ancora muto. Il guasto è intermittente [I: woofer sinistro, o contatto del gruppo sinistro].
 
 ## Bluetooth audio [F]
 

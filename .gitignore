@@ -6,3 +6,5 @@ src/
 !dkms/*/src/
 pkg/
 __pycache__/
+# clone e build di makepkg in pkgs/*/
+pkgs/*/*/

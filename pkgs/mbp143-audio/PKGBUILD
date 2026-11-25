@@ -1,0 +1,45 @@
+# DSP degli altoparlanti e del microfono del MacBookPro14,3 (dnlbtz/mbp143-audio), fissato a un commit letto.
+# Copia del PKGBUILD originale (packaging/arch) con due differenze: sorgente fissata a _commit (l'originale prende
+# l'ultimo commit con sha256sums=SKIP) e pkgver fisso. Il codice è stato letto il 25/11/2026 (docs/audio.md).
+#   cd pkgs/mbp143-audio && makepkg -s && sudo pacman -U mbp143-audio-*.pkg.tar.zst
+#   togliere: sudo pacman -R mbp143-audio, poi systemctl --user restart pipewire pipewire-pulse wireplumber
+# Upstream maintainer: Daniel Betz
+
+pkgname=mbp143-audio
+pkgver=1.0.0
+pkgrel=1
+_commit=aa4d8c13514066aafa6aaa7a4ae852fd856ae9db  # v1.0.0
+pkgdesc='Audio DSP for the 15" MacBook Pro of 2017 (MacBookPro14,3): speaker and microphone graphs for PipeWire, with LV2 plugins'
+arch=('x86_64')
+url='https://github.com/dnlbtz/mbp143-audio'
+license=('MIT')
+depends=('glibc' 'libgcc' 'pipewire' 'pipewire-audio' 'wireplumber')
+makedepends=('cargo' 'git')
+install=mbp143-audio.install
+source=("$pkgname::git+$url.git#commit=$_commit")
+sha256sums=('SKIP')  # il commit fissato fa da verifica
+
+prepare() {
+  cd "$pkgname"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd "$pkgname"
+  export RUSTUP_TOOLCHAIN=stable
+  make CARGOFLAGS=--frozen
+}
+
+check() {
+  cd "$pkgname"
+  export RUSTUP_TOOLCHAIN=stable
+  make check CARGOFLAGS=--frozen
+}
+
+package() {
+  cd "$pkgname"
+  export RUSTUP_TOOLCHAIN=stable
+  make install PREFIX=/usr DESTDIR="$pkgdir" CARGOFLAGS=--frozen
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
