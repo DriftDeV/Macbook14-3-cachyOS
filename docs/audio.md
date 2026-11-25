@@ -87,6 +87,16 @@ ricevono anche i bassi, senza protezione termica. La scheda offre già il profil
   stesso microfono: la sorgente grezza resta visibile di proposito perché porta la scelta interno/cuffie.
 - Togliere: `sudo pacman -R mbp143-audio`, poi riavviare i tre servizi utente.
 
+**bankstown, bassi psicoacustici di Asahi Linux [F] (25/11/2026)**: `chadmed/bankstown` commit `8e6f96f` (1.1.0 + fix
+del sample rate zero), letto: 257 righe di Rust, solo DSP (passa-banda 20-200 Hz, saturazione con tanh per 2ª e 3ª
+armonica, passa-alto, somma al segnale), dipendenze `biquad` e `lv2` da `Cargo.lock`. Pacchetto
+[`../pkgs/bankstown-lv2/`](../pkgs/bankstown-lv2/) in `/usr/lib/lv2`; `pkgs/mbp143-audio` (pkgrel 2) lo inserisce con
+`add-bankstown.py` all'inizio del grafo degli altoparlanti (headroom → `bassex` → passa-alto 88 Hz → resto invariato), così
+vale solo per gli altoparlanti e passa da crossover, limitatori e protezione termica. Valori di Asahi per il MacBook Pro
+14" M1 (`firs/j314/graph.json`: amt 1,45, sat_second 1,35, sat_third 2,25, blend 0,67, ceil/final_hp 200 Hz); il 16" usa
+amt 1,65 e 125 Hz. Prova A/B dal vivo (filtro separato davanti, bypass acceso/spento): l'utente preferisce acceso; dopo
+l'installazione fissa "suona bene". Regolabile dal vivo con `pw-cli s <id> Props '{ params = [ "bassex:amt" 1.65 ] }'`.
+
 **Altoparlanti difettosi di questo Mac [F] (25/11/2026)**: a volume alto si interrompono il woofer sinistro e i due tweeter.
 Abbassando dal vivo il guadagno `f6c0gain`/`f6c1gain` (uguale sui 4 canali, `pw-cli s <id> Props`) fino a -6 dB si
 interrompono ancora; registrando l'uscita del filtro a -6 dB e volume 100 %: picchi woofer -7,5/-8,3 dBFS, tweeter

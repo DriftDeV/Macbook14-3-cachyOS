@@ -1,0 +1,36 @@
+# bankstown: bassi psicoacustici (armoniche delle basse frequenze) di Asahi Linux, come plugin LV2.
+# Fissato al commit letto il 25/11/2026 (257 righe di Rust, solo calcolo audio; docs/audio.md).
+# Lo usa il filtro degli altoparlanti di pkgs/mbp143-audio.
+#   cd pkgs/bankstown-lv2 && makepkg -s && sudo pacman -U bankstown-lv2-*.pkg.tar.zst
+# Upstream: James Calligeros
+
+pkgname=bankstown-lv2
+pkgver=1.1.0
+pkgrel=1
+_commit=8e6f96f06d0e51c2a1dc513cf2fdf57ab32a2a64  # 1.1.0 + "Avoid panic if initialized with zero sample rate"
+pkgdesc='A barebones, fast LV2 bass enhancement plugin (Asahi Linux)'
+arch=('x86_64')
+url='https://github.com/chadmed/bankstown'
+license=('MIT')
+depends=('glibc' 'libgcc')
+makedepends=('cargo' 'git')
+source=("bankstown::git+$url.git#commit=$_commit")
+sha256sums=('SKIP')  # il commit fissato fa da verifica
+
+prepare() {
+  cd bankstown
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd bankstown
+  export RUSTUP_TOOLCHAIN=stable
+  cargo build --release --frozen
+}
+
+package() {
+  cd bankstown
+  make install LIBDIR=/usr/lib DESTDIR="$pkgdir"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

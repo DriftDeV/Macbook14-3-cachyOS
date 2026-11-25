@@ -1,26 +1,30 @@
 # DSP degli altoparlanti e del microfono del MacBookPro14,3 (dnlbtz/mbp143-audio), fissato a un commit letto.
-# Copia del PKGBUILD originale (packaging/arch) con due differenze: sorgente fissata a _commit (l'originale prende
-# l'ultimo commit con sha256sums=SKIP) e pkgver fisso. Il codice è stato letto il 25/11/2026 (docs/audio.md).
-#   cd pkgs/mbp143-audio && makepkg -s && sudo pacman -U mbp143-audio-*.pkg.tar.zst
+# Copia del PKGBUILD originale (packaging/arch) con tre differenze: sorgente fissata a _commit (l'originale prende
+# l'ultimo commit con sha256sums=SKIP), pkgver fisso, e bankstown (pkgs/bankstown-lv2) inserito all'inizio del grafo
+# degli altoparlanti da add-bankstown.py. Il codice è stato letto il 25/11/2026 (docs/audio.md).
+#   prima pkgs/bankstown-lv2, poi: cd pkgs/mbp143-audio && makepkg -s && sudo pacman -U mbp143-audio-*.pkg.tar.zst
 #   togliere: sudo pacman -R mbp143-audio, poi systemctl --user restart pipewire pipewire-pulse wireplumber
 # Upstream maintainer: Daniel Betz
 
 pkgname=mbp143-audio
 pkgver=1.0.0
-pkgrel=1
+pkgrel=2
 _commit=aa4d8c13514066aafa6aaa7a4ae852fd856ae9db  # v1.0.0
 pkgdesc='Audio DSP for the 15" MacBook Pro of 2017 (MacBookPro14,3): speaker and microphone graphs for PipeWire, with LV2 plugins'
 arch=('x86_64')
 url='https://github.com/dnlbtz/mbp143-audio'
 license=('MIT')
-depends=('glibc' 'libgcc' 'pipewire' 'pipewire-audio' 'wireplumber')
-makedepends=('cargo' 'git')
+depends=('glibc' 'libgcc' 'pipewire' 'pipewire-audio' 'wireplumber' 'bankstown-lv2')
+makedepends=('cargo' 'git' 'python')
 install=mbp143-audio.install
-source=("$pkgname::git+$url.git#commit=$_commit")
-sha256sums=('SKIP')  # il commit fissato fa da verifica
+source=("$pkgname::git+$url.git#commit=$_commit"
+        "add-bankstown.py")
+sha256sums=('SKIP'  # il commit fissato fa da verifica
+            'bba59eae7edb4f07e786049e7075f8a61b1a167619fe1464e9796c5406610862')
 
 prepare() {
   cd "$pkgname"
+  python3 "$srcdir/add-bankstown.py" graphs/speakers.json
   export RUSTUP_TOOLCHAIN=stable
   cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
 }
