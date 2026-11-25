@@ -113,6 +113,49 @@ di `install.sh`), in `audio.py` / `gui_audio.py`, da utente, senza password.
   essere `required`: con `optional` WirePlumber non lo carica.
 - Con le cuffie il filtro non esiste: la scheda lo dice e le impostazioni valgono quando torna.
 
+## CPU (scheda CPU) e regole energetiche
+
+`gui_cpu.py` (scheda e riquadro `RulesBox`, usato anche dalla scheda GPU), `power.py` (regole senza Qt).
+
+- **Stato ogni 2 s**: frequenza media e massima dei core, temperatura, ventole, potenza del package (RAPL, pubblicata da
+  `cpu-limit.py` perché l'utente non può leggerla), turbo e frequenza massima, profilo di power-profiles-daemon ed EPP,
+  limite di potenza, tetto di temperatura (e se sta limitando), quante volte il firmware ha limitato la CPU per il calore.
+- **Regole automatiche**, una colonna per l'alimentatore e una per la batteria (quella attuale è segnata): turbo,
+  frequenza massima (40-100 %), profilo energetico (o non cambiarlo), limite di potenza RAPL PL1 (firmware = 100 W, 45,
+  35, 25, 15 W), tetto di temperatura (75-95 °C). Nella scheda GPU: Radeon a batteria (clock al minimo / risparmio /
+  automatica) e limite FPS (nessuno, 120, 90, 60, 30).
+- Ogni valore è un'azione root fissa generata in `actions.py` (`pw-<lato>-<chiave>-<valore>`, nascoste dalla scheda
+  Azioni; `macbook-manager actions --all` le elenca): scrive la chiave in `/etc/macbookpro14-3/power.conf` e riapplica
+  `power-source.sh`. L'helper resta senza argomenti liberi.
+- Il tetto di temperatura lo applica `macbookpro14-3-cpu-limit` (`config/power/cpu-limit.py`, root, ogni 2 s): sopra
+  il tetto abbassa `max_perf_pct` (fino al 30 %), 5 °C sotto lo rialza piano.
+- Il limite FPS è MangoHud (layer Vulkan, HUD nascosto) attivato per tutta la sessione da
+  `/etc/environment.d/90-macbookpro14-3-mangohud.conf`; il limite sta in `/etc/macbookpro14-3/mangohud.conf`, che
+  `power-source.sh` riscrive a ogni cambio di alimentazione e che MangoHud rilegge da solo nei giochi già aperti.
+
+## GPU (scheda GPU)
+
+`gpu.py` / `gui_gpu.py`; comandi di root fissi in `scripts/gpu-control.sh` (installato da `install-manager.sh` in
+`/usr/local/lib/macbookpro14-3/`), azioni del gruppo "GPU" di `actions.py`.
+
+- **Stato** delle due GPU, ogni 2 s: ruolo (schermo o no), frequenza, e per la Radeon utilizzo, watt, temperatura, VRAM,
+  livello e profilo energetico.
+- **Chi sta usando le GPU**: da `/proc/<pid>/fdinfo` (`drm-engine-*`, nanosecondi di lavoro per client DRM, contati una
+  volta per `drm-client-id`): su quale GPU lavora davvero ogni programma e quanto. Solo i processi dell'utente (KWin no).
+- **GPU dello schermo al prossimo avvio** (`gpu-control.sh display intel|radeon`, variabile EFI `gpu-power-prefs`, poi
+  "Riavvia"): Intel per risparmiare (serve l'avvio da OpenCore con "Windows GMUX"), Radeon per i giochi. La scheda avvisa
+  se si sceglie la Intel senza OpenCore.
+- **Radeon**: automatica + profilo giochi (come con l'alimentatore), automatica predefinita, risparmio (manual +
+  POWER_SAVING, come a batteria), clock al minimo / al massimo. Valgono fino al prossimo cambio di alimentazione, quando
+  `power-source.sh` riapplica `power.conf`; lì anche "Radeon in risparmio a batteria: sì/no".
+- **GPU per applicazione**: Predefinita / Radeon / Intel. Nei `.desktop` (copia utente segnata
+  `X-MacBookManager-GPU-Copy=true` per quelli di sistema, tolta tornando a "Predefinita") aggiunge
+  `env MBM_GPU=… DRI_PRIME=pci-… MESA_VK_DEVICE_SELECT=<vendor:device> MESA_VK_DEVICE_SELECT_FORCE_DEFAULT_DEVICE=1`, dopo
+  l'eventuale `env AMD_DEBUG=notiling` dell'Ottimizzazione. [F] 25/11/2026: Vulkan (`vulkaninfo`) e OpenGL (`eglinfo -p
+  wayland`) vedono solo la GPU scelta; anche le app che scelgono da sole la "più potente" (wgpu) vengono vincolate.
+  Limite: se un aggiornamento cambia il `.desktop` di un'app Chromium, l'Ottimizzazione ne rigenera la copia e la scelta
+  della GPU va rifatta.
+
 ## Batteria (scheda Batteria, `macbook-manager battery-report`)
 
 `battery.py` / `gui_battery.py`, da utente, senza root.

@@ -310,11 +310,28 @@ def energy():
                            "Schermo e desktop sono sempre sulla Radeon (7-9 W a riposo)."))
     conf = read_conf("power")
     if conf:
-        rs = conf.get("BATTERY_RADEON_SAVE") == "1"
-        nt = conf.get("BATTERY_NO_TURBO") == "1"
-        items.append(_item("Energia", "powerconf", "A batteria",
-                           "Radeon in risparmio: %s · turbo CPU: %s" % ("sì" if rs else "no", "spento" if nt else "acceso"),
-                           INFO, "Impostazioni di /etc/macbookpro14-3/power.conf"))
+        from . import power as P
+        parts = []
+        for key, _t, label, _e, options, _d, _s in P.SETTINGS:
+            v = P.current("BATTERY", key)
+            if v != P.current("AC", key) or key == "RADEON_MODE":
+                parts.append("%s %s" % (label.lower(), dict(options).get(v, v)))
+        items.append(_item("Energia", "powerconf", "Regole a batteria", " · ".join(parts) or "come con l'alimentatore",
+                           INFO, "Schede CPU e GPU (/etc/macbookpro14-3/power.conf)"))
+    # Stato attuale del turbo (le regole sopra valgono solo a batteria).
+    nt_now = _int("/sys/devices/system/cpu/intel_pstate/no_turbo")
+    if nt_now is not None:
+        ac = (_int("/sys/class/power_supply/ADP1/online") or 0) == 1
+        mx = _int("/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq")
+        ghz = " (massimo %.1f GHz)" % (mx / 1e6) if mx else ""
+        if nt_now == 0:
+            items.append(_item("Energia", "turbo", "Turbo CPU", "attivo ora" + ghz, OK))
+        elif ac:
+            items.append(_item("Energia", "turbo", "Turbo CPU", "spento ora, con l'alimentatore collegato" + ghz, WARN,
+                               "Doveva riaccendersi collegando l'alimentatore: "
+                               "sudo /usr/local/lib/macbookpro14-3/power-source.sh"))
+        else:
+            items.append(_item("Energia", "turbo", "Turbo CPU", "spento ora (a batteria, come da regola)" + ghz, INFO))
     ct, sm = _hwmon("coretemp"), _hwmon("applesmc")
     parts, lvl = [], OK
     if ct:

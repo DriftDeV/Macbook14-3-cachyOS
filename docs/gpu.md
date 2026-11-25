@@ -128,3 +128,17 @@ Provati [F] il 24/11/2026: Brave, Discord, Sidra e Claude Desktop su Wayland con
 `--gpu-recent-crash-count=0`, accelerazione attiva, nessun glitch; Claude Desktop ha riattivato da solo l'accelerazione
 (lanciatore). Da segnalare a monte [NV]: Chromium + Polaris (GFX8) + buffer tiled
 sotto Wayland.
+
+## Giochi con lo schermo sulla Intel: 60 fps e frame time irregolare [F] (25/11/2026)
+
+Horizon (clone di Minecraft in Rust, wgpu/Vulkan): 200-300 fps con lo schermo sulla Radeon, 60 fps e frame time
+irregolare dopo il passaggio dello schermo alla Intel. Misure con il gioco aperto:
+- apre entrambe le GPU e disegna sulla Radeon (`fdinfo`), che però lavora per lui solo ~7 % del tempo: la GPU non è il
+  collo di bottiglia; Radeon a 907 MHz (massimo), 16-19 W, 61-68 °C, nessun limite di potenza;
+- la Intel compone lo schermo a 350/1100 MHz; la CPU ha qualche secondo di limitazione termica in tutto l'avvio
+  (`package_throttle_total_time_ms` 8,2 s) a 99 °C con le ventole a 5000 giri.
+[I] Causa: ogni fotogramma va copiato dalla Radeon alla Intel e presentato da KWin sulla Intel, senza scanout diretto né
+presentazione oltre il refresh: il gioco aspetta la sincronizzazione (60 Hz) e la copia. Rimedio: per giocare, schermo
+sulla Radeon (scheda GPU di MacBook Manager → "Schermo sulla Radeon al prossimo avvio", poi riavvio); per la batteria,
+Intel. Con lo schermo sulla Radeon (scheda GPU, riavvio) l'utente conferma che funziona (25/11/2026; fps non misurati).
+

@@ -65,3 +65,30 @@ batteria. Prime sessioni ricostruite dalla cronologia: 18,5-21,4 W di media nell
 3 h 24 - 3 h 54 con la batteria piena), 27 W il pomeriggio del 25/11 (compilazioni, musica con il DSP audio, Claude).
 Salute 94 % a 184 cicli (72,3/76,8 Wh secondo UPower).
 
+## Regole per alimentatore e batteria, tetto di temperatura, limite FPS [F] (25/11/2026)
+
+`/etc/macbookpro14-3/power.conf` ha ora una chiave per lato (`AC_*`, `BATTERY_*`) per turbo, frequenza massima
+(`max_perf_pct`), profilo di power-profiles-daemon, limite di potenza RAPL PL1, tetto di temperatura e limite FPS, più
+`BATTERY_RADEON_MODE` (low / save / auto; prima `BATTERY_RADEON_SAVE`, ancora letto se manca la chiave nuova).
+`install-power.sh` aggiunge le chiavi mancanti senza toccare quelle presenti. Predefiniti: a batteria Radeon al minimo
+(`low`, sclk 214 MHz), turbo spento, giochi a 60 FPS; con l'alimentatore piena potenza. Si cambiano da MacBook Manager
+(schede CPU e GPU).
+
+Verifiche:
+- RAPL `intel-rapl:0` PL1 e PL2 scrivibili (il firmware lascia PL1 a 100 W, PL2 a 125 W; non bloccati);
+  `max_perf_pct` scrivibile; `energy_uj` leggibile solo da root.
+- Il firmware ha limitato la CPU per il calore 2457 volte in un pomeriggio di gioco (`package_throttle_count`), a 99 °C.
+- MangoHud 0.8.4 (layer Vulkan implicito con `MANGOHUD=1`, config in `MANGOHUD_CONFIGFILE`): vkcube 600 fotogrammi
+  in 0,6 s senza limite; con `fps_limit=30`, 300 fotogrammi in 10,5 s; passando da 300 a 30 con vkcube in esecuzione il
+  limite cambia subito (il file viene riletto). Le app OpenGL non sono coperte.
+- Dopo l'installazione: `macbookpro14-3-cpu-limit` attivo, 20 W di package con un gioco aperto, `mangohud.conf`
+  riscritto con `fps_limit=0` con l'alimentatore.
+[NV]: limite FPS reale in un gioco a batteria (serve un nuovo accesso perché le app carichino MangoHud), tetto di
+temperatura sotto carico, consumo con la Radeon in `low`, giochi di Steam dentro il contenitore di Steam Runtime.
+
+
+**Gioco a batteria [F] (25/11/2026)**: Horizon (Vulkan, MangoHud caricato), schermo sulla Radeon, regole a batteria
+dell'utente (Radeon `low`, turbo spento, CPU max 40 %, profilo power-saver, PL1 15 W, 30 FPS). 2 minuti: batteria 24,2 W
+di media (24,6 W dal contatore di carica), package CPU 6,0 W a 64 °C, Radeon 9,0 W a 214 MHz con Horizon al 46 % del suo
+tempo; il resto (~9 W) è schermo, Wi-Fi, audio, memoria. Autonomia stimata: ~3 h con la batteria piena (72,3 Wh), ~2 h 15
+dal 77 % (UPower 2 h 14).

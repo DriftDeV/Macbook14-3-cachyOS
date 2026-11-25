@@ -50,9 +50,11 @@ def cmd_status(args):
     return 1 if any(i["level"] == "err" for i in items) else 0
 
 
-def cmd_actions(_args):
+def cmd_actions(args):
     group = None
     for a in ACTIONS:
+        if a.get("hidden") and not args.all:
+            continue
         if a["group"] != group:
             group = a["group"]
             print("\n" + group)
@@ -150,7 +152,8 @@ def main(argv=None):
     g.add_argument("--tray", action="store_true", help="parte nascosta nella barra di sistema")
     s = sub.add_parser("status", help="stato di driver, Touch Bar, sospensione, rete, energia")
     s.add_argument("--json", action="store_true")
-    sub.add_parser("actions", help="elenca le azioni")
+    ac = sub.add_parser("actions", help="elenca le azioni")
+    ac.add_argument("--all", action="store_true", help="anche le regole energetiche (pw-*)")
     r = sub.add_parser("run", help="esegue un'azione (quelle root chiedono la password con polkit)")
     r.add_argument("action")
     ts = sub.add_parser("touchbar-screenshot", help="salva l'immagine della Touch Bar (modalità display) in PNG")

@@ -155,6 +155,9 @@ La Touch Bar non ha una luminosità propria regolabile dall'hardware: lo slider 
 | Screenshot o video della Touch Bar | MacBook Manager → Touch Bar → **Touch Bar in diretta…** |
 | Altoparlanti: preset e regolazioni | MacBook Manager → scheda **Audio**: DSP di fabbrica, con bassi, bassi intensi, notte; intensità e frequenza dei bassi, livello massimo, bilanciamento. L'uscita si chiama **MacBook Pro 14,3 Speakers**, il microfono **MacBook Pro 14,3 Microphone** |
 | Risparmio energetico | automatico: a batteria la scheda video va in risparmio e la CPU senza turbo |
+| CPU: turbo, frequenza, temperatura | MacBook Manager → scheda **CPU**: regole per alimentatore e batteria (turbo, frequenza massima, profilo, limite di potenza, tetto di temperatura) e stato dal vivo |
+| Limite FPS a batteria | MacBook Manager → scheda **GPU**: a batteria i giochi Vulkan si fermano a 60 FPS (predefinito) e la Radeon va al minimo; con l'alimentatore tornano liberi |
+| GPU: schermo, giochi, risparmio | MacBook Manager → scheda **GPU**: chi usa quale GPU, GPU dello schermo al prossimo avvio (Intel per risparmiare, Radeon per giocare), profili della Radeon, GPU per ogni applicazione |
 | Batteria: grafico e report | MacBook Manager → scheda **Batteria**: carica e consumi dal vivo, sessioni a batteria con autonomia stimata e cosa ha consumato; un report arriva da solo quando ricolleghi l'alimentatore (`macbook-manager battery-report` da terminale) |
 
 ## Problemi noti e rimedi

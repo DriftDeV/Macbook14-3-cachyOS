@@ -21,6 +21,8 @@ WP_SCRIPT=/usr/local/share/wireplumber/scripts/macbook-manager/audio-settings.lu
 WP_CONF=/etc/wireplumber/wireplumber.conf.d/92-macbook-manager-audio.conf
 # Scheda Batteria: registratore (timer utente, un campione al minuto in ~/.local/share/macbook-manager/battery).
 LOG_UNITS="macbook-manager-battery-log.service macbook-manager-battery-log.timer"
+# Scheda GPU: comandi di root fissi (GPU dello schermo, profili della Radeon), usati dall'helper.
+GPUCTL=/usr/local/lib/macbookpro14-3/gpu-control.sh
 
 TRAY=1 UNDO=0
 for a in "$@"; do
@@ -47,6 +49,7 @@ if [ "$UNDO" = 1 ]; then
     user_systemctl disable --now macbook-manager-battery-log.timer
     run systemctl --global disable macbook-manager-battery-log.timer 2>/dev/null || true
     for u in $LOG_UNITS; do run rm -f "/etc/systemd/user/$u"; done
+    run rm -f "$GPUCTL"
     run rm -rf "$DEST"
     run rm -f "$BIN" "$POLICY" "$APP" "$AUTOSTART" "$WP_SCRIPT" "$WP_CONF"
     run rmdir --ignore-fail-on-non-empty "$(dirname "$WP_SCRIPT")" 2>/dev/null || true
@@ -78,6 +81,9 @@ for u in $LOG_UNITS; do run install -Dm644 "$REPO_DIR/manager/systemd/$u" "/etc/
 run systemctl --global enable macbook-manager-battery-log.timer
 user_systemctl daemon-reload
 user_systemctl enable --now macbook-manager-battery-log.timer
+
+log "Scheda GPU: gpu-control.sh (GPU dello schermo, profili della Radeon)"
+run install -Dm755 "$REPO_DIR/scripts/gpu-control.sh" "$GPUCTL"
 
 log "Voce nel menu delle applicazioni"
 run install -Dm644 "$REPO_DIR/manager/macbook-manager.desktop" "$APP"

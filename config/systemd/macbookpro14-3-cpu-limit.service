@@ -1,0 +1,16 @@
+[Unit]
+Description=MacBookPro14,3: limite di temperatura della CPU e watt per MacBook Manager
+Documentation=file:///usr/local/lib/macbookpro14-3
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -I /usr/local/lib/macbookpro14-3/cpu-limit.py
+Restart=on-failure
+RestartSec=5
+SyslogIdentifier=macbookpro14-3-cpu-limit
+Nice=-5
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

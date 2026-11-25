@@ -10,12 +10,34 @@ import os
 
 from . import LIBDIR, status
 
-_pw = lambda key: status.read_conf("power").get(key) == "1"  # noqa: E731
 _webcam = lambda: status.user_unit_active("macbookpro14-3-webcam.service")  # noqa: E731
 
 TBMODE = "/usr/local/bin/touchbar-mode"
 POWER_APPLY = [LIBDIR + "/power-source.sh"]
 TIDPAM = "/usr/local/bin/touchid-pam"
+GPUCTL = LIBDIR + "/gpu-control.sh"
+
+
+def _radeon(name):
+    """Valore attuale della Radeon: level (power_dpm_force_performance_level) o profile (pp_power_profile_mode)."""
+    import glob
+    for d in glob.glob("/sys/bus/pci/drivers/amdgpu/0000:*"):
+        try:
+            if name == "level":
+                with open(d + "/power_dpm_force_performance_level") as f:
+                    return f.read().strip()
+            with open(d + "/pp_power_profile_mode") as f:
+                for ln in f:
+                    if "*" in ln:
+                        return ln.split()[1].rstrip(":*")
+        except OSError:
+            continue
+    return None
+
+
+def _display_next():
+    from . import gpu
+    return gpu.display_prefs()["next"]
 
 ACTIONS = [
     # Touch Bar
@@ -70,15 +92,31 @@ ACTIONS = [
          needs=["/etc/systemd/system/macbookpro14-3-sleep-mode.service"],
          confirm="Con s2idle, a coperchio chiuso ventole e piattaforma restano accese e il Mac si sveglia da solo "
                  "ogni 30-40 minuti: non metterlo nello zaino. Continuare?"),
-    # Energia
-    dict(id="radeon-save-on", group="Energia", label="Radeon in risparmio a batteria: sì", root=True,
-         steps=[("conf", "power", "BATTERY_RADEON_SAVE", "1"), POWER_APPLY], active=lambda: _pw("BATTERY_RADEON_SAVE"), needs=POWER_APPLY),
-    dict(id="radeon-save-off", group="Energia", label="Radeon in risparmio a batteria: no", root=True,
-         steps=[("conf", "power", "BATTERY_RADEON_SAVE", "0"), POWER_APPLY], active=lambda: not _pw("BATTERY_RADEON_SAVE"), needs=POWER_APPLY),
-    dict(id="turbo-battery-off", group="Energia", label="Turbo CPU a batteria: spento", root=True,
-         steps=[("conf", "power", "BATTERY_NO_TURBO", "1"), POWER_APPLY], active=lambda: _pw("BATTERY_NO_TURBO"), needs=POWER_APPLY),
-    dict(id="turbo-battery-on", group="Energia", label="Turbo CPU a batteria: acceso", root=True,
-         steps=[("conf", "power", "BATTERY_NO_TURBO", "0"), POWER_APPLY], active=lambda: not _pw("BATTERY_NO_TURBO"), needs=POWER_APPLY),
+    # GPU (scheda GPU; gpu-control.sh, comandi fissi)
+    dict(id="gpu-display-intel", group="GPU", label="Schermo sulla Intel al prossimo avvio (risparmio)", root=True,
+         steps=[[GPUCTL, "display", "intel"]], needs=[GPUCTL], active=lambda: _display_next() == "intel",
+         confirm="Al prossimo avvio lo schermo passa alla Intel: circa 1,5-2 W in meno, ma i giochi che usano la Radeon "
+                 "vanno peggio (ogni fotogramma viene copiato alla Intel, di solito 60 fps fissi). Funziona solo avviando "
+                 "da OpenCore con \"Windows GMUX\". Continuare?",
+         then=("reboot", "Impostato. Riavviare ora per applicarlo?")),
+    dict(id="gpu-display-radeon", group="GPU", label="Schermo sulla Radeon al prossimo avvio (prestazioni)", root=True,
+         steps=[[GPUCTL, "display", "radeon"]], needs=[GPUCTL], active=lambda: _display_next() == "radeon",
+         confirm="Al prossimo avvio lo schermo passa alla Radeon: giochi e app 3D al massimo, circa 1,5-2 W in più a "
+                 "riposo. Continuare?",
+         then=("reboot", "Impostato. Riavviare ora per applicarlo?")),
+    dict(id="radeon-game", group="GPU", label="Radeon: automatica, profilo giochi", root=True,
+         steps=[[GPUCTL, "radeon", "game"]], needs=[GPUCTL],
+         active=lambda: _radeon("level") == "auto" and _radeon("profile") == "3D_FULL_SCREEN"),
+    dict(id="radeon-auto", group="GPU", label="Radeon: automatica, profilo predefinito", root=True,
+         steps=[[GPUCTL, "radeon", "auto"]], needs=[GPUCTL],
+         active=lambda: _radeon("level") == "auto" and _radeon("profile") == "BOOTUP_DEFAULT"),
+    dict(id="radeon-powersave", group="GPU", label="Radeon: risparmio energetico", root=True,
+         steps=[[GPUCTL, "radeon", "save"]], needs=[GPUCTL],
+         active=lambda: _radeon("level") == "manual" and _radeon("profile") == "POWER_SAVING"),
+    dict(id="radeon-low", group="GPU", label="Radeon: clock al minimo", root=True,
+         steps=[[GPUCTL, "radeon", "low"]], needs=[GPUCTL], active=lambda: _radeon("level") == "low"),
+    dict(id="radeon-high", group="GPU", label="Radeon: clock al massimo", root=True,
+         steps=[[GPUCTL, "radeon", "high"]], needs=[GPUCTL], active=lambda: _radeon("level") == "high"),
     # Rete e audio
     dict(id="wifi-reload", group="Rete e audio", label="Ricarica il driver Wi-Fi", root=True,
          steps=[["modprobe", "-r", "brcmfmac_wcc", "brcmfmac"], ["modprobe", "brcmfmac"]], needs=[]),
@@ -87,6 +125,8 @@ ACTIONS = [
     # Manutenzione
     dict(id="chromium-fix", group="Manutenzione", label="App Chromium/Electron: correzione GPU (Wayland)", root=False,
          steps=[[status.CHROMIUM_FIX]], needs=[status.CHROMIUM_FIX]),
+    dict(id="reboot", group="Manutenzione", label="Riavvia", root=False,
+         steps=[["systemctl", "reboot"]], needs=[], confirm="Il Mac si riavvia: salva il lavoro. Riavviare?"),
     dict(id="poweroff", group="Manutenzione", label="Spegni il Mac (riavvia anche il T1)", root=False,
          steps=[["systemctl", "poweroff"]], needs=[],
          confirm="Il Mac si spegne: salva il lavoro. Riaccendilo dopo ~30 s (il T1 riparte pulito). Spegnere?"),
@@ -94,6 +134,23 @@ ACTIONS = [
          steps=[["dkms", "autoinstall", "-k", "@KERNEL@"]], needs=["/usr/bin/dkms"], long=True),
 ]
 
+# Regole per alimentatore e batteria (power.py): un'azione fissa per ogni valore, nascosta dalla scheda Azioni
+# (le mostrano le schede CPU e GPU). Scrive la chiave in power.conf e riapplica con power-source.sh.
+def _power_actions():
+    from . import power
+    out = []
+    for key, _tab, label, _expl, options, _defaults, sides in power.SETTINGS:
+        for side in sides:
+            for value, text in options:
+                out.append(dict(
+                    id=power.action_id(side, key, value), group="Regole energetiche", hidden=True, root=True,
+                    label="%s, %s: %s" % (label, dict(power.SIDES)[side].lower(), text),
+                    steps=[("conf", "power", "%s_%s" % (side, key), value), POWER_APPLY], needs=POWER_APPLY,
+                    active=lambda s=side, k=key, v=value: power.current(s, k) == v))
+    return out
+
+
+ACTIONS += _power_actions()
 BY_ID = {a["id"]: a for a in ACTIONS}
 
 

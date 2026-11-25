@@ -90,6 +90,12 @@ class MainWindow(QMainWindow):
         from .gui_audio import AudioTab
         self.audio = AudioTab(lambda t: self.log.appendPlainText(t))
         self.tabs.addTab(self.audio, QIcon.fromTheme("audio-speakers"), "Audio")
+        from .gui_gpu import GpuTab
+        self.gpu = GpuTab(lambda t: self.log.appendPlainText(t), self.run_action)
+        self.tabs.addTab(self.gpu, QIcon.fromTheme("video-display"), "GPU")
+        from .gui_cpu import CpuTab
+        self.cpu = CpuTab(lambda t: self.log.appendPlainText(t), self.run_action)
+        self.tabs.addTab(self.cpu, QIcon.fromTheme("cpu"), "CPU")
         from .gui_battery import BatteryTab
         self.battery = BatteryTab(lambda t: self.log.appendPlainText(t))
         self.tabs.addTab(self.battery, QIcon.fromTheme("battery"), "Batteria")
@@ -133,7 +139,7 @@ class MainWindow(QMainWindow):
         lay = QVBoxLayout(w)
         groups = {}
         for a in ACTIONS:
-            if not available(a):
+            if not available(a) or a.get("hidden"):
                 continue
             if a["group"] not in groups:
                 box = QGroupBox(a["group"])
@@ -214,6 +220,9 @@ class MainWindow(QMainWindow):
         self.refresh(force=True)
         if hasattr(self, "touchbar"):
             self.touchbar.sync()
+        for tab in ("cpu", "gpu"):
+            if hasattr(self, tab):
+                getattr(self, tab).sync()
         then = getattr(self, "current", {}).get("then") if rc == 0 else None
         if then and then[0] in BY_ID:
             nxt = BY_ID[then[0]]
