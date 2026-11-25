@@ -1,188 +1,248 @@
-# CachyOS sul MacBook Pro 14,3 (15" 2017, Touch Bar T1)
+# CachyOS sul MacBook Pro 15" 2017 (MacBookPro14,3)
 
-Tutto quello che serve per usare **CachyOS** (Arch) sul **MacBookPro14,3**: 15" 2017, Touch Bar con chip **T1**,
-Intel i7 Kaby Lake, Radeon Pro 555/560, **senza chip T2**. Un solo script di post-installazione applica i
-passaggi provati su questa macchina: driver DKMS, patch, configurazioni, servizi.
+Questa repo serve a usare **CachyOS** (una distribuzione basata su Arch Linux) sul **MacBook Pro 15" del 2017 con
+Touch Bar** (modello **MacBookPro14,3**, chip T1, Radeon Pro 555/560). Dopo aver installato CachyOS, **un solo comando**
+installa driver, correzioni e impostazioni provate su questo Mac: Touch Bar con grafica e Touch ID, audio migliorato,
+webcam, Wi-Fi a 5 GHz, sospensione, risparmio energetico e un'app, **MacBook Manager**, per controllare tutto.
 
-> **Stato (24 novembre 2026):** provato su un MacBookPro14,3 reale con CachyOS, kernel `7.3.5-2-cachyos`
-> (clang + ThinLTO), KDE Plasma 6.8 Wayland. Quasi tutto funziona, **Touch ID compreso** (in modalità display);
-> restano limiti veri (ibernazione, consumo della Radeon). È un progetto personale, scritto con l'aiuto di un assistente IA e provato su **una sola
-> macchina**: leggi gli script prima di usarli. I dettagli di ogni componente sono in [`docs/`](docs/README.md).
+> **Stato (25 novembre 2026):** provato su un MacBookPro14,3 vero con CachyOS, kernel `7.3.5-2-cachyos`, KDE Plasma 6.8.
+> Quasi tutto funziona; restano due limiti veri: **niente ibernazione** e **autonomia di circa 4 ore** (la scheda video
+> Radeon non si spegne mai). È un progetto personale, scritto con l'aiuto di un assistente IA e provato su **un solo Mac**.
 
 ![Touch Bar in modalità display: renderer fnstrip con il tema OLED](docs/media/touchbar-oled.png)
-<sub>La Touch Bar in modalità display (renderer fnstrip, preset OLED di MacBook Manager): Esc, luminosità dello schermo e
-della tastiera, media, volume. Screenshot reale a 2170×60, catturato con *Touch Bar in diretta*.</sub>
+<sub>La Touch Bar disegnata da Linux (renderer fnstrip, tema OLED di MacBook Manager): Esc, luminosità, tastiera, media,
+volume. Screenshot reale a 2170×60.</sub>
+
+**Come capire se è il tuo modello:** in macOS, menu  → Informazioni su questo Mac → Resoconto di sistema: "Identificatore
+modello" deve essere **MacBookPro14,3**. Gli altri MacBook (14,1, 14,2, 2016, 2018 con chip T2) **non** sono supportati.
 
 ## Cosa funziona
 
-✅ provato sulla macchina · 🟡 funziona con limiti · ❓ non verificato · ❌ non funziona
+✅ funziona · 🟡 funziona con limiti · ❓ non provato · ❌ non funziona
 
-| Componente | Stato | Come | Note |
-|---|---|---|---|
-| Tastiera e trackpad | ✅ | `applespi` (kernel) + quirk libinput | il trackpad si disattiva mentre scrivi ([input](docs/input.md)) |
-| Touch Bar, modalità **tastiera** | ✅ | `apple-ibridge` (fork nonderbe `t1-fixes`) + 3 patch nostre, DKMS | i tasti disegnati dal firmware, come in Boot Camp ([touchbar](docs/touchbar.md)) |
-| Touch Bar, modalità **display** | ✅ predefinita | driver e servizi di [T1Bridge](https://github.com/standardagents/t1bridge) compilati da sorgente | grafica, cursori, temi, renderer [fnstrip](https://github.com/acmccubbin/fnstrip) ([t1bridge](docs/t1bridge.md)); necessaria per Touch ID |
-| Tasti funzione e multimediali | ✅ | Touch Bar | luminosità, tastiera, volume, media, F1-F12 con Fn |
-| Sensore di luce + luminosità automatica | ✅ | `apple-ib-als` / `hid_sensor_als` → `iio-sensor-proxy` → KWin | serve una curva di partenza: il sensore legge poco in luce ambiente |
-| Audio: speaker, cuffie, microfono interno e cuffie | ✅ | codec **CS8409**, driver davidjo (fork dnlbtz), DKMS | ([audio](docs/audio.md)) |
-| Wi-Fi 2,4 e 5 GHz | 🟡 | `brcmfmac` + NVRAM generato dalla calibrazione del chip + firmware patchato | da ~21 a ~290 Mbit/s; canale a 40 MHz invece di 80 ([wifi](docs/wifi.md)) |
-| Bluetooth: musica | ✅ | kernel (Broadcom su UART) | A2DP con AAC |
-| Bluetooth: chiamate (cuffie + microfono) | 🟡 | comando Broadcom per l'audio SCO via HCI | solo CVSD (qualità telefonica); mSBC muto |
-| Webcam | ✅ | `uvcvideo` (**non** `facetimehd`) | in modalità display solo H.264: Discord con `t1-webcam on` |
-| Sospensione (coperchio, S3) | ✅ | S3 (`deep`) come macOS, ventole ferme; Thunderbolt scollegato prima dello sleep + NVMe senza D3cold | notte intera provata: 8 h, 17 mAh (~0,03 W), nessun risveglio spontaneo ([sleep](docs/sleep.md)) |
-| Energia | 🟡 | a batteria Radeon in risparmio, CPU senza turbo | ~18 W a riposo ≈ 4 ore ([power](docs/power.md)) |
-| Grafica | 🟡 | Radeon; Intel con OpenCore | di base sulla Radeon; avviando da OpenCore ("Windows GMUX") con `gpu-power-prefs=1` lo schermo va sulla Intel (la Radeon resta accesa, resto da riprovare) ([gpu](docs/gpu.md)) |
-| Thunderbolt / USB-C, monitor esterni | ❓ | kernel | non provati |
-| Kernel LTS (`linux-cachyos-lts`) | ❓ | | mai avviato; DKMS compila la Touch Bar in modalità tastiera, non l'audio né la modalità display |
-| Ibernazione | ❌ | | `amdgpu` non riparte (serve una patch non ancora nel kernel) |
-| Spegnere la Radeon | ❌ | | 7-9 W anche a riposo, è la causa principale dell'autonomia ridotta |
-| Touch ID | ✅ solo in modalità display | servizi Touch ID di T1Bridge + libfprint/fprintd patchati, dati di fabbrica dalla ESP Apple | registrazione, verifica, sudo, schermata di blocco, dopo la sospensione (~10 s per tornare pronto). **Non disponibile in modalità tastiera** (il T1 espone il Secure Enclave solo nella configurazione USB 2). Limite noto: ~68 riconoscimenti per avvio, poi serve uno spegnimento completo ([touchid](docs/touchid-t1.md)) |
+| | Stato | Note |
+|---|---|---|
+| Tastiera e trackpad | ✅ | il trackpad si disattiva mentre scrivi |
+| Touch Bar | ✅ | grafica completa: Esc, luminosità, volume, media, F1-F12 con Fn; due stili a scelta (fnstrip o tiny-dfr) |
+| Touch ID | ✅ | sudo e schermata di blocco; vedi i limiti sotto |
+| Audio: altoparlanti, cuffie, microfoni | ✅ | con l'elaborazione di Apple (tweeter/woofer separati, equalizzazione, protezioni) e bassi più pieni |
+| Webcam | ✅ | anche in Discord e nel browser, senza disturbi |
+| Wi-Fi 2,4 e 5 GHz | 🟡 | fino a ~290 Mbit/s; canale a 40 MHz invece di 80 |
+| Bluetooth | 🟡 | musica in buona qualità (AAC); chiamate con cuffie solo in qualità telefonica |
+| Sospensione (chiudendo il coperchio) | ✅ | una notte intera consuma quasi niente |
+| Luminosità automatica dello schermo | ✅ | dal sensore di luce della Touch Bar |
+| Autonomia | 🟡 | circa 4 ore a riposo |
+| Monitor esterni, Thunderbolt | ❓ | non provati |
+| Ibernazione | ❌ | disattivata: la scheda video non ripartirebbe |
 
-## 1. Installare CachyOS su questo Mac
+I dettagli tecnici di ogni componente sono in [`docs/`](docs/README.md).
 
-**Prima di tutto:** fai un backup di macOS (Time Machine) e **non cancellare mai la partizione EFI di Apple**
-(`EFI/APPLE`): contiene il firmware del T1. Senza, Touch Bar, webcam e sensore di luce smettono di funzionare
-insieme. Linux può (e conviene) avere una sua partizione EFI separata.
+## Prima di iniziare
 
-Su questa macchina CachyOS è stato installato **da macOS, senza chiavetta USB**, con
-[`macos/prepare.sh`](macos/prepare.sh): ridimensiona il contenitore APFS, crea una partizione FAT32 `COSLIVE` con
-l'ISO estratta e una partizione per Linux. Il disco risultante è:
+1. **Fai un backup completo di macOS** (Time Machine). Installare Linux significa ridimensionare il disco.
+2. **Non cancellare mai la partizione EFI di Apple** (la prima del disco, `EFI`): contiene il firmware del chip T1. Senza
+   di essa Touch Bar, webcam e sensore di luce smettono di funzionare. Linux userà una sua partizione EFI separata.
+3. Tieni il Mac **collegato all'alimentatore** per tutta l'installazione.
+4. Se puoi, tieni a portata una **tastiera USB-C**: durante l'installazione dalla chiavetta la tastiera interna potrebbe
+   non funzionare.
+5. Calcola **circa un'ora** in tutto: lo script compila diversi programmi.
 
-| Partizione | Contenuto |
+## Passo 1: installare CachyOS
+
+Il modo consigliato è la **chiavetta USB**:
+
+1. Scarica l'immagine desktop da [cachyos.org](https://cachyos.org/download/) e scrivila su una chiavetta (per esempio
+   con balenaEtcher).
+2. In macOS, con **Utility Disco**, ricava spazio per Linux (almeno 60 GB, meglio 120 GB) ridimensionando il volume di
+   macOS.
+3. Spegni il Mac, collega la chiavetta e accendi tenendo premuto **Option (⌥)**. Scegli **EFI Boot**.
+4. Nell'installatore scegli il **partizionamento manuale**:
+   - una partizione nuova di ~500 MB, FAT32, montata su `/boot/efi` (EFI di Linux);
+   - una partizione per il sistema montata su `/` (btrfs va bene);
+   - **non toccare** la partizione EFI di Apple né quella di macOS.
+5. Come bootloader usa **GRUB** (provato). systemd-boot e Limine sono sconsigliati sui Mac.
+
+Da qui in poi, all'accensione, **Option (⌥)** ti fa scegliere fra macOS e CachyOS.
+
+<details>
+<summary>Alternativa senza chiavetta (per esperti, non completamente documentata)</summary>
+
+[`macos/prepare.sh`](macos/prepare.sh), lanciato da macOS, ridimensiona il disco, crea una partizione `COSLIVE` con
+l'immagine di CachyOS e una partizione per Linux. È così che CachyOS è stato installato su questo Mac, ma la procedura non
+è stata documentata dall'inizio alla fine.
+
+```bash
+./macos/prepare.sh prepare --linux-gb 120            # mostra il piano, non cambia niente
+./macos/prepare.sh prepare --linux-gb 120 --execute  # lo esegue (chiede conferme scritte)
+```
+</details>
+
+## Passo 2: lanciare lo script di post-installazione
+
+Avvia CachyOS, collegati al Wi-Fi (all'inizio funziona solo a 2,4 GHz) e apri un terminale (Konsole). Poi:
+
+```bash
+sudo pacman -Syu
+```
+
+**Riavvia** (il sistema deve usare il kernel appena aggiornato), riapri il terminale e scarica la repo:
+
+```bash
+git clone https://github.com/DriftDeV/Macbook14-3-cachyOS
+```
+
+```bash
+cd Macbook14-3-cachyOS
+```
+
+Se vuoi, guarda prima cosa farà, senza cambiare niente:
+
+```bash
+sudo ./install.sh --dry-run
+```
+
+E installa:
+
+```bash
+sudo ./install.sh
+```
+
+Non fa domande: installa tutto. Verso la fine la connessione Wi-Fi cade per una ventina di secondi (si sta attivando il
+5 GHz) e torna da sola. Se un passo non riesce gli altri vanno avanti, e il riepilogo finale dice quale rifare.
+Registro completo: `/var/log/macbookpro14-3-install.log`.
+
+Alla fine **spegni completamente** il Mac (non riavviare), aspetta **30 secondi** e riaccendi: il chip T1 deve ripartire
+da zero.
+
+## Passo 3: dopo la riaccensione
+
+1. **Apri MacBook Manager** (dal menu delle applicazioni, o l'icona nella barra di sistema). Mostra lo stato di tutto e
+   ha le azioni più comuni a portata di clic (ti chiede la password quando servono i permessi di amministratore).
+2. **Configura Touch ID** (una volta sola). Nel terminale, dalla cartella della repo:
+   ```bash
+   sudo scripts/install-touchid.sh import
+   ```
+   Poi registra un dito da **Impostazioni di sistema → Utenti** (oppure MacBook Manager → Azioni → Touch ID). Se la prima
+   registrazione fallisce, riprova: è normale. Per usare il dito con `sudo` e nella schermata di blocco: MacBook Manager →
+   Azioni → Touch ID. Usa un dito **diverso** da quelli registrati in macOS.
+3. **Scegli la Touch Bar** che preferisci, nella scheda **Touch Bar** di MacBook Manager (vedi sotto).
+
+## La Touch Bar
+
+Di base parte in **modalità display**, con la grafica disegnata da Linux e il renderer **fnstrip**. Dalla scheda
+**Touch Bar** di MacBook Manager scegli:
+
+- **Renderer**, cioè lo stile della barra:
+  - **fnstrip / T1Bridge** (predefinito): temi, cursori di luminosità e volume, una riga "extra" con grafici (doppio tocco
+    su Fn). Si personalizza dalla stessa scheda (pulsanti, colori, temi, luminosità).
+  - **tiny-dfr** (quello di Asahi Linux): più semplice, tasti funzione e multimediali, ora e batteria. Anche questo si
+    personalizza dalla scheda.
+- **Modalità**:
+  - **display** (consigliata): grafica di Linux, **necessaria per Touch ID**;
+  - **tastiera**: i tasti fissi disegnati dal firmware, come in Boot Camp. Niente Touch ID. Il cambio diventa effettivo
+    dopo uno **spegnimento completo**.
+
+La Touch Bar non ha una luminosità propria regolabile dall'hardware: lo slider nel manager scurisce i colori.
+
+## Uso quotidiano
+
+| Cosa | Come |
 |---|---|
-| EFI (300 MB) | ESP di Apple, intatta |
-| APFS | macOS |
-| `LINUXEFI` (~500 MB, FAT32) | ESP di Linux con GRUB, montata su `/boot/efi` |
-| `COSLIVE` (7 GB, FAT32) | il live usato per l'installazione (si può eliminare dopo) |
-| `CachyOS` (btrfs) | il sistema |
+| Stato di tutto, azioni rapide | **MacBook Manager**, oppure `macbook-manager status` nel terminale |
+| Touch Bar: stile, pulsanti, luminosità | MacBook Manager → scheda **Touch Bar** |
+| Webcam in Discord o nel browser | MacBook Manager → Azioni, oppure `t1-webcam on`; poi scegli la camera "T1 camera (Discord)" nell'app |
+| App lente (Brave, Discord, web app…) | MacBook Manager → scheda **Ottimizzazione** (già fatto dall'installazione per le app presenti) |
+| Screenshot o video della Touch Bar | MacBook Manager → Touch Bar → **Touch Bar in diretta…** |
+| Altoparlanti | l'uscita audio si chiama **MacBook Pro 14,3 Speakers**, il microfono **MacBook Pro 14,3 Microphone**: usa questi |
+| Risparmio energetico | automatico: a batteria la scheda video va in risparmio e la CPU senza turbo |
 
-```bash
-./macos/prepare.sh prepare --linux-gb 120          # da macOS: mostra il piano, non cambia niente
-./macos/prepare.sh prepare --linux-gb 120 --execute
-```
+## Problemi noti e rimedi
 
-Poi riavvia tenendo premuto **Option (⌥)**, scegli "EFI Boot" e installa con Calamares in partizionamento manuale
-(partizione Linux su `/`, una partizione EFI propria per GRUB). Note:
+- **Touch Bar spenta** (ma il tocco funziona), oppure strana dopo un cambio di modalità: **spegni completamente**, aspetta
+  30 secondi, riaccendi. È l'unico modo per far ripartire il chip T1.
+- **Nessun suono dopo l'accensione**: nel terminale `grep Subsystem /proc/asound/card*/codec#0` deve dire `0x106b3900`.
+  Se dice `0x10138409` è un bug noto di questo modello: spegni e riaccendi; se non basta, reset della NVRAM (all'accensione
+  tieni premuti ⌥ ⌘ P R per ~20 secondi).
+- **App che smettono di suonare** dopo aver collegato o scollegato le cuffie (soprattutto i browser): premi di nuovo play.
+- **Touch ID non riconosce più il dito** dopo molti usi nella stessa sessione: è un limite noto (~68 riconoscimenti per
+  avvio). Sblocca con la password; Touch ID torna dopo uno spegnimento completo. Dopo la sospensione serve circa 10 secondi
+  prima che sia di nuovo pronto.
+- **Wi-Fi a 5 GHz debole dopo essere passati da macOS**: in macOS usa "Spegni" invece di "Riavvia".
+- **La sospensione sembra bloccata**: aspetta almeno 3 minuti prima di forzare lo spegnimento.
+- **Aggiornamenti del kernel**: i driver si ricompilano da soli. Audio e webcam hanno sorgenti per la serie 7.3: con una
+  serie nuova del kernel potrebbero dover essere aggiornati in questa repo (la Touch Bar torna da sola in modalità tastiera
+  se la modalità display non si compila).
+- **iPhone collegato via USB**: la regola di `usbmuxd` può spegnere il T1; gli script avvisano se la trovano.
 
-- Bootloader: **GRUB** (provato) o rEFInd. systemd-boot e Limine sono sconsigliati sugli EFI Apple.
-- Tieni a portata una tastiera USB-C: la tastiera interna nel live non è garantita.
-- La procedura passo passo di `prepare.sh` non è stata documentata dall'inizio alla fine: in alternativa usa una
-  chiavetta USB con l'ISO di CachyOS, il risultato è lo stesso.
-- All'accensione, **Option (⌥)** permette di scegliere tra macOS e CachyOS.
+## Per esperti
 
-## 2. Post-installazione
+<details>
+<summary>Cosa fa install.sh, passo per passo</summary>
 
-Su CachyOS appena installato (collegato all'alimentatore, Wi-Fi 2,4 GHz già funzionante):
-
-```bash
-sudo pacman -Syu        # poi riavvia: il kernel in uso deve essere quello installato
-git clone https://github.com/DriftDeV/Macbook14-3-cachyOS && cd Macbook14-3-cachyOS
-sudo ./install.sh --dry-run     # mostra cosa farà
-sudo ./install.sh               # chiede la modalità della Touch Bar (predefinita: display, con Touch ID)
-```
-
-Alla fine **spegni completamente** il Mac, aspetta ~30 secondi e riaccendi (il T1 riparte pulito).
-
-`install.sh` esegue, nell'ordine, questi passi (ognuno è uno script in [`scripts/`](scripts/) e si può rilanciare):
+Ogni passo è uno script in [`scripts/`](scripts/) e si può rifare da solo con `sudo ./install.sh --only <passo>`
+(o saltare con `--skip <passo>`).
 
 | Passo | Cosa fa |
 |---|---|
-| `backup` | copia l'ESP di Apple e il firmware T1 in `/var/backups/macbookpro14-3` (indispensabile) |
+| `backup` | copia l'EFI di Apple e il firmware del T1 in `/var/backups/macbookpro14-3` (indispensabile) |
 | `packages` | pacchetti necessari e header di ogni kernel installato |
 | `input` | quirk libinput (trackpad disattivato mentre scrivi) |
-| `touchbar` | Touch Bar in modalità tastiera (DKMS), sempre installata: è la base di sicurezza |
-| `audio` | driver CS8409 (DKMS) |
-| `sleep` | S3 sui kernel >= 7.3 (s2idle di ripiego), hook Thunderbolt/Wi-Fi, NVMe senza D3cold, ibernazione disattivata |
+| `touchbar` | Touch Bar in modalità tastiera (`apple-ibridge`, DKMS): sempre installata, serve anche in sospensione |
+| `audio` | driver del codec CS8409 (davidjo, fork dnlbtz, DKMS) |
+| `audio-dsp` | pacchetti [`pkgs/bankstown-lv2`](pkgs/bankstown-lv2/) e [`pkgs/mbp143-audio`](pkgs/mbp143-audio/): filtro PipeWire con crossover, equalizzazione, limitatori e protezione termica di Apple, più i bassi psicoacustici di Asahi; +35 dB al microfono delle cuffie. Costa ~1,5 W |
+| `sleep` | sospensione S3, Thunderbolt scollegato prima della sospensione, NVMe senza D3cold, ibernazione disattivata |
 | `power` | a batteria Radeon in risparmio e CPU senza turbo; piena potenza con l'alimentatore |
-| `bluetooth` | audio delle chiamate (SCO via HCI), mSBC disattivato in WirePlumber |
+| `bluetooth` | audio delle chiamate (SCO via HCI), mSBC disattivato |
 | `brightness` | curva di partenza della luminosità automatica di KWin |
-| `touchbar-display` | modalità display (predefinita): compila T1Bridge, installa driver e servizi (e fnstrip) |
-| `touchid` | solo in modalità display: servizi Touch ID di T1Bridge, rete privata del T1, libfprint/fprintd, regola ufw per xART, interruttori PAM (`touchid-pam`); sudo e schermata di blocco restano con la password finché non li attivi |
-| `apps` | da utente: app Chromium/Electron (Brave, Discord, web app…) con `AMD_DEBUG=notiling`, perché sotto Wayland il loro processo GPU crolla con i buffer tiled della Radeon; servizio che lo riapplica alle app nuove |
-| `manager` | MacBook Manager: GUI e icona nella barra di sistema con stato e azioni rapide ([manager/README.md](manager/README.md)) |
-| `wifi` | per ultimo (la connessione cade ~20 s): NVRAM dal chip, firmware, impostazioni NetworkManager |
+| `touchbar-display` | compila T1Bridge, installa driver display e webcam (con la correzione dei buffer H.264), servizi, `touchbar-mode`, renderer fnstrip; salva la modalità display |
+| `tiny-dfr` | compila tiny-dfr con le patch per il T1; resta inattivo finché non lo scegli |
+| `touchid` | servizi Touch ID di T1Bridge, rete privata del T1, libfprint/fprintd, regola ufw, interruttori PAM (spenti finché non li attivi) |
+| `manager` | MacBook Manager: GUI, icona nella barra di sistema, helper con polkit ([manager/README.md](manager/README.md)) |
+| `apps` | da utente: `AMD_DEBUG=notiling` per le app Chromium/Electron sotto Wayland, più un servizio per quelle installate dopo |
+| `wifi` | per ultimo: NVRAM generata dalla calibrazione del chip, firmware, impostazioni di NetworkManager |
 
-Opzioni utili:
+Altre opzioni: `--yes` (nessuna conferma), `--wifi-nvram FILE`, `--initramfs` (non provato, solo per disco cifrato),
+`--list`. La modalità e il renderer della Touch Bar si cambiano anche da terminale: `sudo touchbar-mode set
+display|keyboard`, `sudo touchbar-mode renderer t1bridge|tiny-dfr`.
+</details>
 
-```bash
-sudo ./install.sh --yes --fnstrip                   # senza domande: display, Touch ID, fnstrip
-sudo ./install.sh --yes --touchbar keyboard         # Touch Bar come in Boot Camp, niente Touch ID
-sudo ./install.sh --only audio,bluetooth            # rifà solo alcuni passi
-sudo ./install.sh --skip wifi
-```
+<details>
+<summary>Schermo sulla scheda Intel (facoltativo, con OpenCore)</summary>
 
-Se un passo fallisce gli altri proseguono; il riepilogo dice cosa rifare. Registro: `/var/log/macbookpro14-3-install.log`.
+Di base lo schermo è collegato alla Radeon. Avviando Linux da **OpenCore Legacy Patcher** con l'opzione "Windows GMUX"
+(`SignalAppleOS`) e la variabile EFI `gpu-power-prefs` impostata sulla Intel, lo schermo passa alla Intel: circa 1,5-2 W in
+meno a riposo, luminosità funzionante. La Radeon resta comunque accesa. Sospensione e monitor esterni non ancora riprovati
+in questa configurazione. Dettagli e come tornare indietro in [docs/gpu.md](docs/gpu.md).
+</details>
 
-## 3. Uso quotidiano
-
-Il modo più semplice è **MacBook Manager** (menu delle applicazioni o icona nella barra di sistema): stato di driver,
-Touch Bar, sospensione, Wi-Fi, batteria e temperature, con le azioni qui sotto a un clic; nella scheda
-**Ottimizzazione** un pulsante ottimizza tutte le app Chromium/Electron e le web app. Da terminale:
-`macbook-manager status`, `macbook-manager actions`, `macbook-manager run <azione>`. Dettagli in
-[manager/README.md](manager/README.md).
-
-| Cosa | Comando |
-|---|---|
-| Touch ID (modalità display) | dopo il primo riavvio: `sudo scripts/install-touchid.sh import`; registra un dito da **Impostazioni di sistema → Utenti** (o MacBook Manager → Azioni → Touch ID); prova con `fprintd-verify`; sudo e schermata di blocco: MacBook Manager → Azioni → Touch ID, oppure `sudo touchid-pam sudo on`, `sudo touchid-pam lockscreen on`; rollback: `sudo scripts/install-touchid.sh undo` |
-| Modalità della Touch Bar | `sudo touchbar-mode status` · `sudo touchbar-mode set display` · `sudo touchbar-mode set keyboard` (salva; attiva dopo uno spegnimento completo, l'unico modo di azzerare il T1) |
-| Webcam per Discord/browser (modalità display) | `t1-webcam on` / `t1-webcam off`, poi scegli "T1 camera (Discord)" |
-| Screenshot/video della Touch Bar (modalità display) | MacBook Manager → Touch Bar → **Touch Bar in diretta…**, oppure `macbook-manager touchbar-screenshot` |
-| Renderer tiny-dfr (alternativo a fnstrip) | `sudo scripts/install-tiny-dfr.sh`, poi `sudo touchbar-mode renderer tiny-dfr` (o MacBook Manager → Azioni); indietro: `sudo touchbar-mode renderer t1bridge`; configurazione `/etc/tiny-dfr/config.toml` ([dettagli](docs/t1bridge.md)) |
-| Renderer fnstrip | `scripts/install-fnstrip.sh` (`--undo` per togliere); configurazione dalla scheda **Touch Bar** di MacBook Manager, oppure a mano in `~/.config/fnstrip/config.toml` e poi `systemctl --user restart macbookpro14-3-touchbar-renderer` |
-| Energia a batteria | `/etc/macbookpro14-3/power.conf`; registro `journalctl -t macbookpro14-3-power` |
-| Prova della sospensione | `scripts/sleep-test.sh check` · `sudo scripts/sleep-test.sh real 60` · dopo una notte: `scripts/sleep-test.sh report` |
-| Tornare a s2idle (fino al riavvio) | `sudo systemctl stop macbookpro14-3-sleep-mode` |
-| Curva della luminosità automatica | `scripts/set-kwin-brightness-curve.sh --force` (poi logout/login) |
-
-## 4. Problemi noti e rimedi
-
-- **Touch Bar spenta ma il tocco funziona**, oppure il T1 compare come `05ac:1281` (recovery): spegnimento completo,
-  ~30 s, riaccensione. Succede anche tornando dalla modalità display a quella tastiera senza riavvio.
-- **Niente audio dopo un avvio**: se `grep Subsystem /proc/asound/card*/codec#0` dà `0x10138409` invece di
-  `0x106b3900` è il bug noto del 14,3: reset della NVRAM o avvio da Option.
-- **5 GHz deboli dopo un riavvio da macOS**: spegni macOS invece di riavviarlo.
-- **Sospensione che sembra bloccata**: aspetta almeno 3 minuti prima di forzare lo spegnimento.
-- **Aggiornamento del kernel**: DKMS ricompila da solo. Il driver audio e il driver webcam della modalità display
-  hanno sorgenti solo per la serie 7.3: con una serie nuova servirà aggiornarli (la Touch Bar torna in modalità
-  tastiera da sola se la modalità display non compila).
-- **`usbmuxd`** (iPhone): la sua regola udev può spegnere il T1; gli script avvisano se lo trovano.
-- **Touch ID non riconosce più il dito** dopo un uso intenso: è il limite di ~68 riconoscimenti per avvio di T1Bridge
-  (issue #14; il contatore è in MacBook Manager). Si sblocca con la password; per riaverlo serve uno spegnimento
-  completo. Con l'impronta nella schermata di blocco il limite arriva prima. Dopo la sospensione Touch ID torna pronto
-  in ~10 s: la schermata di blocco riprova da sola.
-- **Brave (e altre app Chromium/Electron) a scatti, CPU alta**: sotto Wayland il loro processo GPU crolla con i buffer
-  "tiled" della Radeon e l'accelerazione si spegne. Rimedio provato, restando su Wayland: `scripts/fix-chromium-gpu.sh`
-  (passo `apps` di `install.sh`, da utente, `--undo` per togliere) dà `AMD_DEBUG=notiling` solo a queste app, web app di
-  Brave comprese, e un servizio lo riapplica alle app che installi dopo; MacBook Manager segnala quelle ancora con la GPU
-  spenta. YouTube in VP9 lo decodifica la CPU (la Radeon non sa farlo); in H.264 la Radeon (CPU 24 % invece di ~80 %)
-  ([gpu](docs/gpu.md)).
-- **Touch ID in modalità tastiera**: non disponibile. Si torna alla modalità display con `sudo touchbar-mode set display`.
-
-## Struttura della repo
+<details>
+<summary>Struttura della repo</summary>
 
 ```
 install.sh              post-installazione (sudo ./install.sh --dry-run)
 macos/prepare.sh        da macOS: partizione live sul disco interno, senza USB
-scripts/                un installer per componente, touchbar-mode, sleep-test, build T1Bridge/fnstrip
+scripts/                un installer per componente, touchbar-mode, sleep-test, build di T1Bridge, fnstrip, tiny-dfr
 manager/                MacBook Manager: comando, GUI Qt, helper polkit
 config/                 sorgenti esterne fissate (sources.conf), udev, systemd, sleep, power, NetworkManager,
-                        WirePlumber, KDE, libinput, T1Bridge
+                        WirePlumber, KDE, libinput, T1Bridge, tiny-dfr
 dkms/                   driver display e webcam della modalità display (T1Bridge, Linux 7.3)
-patches/                patch nostre per la Touch Bar e l'audio
+patches/                patch nostre per Touch Bar, audio e tiny-dfr
+pkgs/                   PKGBUILD: mbp143-audio e bankstown-lv2 (usati da install.sh); meta e apple-ibridge (non aggiornati)
 docs/                   risultati per componente e report di ricerca (indice: docs/README.md)
-pkgs/                   PKGBUILD non aggiornati (non usati da install.sh)
 ```
 
 Le sorgenti esterne sono **fissate a un commit** e il loro codice è stato letto prima dell'uso
-([`config/sources.conf`](config/sources.conf)). Il file NVRAM del Wi-Fi non è nella repo: viene generato sulla
+([`config/sources.conf`](config/sources.conf) e i PKGBUILD). Il file NVRAM del Wi-Fi non è nella repo: viene generato sulla
 macchina dalla calibrazione del chip.
+</details>
 
 ## Crediti
 
 - Touch Bar (tastiera): roadrunner2/cb22 → marc-git → F13-Kr1pt0n → **nonderbe** (`t1-fixes`).
-- Touch Bar (display), webcam H.264: **T1Bridge** (Andrew Boyd, Standard Agents), `appletbdrm` di Kerem Karabay.
-- Renderer: **fnstrip** (Alex McCubbin); alternativo: **tiny-dfr** (Asahi Linux), sul T1 come in heymaaz/mbp-t1-touchbar.
-- Audio: **davidjo/snd_hda_macbookpro**, fork **dnlbtz**.
+- Touch Bar (display), webcam H.264, Touch ID: **T1Bridge** (Andrew Boyd, Standard Agents), `appletbdrm` di Kerem Karabay.
+- Renderer: **fnstrip** (Alex McCubbin); **tiny-dfr** (Asahi Linux), sul T1 come in heymaaz/mbp-t1-touchbar.
+- Audio: **davidjo/snd_hda_macbookpro**, fork **dnlbtz**; DSP degli altoparlanti **dnlbtz/mbp143-audio**; bassi
+  psicoacustici **bankstown** (James Calligeros, Asahi Linux).
 - Wi-Fi: **dnlbtz/mbp143-wifi**; impostazioni di scansione da **mihneadevries/mbp14-3-linux-wifi-fix**.
 - Sospensione: **mihneadevries/mbp14-3-linux-sleep-fix**.
 - Tracker storico: Dunedan/mbp-2016-linux.

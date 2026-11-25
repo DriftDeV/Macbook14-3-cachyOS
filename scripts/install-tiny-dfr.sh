@@ -60,8 +60,10 @@ if [ "$UNDO" = 1 ]; then
     exit 0
 fi
 
-[ -x /usr/local/bin/touchbar-mode ] && [ -e /etc/systemd/system/macbookpro14-3-touchbar-hw.service ] \
-    || die "Modalità display non installata: prima sudo scripts/install-touchbar-display.sh"
+if ! { [ -x /usr/local/bin/touchbar-mode ] && [ -e /etc/systemd/system/macbookpro14-3-touchbar-hw.service ]; }; then
+    if [ "$DRY_RUN" = 1 ]; then warn "Modalità display non ancora installata (in un'installazione vera viene prima)."
+    else die "Modalità display non installata: prima sudo scripts/install-touchbar-display.sh"; fi
+fi
 if pacman -Q tiny-dfr >/dev/null 2>&1; then
     die "Il pacchetto tiny-dfr è installato (usa $SHARE e /etc/tiny-dfr e parte da solo sui T2): rimuovilo prima (sudo pacman -R tiny-dfr)."
 fi

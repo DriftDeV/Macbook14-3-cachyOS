@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Installa la modalità "display" della Touch Bar T1 (grafica di T1Bridge in configurazione USB 2),
-# scegliibile con touchbar-mode. La modalità predefinita resta "keyboard" (lo stack attuale) e non
-# dipende da nulla di quanto installato qui. Vedi docs/t1bridge.md.
+# scegliibile con touchbar-mode. Da solo non cambia modalità; install.sh poi salva "display" come predefinita
+# (la modalità keyboard resta installata e serve in sospensione). Vedi docs/t1bridge.md.
 #   scripts/build-t1bridge.sh                      (prima, da utente: compila i programmi T1Bridge)
 #   sudo scripts/install-touchbar-display.sh       installa (non cambia modalità)
 #   sudo scripts/install-touchbar-display.sh --dry-run
@@ -33,6 +33,7 @@ for a in "$@"; do
 done
 need_root
 USER_NAME="${SUDO_USER:-}"
+[ -z "$USER_NAME" ] && [ "$DRY_RUN" = 1 ] && USER_NAME="$(id -un)"
 [ -n "$USER_NAME" ] && [ "$USER_NAME" != root ] || die "Lancialo con sudo dal tuo utente."
 USER_HOME="$(getent passwd "$USER_NAME" | cut -d: -f6)"
 USER_GROUP="$(id -gn "$USER_NAME")"
@@ -62,8 +63,10 @@ fi
 [ "$(cat /sys/class/dmi/id/product_name 2>/dev/null)" = MacBookPro14,3 ] || [ "${FORCE:-0}" = 1 ] || die "Solo MacBookPro14,3."
 for c in dkms ffmpeg modprobe; do command -v "$c" >/dev/null || die "$c non installato."; done
 modinfo v4l2loopback >/dev/null 2>&1 || warn "v4l2loopback non disponibile: niente webcam per Discord in modalità display."
-for f in t1-touchbar-hw t1-touchbar; do [ -x "$BUILD/$f" ] || die "Manca $BUILD/$f: lancia prima scripts/build-t1bridge.sh (da utente)."; done
-[ "$(cat "$BUILD/t1bridge-commit" 2>/dev/null)" = "$T1BRIDGE_REF" ] || die "I programmi in $BUILD non sono del commit $T1BRIDGE_REF: ricompila."
+# In prova (--dry-run) i programmi possono non essere ancora compilati: build-t1bridge.sh viene solo mostrato.
+nobuild() { if [ "$DRY_RUN" = 1 ]; then warn "$1"; else die "$1"; fi; }
+for f in t1-touchbar-hw t1-touchbar; do [ -x "$BUILD/$f" ] || nobuild "Manca $BUILD/$f: lancia prima scripts/build-t1bridge.sh (da utente)."; done
+[ "$(cat "$BUILD/t1bridge-commit" 2>/dev/null)" = "$T1BRIDGE_REF" ] || nobuild "I programmi in $BUILD non sono del commit $T1BRIDGE_REF: ricompila."
 
 log "Driver con DKMS (solo kernel 7.x; il driver webcam solo 7.3)"
 for p in $DKMS_PKGS; do
