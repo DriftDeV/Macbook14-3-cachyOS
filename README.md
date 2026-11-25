@@ -127,6 +127,7 @@ Touch Bar, sospensione, Wi-Fi, batteria e temperature, con le azioni qui sotto a
 | Modalità della Touch Bar | `sudo touchbar-mode status` · `sudo touchbar-mode set display` · `sudo touchbar-mode set keyboard` (salva; attiva dopo uno spegnimento completo, l'unico modo di azzerare il T1) |
 | Webcam per Discord/browser (modalità display) | `t1-webcam on` / `t1-webcam off`, poi scegli "T1 camera (Discord)" |
 | Screenshot/video della Touch Bar (modalità display) | MacBook Manager → Touch Bar → **Touch Bar in diretta…**, oppure `macbook-manager touchbar-screenshot` |
+| Renderer tiny-dfr (alternativo a fnstrip) | `sudo scripts/install-tiny-dfr.sh`, poi `sudo touchbar-mode renderer tiny-dfr` (o MacBook Manager → Azioni); indietro: `sudo touchbar-mode renderer t1bridge`; configurazione `/etc/tiny-dfr/config.toml` ([dettagli](docs/t1bridge.md)) |
 | Renderer fnstrip | `scripts/install-fnstrip.sh` (`--undo` per togliere); configurazione dalla scheda **Touch Bar** di MacBook Manager, oppure a mano in `~/.config/fnstrip/config.toml` e poi `systemctl --user restart macbookpro14-3-touchbar-renderer` |
 | Energia a batteria | `/etc/macbookpro14-3/power.conf`; registro `journalctl -t macbookpro14-3-power` |
 | Prova della sospensione | `scripts/sleep-test.sh check` · `sudo scripts/sleep-test.sh real 60` · dopo una notte: `scripts/sleep-test.sh report` |
@@ -180,7 +181,7 @@ macchina dalla calibrazione del chip.
 
 - Touch Bar (tastiera): roadrunner2/cb22 → marc-git → F13-Kr1pt0n → **nonderbe** (`t1-fixes`).
 - Touch Bar (display), webcam H.264: **T1Bridge** (Andrew Boyd, Standard Agents), `appletbdrm` di Kerem Karabay.
-- Renderer: **fnstrip** (Alex McCubbin).
+- Renderer: **fnstrip** (Alex McCubbin); alternativo: **tiny-dfr** (Asahi Linux), sul T1 come in heymaaz/mbp-t1-touchbar.
 - Audio: **davidjo/snd_hda_macbookpro**, fork **dnlbtz**.
 - Wi-Fi: **dnlbtz/mbp143-wifi**; impostazioni di scansione da **mihneadevries/mbp14-3-linux-wifi-fix**.
 - Sospensione: **mihneadevries/mbp14-3-linux-sleep-fix**.

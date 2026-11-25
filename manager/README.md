@@ -91,7 +91,7 @@ registro), **Impronte registrate** (`fprintd-list`). Gli interruttori usano `/us
 
 | Gruppo | Azioni |
 |---|---|
-| Touch Bar | modalità display (subito) / tastiera (salvata, attiva dopo lo spegnimento: il manager propone di spegnere), riavvia il renderer, webcam virtuale on/off |
+| Touch Bar | modalità display (subito) / tastiera (salvata, attiva dopo lo spegnimento: il manager propone di spegnere), riavvia il renderer, renderer fnstrip/T1Bridge o tiny-dfr (dopo `scripts/install-tiny-dfr.sh`), webcam virtuale on/off |
 | Sospensione | S3 (deep) / s2idle |
 | Energia | Radeon in risparmio a batteria sì/no, turbo CPU a batteria sì/no (`power.conf` + riapplica) |
 | Rete e audio | ricarica il driver Wi-Fi, ripristina l'audio delle chiamate Bluetooth (CVSD) |

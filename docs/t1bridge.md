@@ -103,8 +103,21 @@ Per la sospensione non conta (la modalità tastiera serve solo durante lo sleep)
   autosospensione per il T1; un blocco di include adattato a mano) compilato con `LLVM=1` senza warning.
   - ffmpeg: 94 fotogrammi in 3 s; **OBS funziona** (decodifica H.264).
   - Discord e browser vogliono video non compresso: `v4l2loopback` (già nel kernel CachyOS) crea `/dev/video10`
-    "T1 camera (Discord)" e il servizio utente `t1test-webcam` (ffmpeg, decodifica VA-API sulla GPU Intel, ~5 % di un
-    core) la alimenta su richiesta (LED acceso mentre gira). **Discord funziona.** Da fnstrip `contrib/t1-webcam` (MIT).
+    "T1 camera (Discord)" e il servizio utente `macbookpro14-3-webcam` (ffmpeg, decodifica VA-API sulla GPU Intel)
+    la alimenta su richiesta (LED acceso mentre gira). **Discord funziona.** Da fnstrip `contrib/t1-webcam` (MIT).
+  - **Glitch "a pioggia" corretti [F] (25/11/2026).** La camera dichiara `dwMaxVideoFrameSize` = 276480 byte (= la
+    `sizeimage` dei buffer), ma trasmette a ~25-35 Mbit/s e con scene chiare o in movimento manda fotogrammi più grandi
+    (misurati fino a 326 KB, 10 su 1204 in 40 s). Il fotogramma troncato arriva con il flag di errore ("Dequeued v4l2
+    buffer contains corrupted data (276480 bytes)", 30 volte in 2 minuti di Discord), ffmpeg lo scarta e i P-frame
+    successivi si decodificano senza riferimento fino al fotogramma chiave dopo. Correzione nostra
+    (`dkms/t1bridge-uvc/uvcvideo-t1-h264-big-frames.patch`, quirk `UVC_QUIRK_H264_BIG_FRAMES` solo per `05ac:8600`):
+    buffer da un fotogramma intero non compresso (1280×720×1,5 = 1,4 MB); alla camera non si manda nulla di diverso.
+    Dopo: 40 s con scene pesanti, 0 buffer corrotti, 0 errori di decodifica.
+  - **CPU [F] (25/11/2026)**, 8 s registrati dalla camera (243 fotogrammi), ffmpeg con uscita come nel servizio:
+    VA-API Intel ~10 % di un core (dal vivo, servizio acceso: ~14 %), VA-API Radeon ~13 % e più lenta (copia dalla
+    VRAM), solo CPU ~60 %. Conversione del formato sulla GPU (`scale_vaapi`) o uscita NV12: 1-2 punti in meno, non
+    adottate. In chiamata il grosso è **Discord** (renderer al 70-100 % di un core: audio WebRTC, soppressione del
+    rumore, codifica del video in uscita), che la pipe non può spostare sulla GPU.
 - Ritorno manuale a `keyboard` senza riavvio: tocco OK, barra spenta fino allo spegnimento completo (sopra).
 
 ### Reset del T1 senza spegnere: non possibile [F] (23/11/2026)
@@ -186,6 +199,33 @@ Sospensione di ~18 minuti (20:51-21:08 del 23/11/2026) in modalità display: al 
   caricato `uvcvideo_t1` se è in uso (gestisce anche la configurazione 1) e non tenta `modprobe uvcvideo`.
 - Ripristino senza riavvio: `sudo touchbar-mode display` (lo schermo era già in configurazione 2).
 - [NV] Nuova prova di sospensione lunga con le correzioni.
+
+## tiny-dfr come renderer alternativo [F] (25/11/2026)
+
+[tiny-dfr](https://github.com/AsahiLinux/tiny-dfr) (Asahi Linux, MIT; commit `a79f2f4` del 20/10/2026, v0.3.8) disegna la
+barra al posto di `t1-touchbar-hw` + fnstrip. La nota della ricerca "tiny-dfr non vale per il T1" valeva per la
+modalità tastiera (configurazione 1, senza schermo): in configurazione 2 lo schermo è `appletbdrm` (T1Bridge),
+60×2170 in verticale, cioè proprio ciò che tiny-dfr cerca. Precedente: `heymaaz/mbp-t1-touchbar` su un MacBookPro13,2.
+
+- **Tocco**: il sensore (`05ac:8600`, gruppo HID generico, "Apple Inc. iBridge Touchpad") va a `hid-multitouch` con
+  `MT_CLS_APPLE_TOUCHBAR` (0x114 sul 7.3.5, letto dal modulo) tramite `new_id` + `bind`, senza ricompilare nulla
+  (`config/tiny-dfr/tiny-dfr-touch`, prima e dopo il servizio). Diventa un touchscreen (`INPUT_PROP_DIRECT`); la regola
+  `99-zz-macbookpro14-3-tiny-dfr.rules` lo mette nel posto `seat-touchbar`, dove KWin non lo vede e tiny-dfr sì.
+  L'interfaccia del sensore di luce (gruppo sensor hub) resta a `hid-sensor-hub`: luminosità automatica intatta.
+  Tornando a fnstrip il sensore torna a `hid-generic` e `hid-multitouch` viene scaricato.
+- **Patch** (`patches/tiny-dfr/tiny-dfr-t1.patch`): nome del sensore T1 (stessa riga di heymaaz); solo
+  `/dev/dri/touchbar` invece di provare tutte le schede DRM; **luminosità in software** quando manca il regolatore
+  della barra (sul T1 il regolatore starebbe nell'interfaccia del sensore di luce: heymaaz la dà a `hid-appletb-bl`
+  e si perderebbe l'ALS). Stesse regole di tiny-dfr: attenuata dopo inattività, spenta dopo, nera a coperchio chiuso,
+  il primo tocco riaccende.
+- **Scelta**: `sudo touchbar-mode renderer tiny-dfr|t1bridge` (salvata in `touchbar.conf`, cambia subito se la barra
+  è in modalità display) o MacBook Manager → Azioni → Touch Bar. Installazione: `sudo scripts/install-tiny-dfr.sh`
+  (`--undo`). Configurazione: `/etc/tiny-dfr/config.toml` (riletta da sola; la nostra mette i tasti multimediali come
+  riga principale, luminosità piena, `EnablePixelShift` contro il segno sull'OLED).
+- **Provato** il 25/11/2026: grafica, tocco, Fn/F1-F12 e tasti multimediali confermati dall'utente; ALS ancora a
+  `hid-sensor-hub`. [NV]: risveglio dalla sospensione con tiny-dfr, Touch ID con tiny-dfr attivo, riavvio.
+- Si perde, finché c'è tiny-dfr: editor e preset di fnstrip, Touch Bar in diretta/screenshot/video (usano la
+  registrazione di fnstrip), indicatori e riga extra, riquadro di Touch ID sulla barra.
 
 ## Touch ID: quadro aggiornato al 24/11/2026
 

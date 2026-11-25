@@ -1,0 +1,162 @@
+tiny-dfr (AsahiLinux, commit in config/sources.conf) sulla Touch Bar T1 del MacBookPro14,3, modalità display.
+Applicata da scripts/install-tiny-dfr.sh. Tre modifiche:
+1. src/main.rs: accetta il sensore del T1 ("Apple Inc. iBridge Touchpad"; tiny-dfr cerca " Touch Bar").
+   Stessa riga di heymaaz/mbp-t1-touchbar userspace/tiny-dfr-t1-digitizer-name.patch.
+2. src/display.rs: se esiste /dev/dri/touchbar (regola udev della repo) apre solo quello, senza provare
+   (e prendere per un attimo come master) le GPU dello schermo principale.
+3. src/backlight.rs, src/main.rs: il regolatore di luminosità della barra diventa facoltativo. Sul T1 non c'è
+   (l'interfaccia HID 0xff12 resta a hid-sensor-hub per il sensore di luce, usato da KWin): la luminosità si applica
+   in software scalando i pixel, con le stesse regole (attenuata dopo inattività, spenta dopo, nera a coperchio
+   chiuso, il primo tocco la riaccende). Attenuata = un quarto di ActiveBrightness invece di 1.
+
+diff --color -ruN tdfr-a/src/backlight.rs tdfr-b/src/backlight.rs
+--- a/src/backlight.rs	2026-10-20 15:36:25.000000000 +0200
++++ b/src/backlight.rs	2026-11-25 01:43:14.616774109 +0100
+@@ -70,22 +70,37 @@
+     max_bl: u32,
+     current_bl: u32,
+     lid_state: SwitchState,
+-    bl_file: File,
++    // None: no Touch Bar backlight device (T1 Macs: the 0xff12 HID interface stays with hid-sensor-hub for the
++    // ambient light sensor). Brightness is then applied in software by scaling the pixels (see software_level).
++    bl_file: Option<File>,
+     display_bl_path: Option<PathBuf>,
+ }
+ 
+ impl BacklightManager {
+     pub fn new() -> BacklightManager {
+-        let bl_path = find_backlight().unwrap();
+         let display_bl_path = find_display_backlight()
+             .inspect_err(|e| eprintln!("Failed to find display backlight sysfs path: {e}"))
+             .ok();
++        let bl_path = match find_backlight() {
++            Ok(path) => path,
++            Err(e) => {
++                eprintln!("{e}: dimming the Touch Bar in software");
++                return BacklightManager {
++                    bl_file: None,
++                    lid_state: SwitchState::Off,
++                    max_bl: MAX_TOUCH_BAR_BRIGHTNESS,
++                    current_bl: MAX_TOUCH_BAR_BRIGHTNESS,
++                    last_active: Instant::now(),
++                    display_bl_path,
++                };
++            }
++        };
+         let bl_file = OpenOptions::new()
+             .write(true)
+             .open(bl_path.join("brightness"))
+             .unwrap();
+         BacklightManager {
+-            bl_file,
++            bl_file: Some(bl_file),
+             lid_state: SwitchState::Off,
+             max_bl: read_attr(&bl_path, "max_brightness"),
+             current_bl: read_attr(&bl_path, "brightness"),
+@@ -116,7 +131,14 @@
+             _ => {}
+         }
+     }
+-    pub fn update_backlight(&mut self, cfg: &Config) {
++    /// Returns true when the brightness changed.
++    pub fn update_backlight(&mut self, cfg: &Config) -> bool {
++        // In software a level of 1 would be black: dim to a quarter of the active brightness instead.
++        let dimmed = if self.bl_file.is_some() {
++            DIMMED_BRIGHTNESS
++        } else {
++            (cfg.active_brightness / 4).max(1)
++        };
+         let since_last_active = (Instant::now() - self.last_active).as_millis() as u64;
+         let new_bl = min(
+             self.max_bl,
+@@ -134,14 +156,30 @@
+                     cfg.active_brightness
+                 }
+             } else if since_last_active < BRIGHTNESS_OFF_TIMEOUT as u64 {
+-                DIMMED_BRIGHTNESS
++                dimmed
+             } else {
+                 0
+             },
+         );
+         if self.current_bl != new_bl {
+             self.current_bl = new_bl;
+-            set_backlight(&self.bl_file, self.current_bl);
++            if let Some(file) = &self.bl_file {
++                set_backlight(file, self.current_bl);
++            }
++            return true;
++        }
++        false
++    }
++    pub fn is_software(&self) -> bool {
++        self.bl_file.is_none()
++    }
++    /// Software brightness (0..=255) to apply to the pixels, or None when a backlight device does the job
++    /// or the brightness is full.
++    pub fn software_level(&self) -> Option<u32> {
++        if self.bl_file.is_some() || self.current_bl >= self.max_bl {
++            None
++        } else {
++            Some(self.current_bl * 255 / self.max_bl.max(1))
+         }
+     }
+     pub fn current_bl(&self) -> u32 {
+diff --color -ruN tdfr-a/src/display.rs tdfr-b/src/display.rs
+--- a/src/display.rs	2026-10-20 15:36:25.000000000 +0200
++++ b/src/display.rs	2026-11-25 01:43:04.108838764 +0100
+@@ -179,6 +179,13 @@
+ impl DrmBackend {
+     pub fn open_card() -> Result<DrmBackend> {
+         let mut errors = Vec::new();
++        // MacBookPro14,3 setup: a udev rule links the Touch Bar card as /dev/dri/touchbar. Use only that one when it
++        // exists, instead of probing (and briefly taking DRM master on) the GPUs of the main display.
++        let touchbar = Path::new("/dev/dri/touchbar");
++        if touchbar.exists() {
++            return try_open_card(touchbar)
++                .map_err(|err| anyhow!("/dev/dri/touchbar: {}", err));
++        }
+         for entry in fs::read_dir("/dev/dri/")? {
+             let entry = entry?;
+             if !entry.file_name().to_string_lossy().starts_with("card") {
+diff --color -ruN tdfr-a/src/main.rs tdfr-b/src/main.rs
+--- a/src/main.rs	2026-10-20 15:36:25.000000000 +0200
++++ b/src/main.rs	2026-11-25 01:43:14.616643471 +0100
+@@ -969,7 +969,15 @@
+                 needs_complete_redraw,
+             );
+             let data = surface.data().unwrap();
+-            drm.map().unwrap().as_mut()[..data.len()].copy_from_slice(&data);
++            match backlight.software_level() {
++                None => drm.map().unwrap().as_mut()[..data.len()].copy_from_slice(&data),
++                Some(level) => {
++                    let mut map = drm.map().unwrap();
++                    for (dst, src) in map.as_mut()[..data.len()].iter_mut().zip(data.iter()) {
++                        *dst = (*src as u32 * level / 255) as u8;
++                    }
++                }
++            }
+             drm.dirty(&clips).unwrap();
+             needs_complete_redraw = false;
+         }
+@@ -991,7 +999,8 @@
+             match event {
+                 Event::Device(DeviceEvent::Added(evt)) => {
+                     let dev = evt.device();
+-                    if dev.name().contains(" Touch Bar") {
++                    // MacBookPro13,x/14,x (T1, 05ac:8600): the digitizer is "Apple Inc. iBridge Touchpad".
++                    if dev.name().contains(" Touch Bar") || dev.name().contains("iBridge Touchpad") {
+                         digitizer = Some(dev);
+                     }
+                 }
+@@ -1054,6 +1063,9 @@
+                 _ => {}
+             }
+         }
+-        backlight.update_backlight(&cfg);
++        if backlight.update_backlight(&cfg) && backlight.is_software() {
++            // Software dimming: the pixels must be redrawn at the new level.
++            needs_complete_redraw = true;
++        }
+     }
+ }

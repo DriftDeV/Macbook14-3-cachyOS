@@ -99,9 +99,12 @@ class LiveWindow(QWidget):
         if self.cap:
             return
         if not T.renderer_active():
+            from .status import touchbar_renderer
             self._set_buttons(False)
             self.view.image = None
-            self.view.message = "La Touch Bar non è in modalità display (renderer fnstrip fermo)."
+            self.view.message = ("La Touch Bar usa tiny-dfr: la vista in diretta funziona solo con fnstrip."
+                                 if touchbar_renderer() == "tiny-dfr" else
+                                 "La Touch Bar non è in modalità display (renderer fnstrip fermo).")
             self.status.setText("Passa alla modalità display dalla scheda Azioni, poi riapri questa finestra.")
             self.view.update()
             return

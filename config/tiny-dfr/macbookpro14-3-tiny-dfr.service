@@ -1,0 +1,22 @@
+# Touch Bar T1 in modalità display con tiny-dfr (Asahi Linux, patches/tiny-dfr/) al posto di t1-touchbar-hw +
+# renderer utente (fnstrip o quello di T1Bridge). Avviato da touchbar-mode quando TOUCHBAR_RENDERER=tiny-dfr;
+# installato da scripts/install-tiny-dfr.sh.
+[Unit]
+Description=Touch Bar T1 (modalità display): renderer tiny-dfr
+BindsTo=dev-dri-touchbar.device
+After=dev-dri-touchbar.device
+# Stesso schermo e stesso sensore: mai insieme.
+Conflicts=macbookpro14-3-touchbar-hw.service macbookpro14-3-touchbar-hw.socket
+
+[Service]
+ExecStartPre=/usr/local/lib/macbookpro14-3/tiny-dfr/tiny-dfr-touch attach
+ExecStart=/usr/local/lib/macbookpro14-3/tiny-dfr/tiny-dfr
+ExecStopPost=/usr/local/lib/macbookpro14-3/tiny-dfr/tiny-dfr-touch detach
+Restart=on-failure
+RestartSec=2
+# tiny-dfr apre schermo, uinput e configurazione da root, poi passa a nobody (gruppi input e video).
+# Niente ProtectKernelModules: tiny-dfr-touch carica hid-multitouch.
+ProtectHome=yes
+PrivateTmp=yes
+ProtectSystem=full
+LockPersonality=yes

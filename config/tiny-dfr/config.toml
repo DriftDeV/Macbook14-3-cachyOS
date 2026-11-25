@@ -1,0 +1,12 @@
+# /etc/tiny-dfr/config.toml per il MacBookPro14,3 (installato da scripts/install-tiny-dfr.sh solo se manca).
+# Contiene solo ciò che cambia rispetto a /usr/share/tiny-dfr/config.toml (che elenca tutte le chiavi e i tasti):
+# tiny-dfr unisce i due file e rilegge questo appena lo salvi, senza riavvio.
+
+# Tasti multimediali come riga principale, F1-F12 tenendo premuto Fn (come macOS e fnstrip).
+MediaLayerDefault = true
+# Sul T1 la luminosità è applicata in software (patches/tiny-dfr/): 255 = piena. Con AdaptiveBrightness segue
+# la luminosità dello schermo; dopo un po' di inattività la barra si attenua e poi si spegne (OLED).
+ActiveBrightness = 255
+AdaptiveBrightness = true
+# Sposta il disegno di qualche pixel ogni tanto, contro il segno permanente sull'OLED.
+EnablePixelShift = true

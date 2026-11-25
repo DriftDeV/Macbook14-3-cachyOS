@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# Tocco della Touch Bar T1 per tiny-dfr (root; ExecStartPre/ExecStopPost di macbookpro14-3-tiny-dfr.service).
+#   attach  lega il sensore del T1 (05ac:8600, gruppo HID generico) a hid-multitouch con la classe della Touch Bar
+#           (MT_CLS_APPLE_TOUCHBAR): diventa un touchscreen per libinput. La regola udev della repo lo tiene fuori
+#           dalla sessione grafica (ID_SEAT=seat-touchbar), dove lo legge solo tiny-dfr.
+#   detach  lo riporta a hid-generic e scarica hid-multitouch (sparisce anche l'id aggiunto), come serve a
+#           t1-touchbar-hw (legge lo stesso sensore da hidraw).
+# Sul 14,3 hid-multitouch non serve a nient'altro (trackpad e tastiera sono SPI). L'interfaccia del sensore di luce
+# (stesso 05ac:8600, gruppo sensor hub) resta a hid-sensor-hub: si lega solo il dispositivo del gruppo generico.
+set -euo pipefail
+# Linux 6.15-7.3: MT_CLS_APPLE_TOUCHBAR = 0x0114 (letto dal modulo hid-multitouch del 7.3.5 il 25/11/2026).
+MT_CLS="${MT_CLS:-114}"
+DRV=/sys/bus/hid/drivers
+
+log() { echo "tiny-dfr-touch: $*"; }
+digitizer() {
+    local d
+    for d in /sys/bus/hid/devices/0003:05AC:8600.*; do
+        [ -e "$d" ] || continue
+        grep -q '^MODALIAS=hid:b0003g0001v000005ACp00008600$' "$d/uevent" && { basename "$d"; return 0; }
+    done
+    return 1
+}
+driver_of() { basename "$(readlink "/sys/bus/hid/devices/$1/driver" 2>/dev/null)" 2>/dev/null || true; }
+
+attach() {
+    local dev cur
+    for _ in $(seq 40); do dev="$(digitizer)" && break; sleep 0.25; done
+    [ -n "${dev:-}" ] || { log "sensore della Touch Bar (05ac:8600) non trovato: la barra è in modalità display?"; exit 1; }
+    modprobe hid_multitouch
+    echo "0003 05AC 8600 $MT_CLS" > "$DRV/hid-multitouch/new_id" 2>/dev/null || true   # già presente: va bene
+    cur="$(driver_of "$dev")"
+    if [ "$cur" != hid-multitouch ]; then
+        [ -n "$cur" ] && echo "$dev" > "$DRV/$cur/unbind"
+        echo "$dev" > "$DRV/hid-multitouch/bind"
+    fi
+    for _ in $(seq 20); do
+        ls "/sys/bus/hid/devices/$dev/input" >/dev/null 2>&1 && break
+        sleep 0.1
+    done
+    udevadm settle --timeout=5 || true
+    log "$dev legato a hid-multitouch (classe 0x$MT_CLS)"
+}
+
+detach() {
+    local dev cur
+    dev="$(digitizer)" || true
+    if [ -n "${dev:-}" ]; then
+        cur="$(driver_of "$dev")"
+        [ "$cur" = hid-multitouch ] && echo "$dev" > "$DRV/hid-multitouch/unbind"
+    fi
+    if [ -d /sys/module/hid_multitouch ]; then
+        modprobe -r hid_multitouch 2>/dev/null || log "hid-multitouch in uso: resta caricato"
+    fi
+    if [ -n "${dev:-}" ] && [ -z "$(driver_of "$dev")" ]; then
+        echo "$dev" > /sys/bus/hid/drivers_probe 2>/dev/null || true
+    fi
+    log "sensore della Touch Bar: ${dev:-assente} → $( [ -n "${dev:-}" ] && driver_of "$dev")"
+}
+
+case "${1:-}" in
+    attach) attach ;;
+    detach) detach ;;
+    *) echo "Uso: tiny-dfr-touch attach|detach" >&2; exit 2 ;;
+esac

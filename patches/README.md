@@ -4,6 +4,8 @@ Qui vanno le patch che servono *e* che non sono già in un fork da cui scarichia
 `touchbar/`: patch per il driver T1 (fork nonderbe `t1-fixes`), applicate da `scripts/install-touchbar.sh`
 e dal PKGBUILD. Vedi `docs/touchbar.md`.
 `audio/`: `LLVM=1` automatico per il driver CS8409 (fork dnlbtz), applicata da `scripts/install-audio.sh`. Vedi `docs/audio.md`.
+`tiny-dfr/`: tiny-dfr sulla Touch Bar T1 (sensore, `/dev/dri/touchbar`, luminosità in software), applicata da
+`scripts/install-tiny-dfr.sh`. Vedi `docs/t1bridge.md`.
 
 Per il resto la ricerca indica DKMS + header come strada
 preferita rispetto a un kernel patchato (`linux-cachyos` non ha una cartella

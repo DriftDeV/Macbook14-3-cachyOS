@@ -29,6 +29,15 @@ ACTIONS = [
                            "allora resta la grafica. Spegnere ora? (Riaccendi dopo ~30 s.)")),
     dict(id="renderer-restart", group="Touch Bar", label="Riavvia il renderer", root=False,
          steps=[["systemctl", "--user", "restart", "macbookpro14-3-touchbar-renderer.service"]], needs=[TBMODE]),
+    # Renderer della modalità display (touchbar-mode renderer): fnstrip/T1Bridge oppure tiny-dfr (install-tiny-dfr.sh).
+    # Il renderer salvato è spuntato; la riga in Stato dice quale gira davvero.
+    dict(id="renderer-t1bridge", group="Touch Bar", label="Renderer fnstrip / T1Bridge", root=True,
+         steps=[[TBMODE, "renderer", "t1bridge"]], needs=[TBMODE, status.TDFR_BIN],
+         active=lambda: status.read_conf("touchbar").get("TOUCHBAR_RENDERER", "t1bridge") == "t1bridge"),
+    dict(id="renderer-tiny-dfr", group="Touch Bar", label="Renderer tiny-dfr", root=True,
+         steps=[[TBMODE, "renderer", "tiny-dfr"]], needs=[TBMODE, status.TDFR_BIN],
+         active=lambda: status.read_conf("touchbar").get("TOUCHBAR_RENDERER") == "tiny-dfr"
+         and status.system_unit_active(status.TDFR_UNIT)),
     dict(id="webcam-on", group="Touch Bar", label="Webcam virtuale accesa", root=False,
          steps=[["/usr/local/bin/t1-webcam", "on"]], active=_webcam, needs=["/usr/local/bin/t1-webcam"]),
     dict(id="webcam-off", group="Touch Bar", label="Webcam virtuale spenta", root=False,

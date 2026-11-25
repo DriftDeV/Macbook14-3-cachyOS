@@ -1,0 +1,5 @@
+# Sensore della Touch Bar T1 (configurazione USB 2) fuori dalla sessione grafica: con hid-multitouch (tiny-dfr) è un
+# touchscreen e KWin lo userebbe per muovere il puntatore sullo schermo principale. Nel posto seat-touchbar lo legge
+# solo tiny-dfr (libinput). Con hid-generic (t1-touchbar-hw lo legge da hidraw) non cambia nulla.
+# Installata da scripts/install-tiny-dfr.sh. Equivalente della regola di tiny-dfr per il T2 (etc/udev/rules.d).
+SUBSYSTEM=="input", ATTRS{name}=="Apple Inc. iBridge Touchpad", ENV{ID_SEAT}="seat-touchbar"

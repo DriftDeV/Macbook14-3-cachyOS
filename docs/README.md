@@ -14,7 +14,7 @@ recenti sono su 14,2 o 13,x, non su 14,3.
 
 | Componente | Note grezze | Esito in breve |
 |---|---|---|
-| Tastiera, trackpad, Touch Bar T1, ALS | `touchbar_keyboard_trackpad.md` + **[`touchbar.md`](touchbar.md), [`input.md`](input.md) (provati sulla macchina)** | `applespi` è nel kernel dal 5.3. La Touch Bar funziona solo con DKMS fuori dal kernel (`apple-ibridge`, `apple-ib-tb`, `apple-ib-als`), fragile. `tiny-dfr` non vale per il T1. |
+| Tastiera, trackpad, Touch Bar T1, ALS | `touchbar_keyboard_trackpad.md` + **[`touchbar.md`](touchbar.md), [`input.md`](input.md) (provati sulla macchina)** | `applespi` è nel kernel dal 5.3. La Touch Bar funziona solo con DKMS fuori dal kernel (`apple-ibridge`, `apple-ib-tb`, `apple-ib-als`), fragile. `tiny-dfr` non vale per la modalità tastiera; in modalità display funziona con patch ([`t1bridge.md`](t1bridge.md), 25/11/2026). |
 | Audio | `research_notes/.../audio.md` + **[`audio.md`](audio.md) (provato sulla macchina)** | Codec **CS8409** confermato sulla macchina. Funziona con `davidjo/snd_hda_macbookpro` (fork dnlbtz). Bug del subsystem id al boot; microfono debole. |
 | Wi-Fi, Bluetooth, webcam, periferiche | `wifi_bt_camera_peripherals.md` + **[`wifi.md`](wifi.md) (Wi-Fi provato sulla macchina)** | Wi-Fi BCM43602 con `brcmfmac`: il file NVRAM di scheda serve per i 5 GHz. Webcam USB via iBridge con `uvcvideo`, **non** `facetimehd`. Il firmware T1 sta nell'ESP Apple. |
 | GPU, energia, ventole, sospensione | `gpu_power_thermal.md` + **[`sleep.md`](sleep.md), [`gpu.md`](gpu.md), [`power.md`](power.md) (misurati sulla macchina)** | dGPU Radeon mai in runtime suspend (~7 W). Sospensione parziale: s2idle + hook. Ibernazione rotta. Poche fonti verificate sul 14,3. |

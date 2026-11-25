@@ -204,7 +204,11 @@ class FnstripEditor(QScrollArea):
         self._preview()
 
     def _update_info(self):
-        if not F.installed():
+        from .status import touchbar_renderer
+        if touchbar_renderer() == "tiny-dfr":
+            self.info.setText("La Touch Bar usa tiny-dfr (Azioni → Renderer): questa configurazione vale per fnstrip. "
+                              "tiny-dfr si configura in /etc/tiny-dfr/config.toml (si ricarica da solo).")
+        elif not F.installed():
             self.info.setText("⚠ fnstrip non è installato (~/.local/bin/fnstrip): installalo con scripts/install-fnstrip.sh. "
                               "Puoi comunque preparare la configurazione.")
         elif F.renderer_active():

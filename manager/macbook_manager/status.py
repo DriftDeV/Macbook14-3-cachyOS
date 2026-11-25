@@ -128,6 +128,16 @@ def touchbar_mode():
     return _read("/run/macbookpro14-3/touchbar/mode", "keyboard")
 
 
+TDFR_UNIT = "macbookpro14-3-tiny-dfr.service"
+TDFR_BIN = "/usr/local/lib/macbookpro14-3/tiny-dfr/tiny-dfr"
+
+
+def touchbar_renderer():
+    """Renderer in uso in modalità display: "tiny-dfr" (scripts/install-tiny-dfr.sh) o "t1bridge" (fnstrip o quello
+    di T1Bridge). touchbar-mode crea il file quando avvia tiny-dfr."""
+    return "tiny-dfr" if os.path.exists("/run/macbookpro14-3/touchbar/tiny-dfr") else "t1bridge"
+
+
 def touchbar():
     if not os.path.exists("/usr/local/bin/touchbar-mode"):
         return [_item("Touch Bar", "touchbar", "Modalità", "touchbar-mode non installato", INFO,
@@ -150,10 +160,16 @@ def touchbar():
     else:
         items.append(_item("Touch Bar", "touchbar", "Modalità", "%s, salvata: %s" % (cur, saved), WARN,
                            "La modalità salvata non è attiva.", "touchbar-" + saved))
-    if cur == "display":
+    if cur == "display" and touchbar_renderer() == "tiny-dfr":
+        r = system_unit_active(TDFR_UNIT)
+        items.append(_item("Touch Bar", "renderer", "Renderer", "tiny-dfr, " + ("attivo" if r else "fermo"),
+                           OK if r else ERR, "" if r else "Barra senza grafica: riavvia tiny-dfr "
+                           "(journalctl -u %s)." % TDFR_UNIT, None if r else "renderer-tiny-dfr"))
+    elif cur == "display":
         r = user_unit_active("macbookpro14-3-touchbar-renderer.service")
         items.append(_item("Touch Bar", "renderer", "Renderer", "attivo" if r else "fermo", OK if r else ERR,
                            "" if r else "Barra senza grafica: riavvia il renderer.", None if r else "renderer-restart"))
+    if cur == "display":
         w = user_unit_active("macbookpro14-3-webcam.service")
         items.append(_item("Touch Bar", "webcam", "Webcam virtuale (Discord)", "accesa" if w else "spenta", INFO,
                            "Accesa: il LED della camera resta acceso."))
