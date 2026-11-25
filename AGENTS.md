@@ -62,7 +62,7 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
 - Codec audio: **CS8409** [F] (subsystem `0x106b3900`), non CS4208. **Audio [F] funziona** (speaker, cuffie, microfoni)
   con dnlbtz `offlineDkmsDeb` `11febcf` + `patches/audio/`; il fork ha sorgenti kernel solo per la serie 7.3.
 - Webcam: USB dietro l'iBridge → `uvcvideo`. **`facetimehd` non serve.** [F] Provata in Discord il 23/11/2026.
-  Glitch "a pioggia" [F] corretti il 25/11: buffer da 270 KB troppo piccoli per l'H.264 della camera
+  Glitch "a pioggia" [F] corretti il 25/11 (Discord senza glitch, confermato): buffer da 270 KB troppo piccoli per l'H.264 della camera
   (`uvcvideo-t1-h264-big-frames.patch`). I sorgenti di `dkms/*/src/` erano esclusi da `.gitignore` (regola `src/`): ora no.
   Tasti funzione/multimediali dalla Touch Bar [F] funzionano.
 - Il 14,3 **non ha il T2**: ignora `t2linux` e le pagine CachyOS sui T2.

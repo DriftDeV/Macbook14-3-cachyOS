@@ -112,7 +112,9 @@ Per la sospensione non conta (la modalità tastiera serve solo durante lo sleep)
     successivi si decodificano senza riferimento fino al fotogramma chiave dopo. Correzione nostra
     (`dkms/t1bridge-uvc/uvcvideo-t1-h264-big-frames.patch`, quirk `UVC_QUIRK_H264_BIG_FRAMES` solo per `05ac:8600`):
     buffer da un fotogramma intero non compresso (1280×720×1,5 = 1,4 MB); alla camera non si manda nulla di diverso.
-    Dopo: 40 s con scene pesanti, 0 buffer corrotti, 0 errori di decodifica.
+    Dopo: 40 s con scene pesanti, 0 buffer corrotti, 0 errori di decodifica. **Discord senza glitch** (confermato
+    dall'utente il 25/11/2026): 2 min 42 s di chiamata, 0 "corrupted data" nel registro del servizio (prima 30 in
+    2 minuti), ffmpeg ~9 % di un core.
   - **CPU [F] (25/11/2026)**, 8 s registrati dalla camera (243 fotogrammi), ffmpeg con uscita come nel servizio:
     VA-API Intel ~10 % di un core (dal vivo, servizio acceso: ~14 %), VA-API Radeon ~13 % e più lenta (copia dalla
     VRAM), solo CPU ~60 %. Conversione del formato sulla GPU (`scale_vaapi`) o uscita NV12: 1-2 punti in meno, non
