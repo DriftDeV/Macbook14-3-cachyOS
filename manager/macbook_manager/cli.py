@@ -100,6 +100,48 @@ def cmd_touchbar_screenshot(args):
         cap.stop()
 
 
+def cmd_battery_log(_args):
+    from . import battery as B
+    s, report = B.log_sample()
+    if report:
+        print("Report della sessione salvato: " + B.short_text(report))
+    return 0
+
+
+def cmd_battery_report(args):
+    from . import battery as B
+    reps = B.all_reports(args.days)
+    if not reps:
+        print("Nessuna sessione a batteria nella cronologia di UPower.")
+        return 0
+    if args.list:
+        print("%-3s %-26s %10s %12s %8s %10s %s" % ("n", "sessione", "durata", "carica", "media", "autonomia", "fattori"))
+        for i, r in enumerate(reps):
+            print("%-3d %-26s %10s %12s %8s %10s %s" % (
+                i, "%s → %s" % (time.strftime("%d/%m %H:%M", time.localtime(r["start"])),
+                                time.strftime("%H:%M", time.localtime(r["end"]))),
+                B.hm(r["duration_min"]), "%.0f → %.0f %%" % (r["start_pct"], r["end_pct"]),
+                "%.1f W" % r["avg_w"] if r["avg_w"] else "-", B.hm(r["projected_h"] * 60) if r["projected_h"] else "-",
+                "sì" if r.get("factors") else "no"))
+        return 0
+    if not 0 <= args.n < len(reps):
+        print("Sessione %d inesistente (0-%d, elenco: --list)." % (args.n, len(reps) - 1), file=sys.stderr)
+        return 2
+    r = reps[args.n]
+    if args.json:
+        json.dump(r, sys.stdout, ensure_ascii=False, indent=1)
+        print()
+    elif args.html:
+        span = time.time() - r["start"] + 3600
+        with open(args.html, "w", encoding="utf-8") as f:
+            f.write(B.html_report(r, reps[args.n + 1:args.n + 11], B.upower_history("charge", span),
+                                  B.upower_history("rate", span)))
+        print("Salvato: %s" % args.html)
+    else:
+        print("\n".join(B.report_lines(r, reps[args.n + 1:args.n + 11])))
+    return 0
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(prog="macbook-manager", description="Stato e azioni rapide del MacBookPro14,3.")
     p.add_argument("--version", action="version", version=VERSION)
@@ -116,6 +158,14 @@ def main(argv=None):
     ts.add_argument("--timeout", type=int, default=15)
     sr = sub.add_parser("sleep-report", help="sospensioni dell'avvio attuale (o -1, -2...)")
     sr.add_argument("boot", nargs="?", default="0")
+    bl = sub.add_parser("battery-log", help="registra un campione della batteria (lo usa il timer, ogni minuto)")
+    bl.set_defaults(_x=None)
+    br = sub.add_parser("battery-report", help="report delle sessioni a batteria (0 = la più recente)")
+    br.add_argument("n", nargs="?", type=int, default=0)
+    br.add_argument("--list", action="store_true", help="elenca le sessioni")
+    br.add_argument("--json", action="store_true")
+    br.add_argument("--html", metavar="FILE", help="salva il report in HTML, con il grafico")
+    br.add_argument("--days", type=int, default=60, help="quanti giorni di cronologia leggere (60)")
     args = p.parse_args(argv)
 
     if args.cmd in (None, "gui"):
@@ -135,4 +185,8 @@ def main(argv=None):
         return cmd_touchbar_screenshot(args)
     if args.cmd == "sleep-report":
         return cmd_sleep_report(args)
+    if args.cmd == "battery-log":
+        return cmd_battery_log(args)
+    if args.cmd == "battery-report":
+        return cmd_battery_report(args)
     return 0

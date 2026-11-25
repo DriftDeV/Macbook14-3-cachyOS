@@ -90,6 +90,9 @@ class MainWindow(QMainWindow):
         from .gui_audio import AudioTab
         self.audio = AudioTab(lambda t: self.log.appendPlainText(t))
         self.tabs.addTab(self.audio, QIcon.fromTheme("audio-speakers"), "Audio")
+        from .gui_battery import BatteryTab
+        self.battery = BatteryTab(lambda t: self.log.appendPlainText(t))
+        self.tabs.addTab(self.battery, QIcon.fromTheme("battery"), "Batteria")
         from .gui_optimize import OptimizeTab
         self.optimize = OptimizeTab(lambda t: self.log.appendPlainText(t))
         self.tabs.addTab(self.optimize, QIcon.fromTheme("speedometer"), "Ottimizzazione")

@@ -56,3 +56,12 @@ Il grosso del consumo resta la Radeon (~7 W anche al minimo); l'unico modo di to
 
 - Autonomia reale su una carica completa con l'automatismo attivo.
 - Prestazioni grafiche a batteria con PCIe al minimo (video, browser) e passaggio pulito tra i due stati.
+
+## Grafico e report della batteria [F] (25/11/2026)
+
+MacBook Manager, scheda **Batteria** (dettagli in `manager/README.md`): cronologia di UPower e journal, registratore ogni
+minuto con i fattori (Radeon, GPU dello schermo, luminosità, filtro audio, Touch Bar, app), report per ogni sessione a
+batteria. Prime sessioni ricostruite dalla cronologia: 18,5-21,4 W di media nelle giornate normali (autonomia stimata
+3 h 24 - 3 h 54 con la batteria piena), 27 W il pomeriggio del 25/11 (compilazioni, musica con il DSP audio, Claude).
+Salute 94 % a 184 cicli (72,3/76,8 Wh secondo UPower).
+

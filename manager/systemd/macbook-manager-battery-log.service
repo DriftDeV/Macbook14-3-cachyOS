@@ -1,0 +1,9 @@
+[Unit]
+Description=MacBook Manager: campione della batteria (registratore)
+Documentation=file:///usr/local/lib/macbookpro14-3/manager
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/macbook-manager battery-log
+Nice=10
+IOSchedulingClass=idle

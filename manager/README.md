@@ -113,6 +113,33 @@ di `install.sh`), in `audio.py` / `gui_audio.py`, da utente, senza password.
   essere `required`: con `optional` WirePlumber non lo carica.
 - Con le cuffie il filtro non esiste: la scheda lo dice e le impostazioni valgono quando torna.
 
+## Batteria (scheda Batteria, `macbook-manager battery-report`)
+
+`battery.py` / `gui_battery.py`, da utente, senza root.
+
+- **Grafico dal vivo** (QPainter, niente QtCharts): carica in alto, potenza assorbita in basso sulla stessa scala dei tempi;
+  fasce verdi con l'alimentatore, grigie in sospensione, tratteggio ai riavvii; con il registratore anche i watt della
+  Radeon (arancione). Periodo 4 ore / oggi / 24 ore / 7 giorni, media su 1, 5 o 15 minuti, puntatore con i valori,
+  aggiornamento ogni minuto mentre la scheda è aperta, "Salva grafico PNG".
+- **Indicatori**: carica ed energia, potenza attuale, media dell'ultima ora a batteria, autonomia (UPower, oppure stimata
+  dalla media), salute e cicli (`charge_full`/`charge_full_design`), temperatura della batteria e della CPU.
+- **Fonti**: cronologia di UPower via D-Bus (`GetHistory` charge/rate: c'è dall'installazione, sfoltita da UPower), journal
+  per avvii e sospensioni (`PM: suspend entry/exit`). Prima dell'inizio del journal le pause (sospeso o spento) sono
+  stimate dai buchi di oltre 10 minuti nella cronologia e segnate come stime.
+- **Registratore**: `macbook-manager-battery-log.timer` (utente, installato e attivato da `install-manager.sh`), un
+  campione al minuto in `~/.local/share/macbook-manager/battery/AAAA-MM.csv`, 3 mesi: carica, potenza, alimentatore,
+  luminosità, watt della Radeon, GPU dello schermo, stato del filtro audio e flussi aperti, modalità e renderer della
+  Touch Bar, carico, temperature, le 3 app con più CPU dall'ultimo campione (da `/proc/*/stat`). Costo misurato: 0,1 s di
+  CPU per campione.
+- **Sessioni e report**: una sessione va da quando stacchi l'alimentatore a quando lo ricolleghi (anche attraverso
+  riavvii). Report: durata e tempo attivo, carica e Wh usati, potenza media/mediana/90° percentile, %/h, autonomia
+  proiettata con la batteria piena, sospensioni e loro consumo, riavvii, fattori dal registratore, confronto con le
+  sessioni precedenti. Al ricollegamento il registratore salva il report in
+  `~/.local/share/macbook-manager/battery/reports/` e manda una notifica (sessioni di almeno 15 minuti). Nella scheda:
+  elenco, testo, "Copia report", "Esporta HTML" (con grafico SVG). Da terminale: `macbook-manager battery-report --list`,
+  `battery-report N`, `--json`, `--html FILE`.
+- La potenza letta dalla batteria oscilla di 1-3 W: medie e mediane sono affidabili, i fattori sono indicazioni.
+
 ## Ottimizzazione (scheda Ottimizzazione)
 
 Elenca le app Chromium/Electron e le **web app** installate dal browser (Brave, Discord, Claude Desktop, Sidra, …) con
