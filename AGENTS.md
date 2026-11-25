@@ -43,7 +43,8 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
 1. **Sicurezza dei dischi.** `macos/prepare.sh` modifica le partizioni di questo Mac. Non lanciarlo con
    `--execute` di tua iniziativa: serve una richiesta esplicita dell'utente nella chat, backup fatto e
    alimentatore collegato. Le conferme scritte (`RIDIMENSIONA`, `ROLLBACK`) le scrive l'utente, non tu.
-   Non cancellare mai la ESP di macOS (`disk0s1`): contiene il firmware T1 (Touch Bar, webcam, ALS).
+   Non cancellare mai la ESP di macOS (`disk0s1`, su Linux `nvme0n1p1`): contiene il firmware T1 (Touch Bar, webcam, ALS).
+   Va riformattata solo dopo aver salvato e verificato tutti i file (vedi `docs/t1-firmware.md`).
 2. **Onestà sullo stato.** Quasi nulla è stato provato su hardware reale: fanno eccezione Touch Bar (`docs/touchbar.md`)
    sospensione (`docs/sleep.md`), audio (`docs/audio.md`) e Wi-Fi (`docs/wifi.md`).
    Marca come **[F] fatto / [I] inferenza / [NV] non verificato / [C] conflitto**. Non dichiarare "risolto"
@@ -124,7 +125,17 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
 - Il dry-run su questo Mac ha mostrato: container APFS `disk1` da ~500 GB, **7 snapshot locali di Time Machine**
   (il limite minimo del resize è uguale alla dimensione attuale finché non vengono eliminati).
 
-## Stato della sessione (aggiornato il 23 novembre 2026)
+## Stato della sessione (aggiornato il 25 novembre 2026)
+
+- **macOS cancellato [F] (25/11/2026)** su richiesta dell'utente (ha Time Machine). Disco: p1 ESP di Apple 512 MiB
+  (firmware T1 + OpenCore + `\EFI\GRUB\grubx64.efi` + riserva `EFI/BOOT/BOOTX64.EFI`, montata su `/boot/efi` a richiesta),
+  p2 btrfs 354 GiB (aggiunta con `btrfs device add`), p4 COSLIVE 7 GB (tenuta per provare Omarchy), p5 btrfs 104 GiB.
+  Guardia del firmware T1 a ogni avvio. Dettagli in `docs/t1-firmware.md`. Le note sotto su p3/p6/`prepare.sh` sono storiche.
+- **MangoHud mai dentro KWin [F]**: lo faceva crollare (desktop chiuso quando cambiava l'alimentazione). Drop-in utente
+  `UnsetEnvironment` per `plasma-kwin_wayland` e `plasma-login-kwin_wayland` (`docs/power.md`).
+- Lezione: il README era finito vuoto in `ffe762e` per uno script con `open(p,'w').write(open(p).read())` (apre in
+  scrittura, cioè azzera, prima di leggere). Controlla `wc -c README.md` prima di committare.
+
 
 - **Installazione**: CachyOS installato dal live sul disco interno (partizioni `COSLIVE` 7 GB e `LINUXEFI` con GRUB su
   `/boot/efi`; ESP Apple `nvme0n1p1` intatta) [I dalle partizioni]. README riscritto con stato verificato e istruzioni.

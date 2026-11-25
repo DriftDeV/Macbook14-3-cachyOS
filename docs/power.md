@@ -83,6 +83,13 @@ Verifiche:
   limite cambia subito (il file viene riletto). Le app OpenGL non sono coperte.
 - Dopo l'installazione: `macbookpro14-3-cpu-limit` attivo, 20 W di package con un gioco aperto, `mangohud.conf`
   riscritto con `fps_limit=0` con l'alimentatore.
+- **MangoHud fuori da KWin [F] (25/11/2026)**: `MANGOHUD=1` in `/etc/environment.d` arriva anche a `kwin_wayland`
+  (anche quello della schermata di login, utente `plasmalogin`). Lì MangoHud lo ha fatto crollare due volte: SIGABRT
+  al momento del login (16:35) e SIGSEGV in `free()` da un thread di `libMangoHud` un secondo dopo che
+  `power-source.sh` aveva riscritto `mangohud.conf` all'avvio (18:10; schermata di login sparita, riavvio col tasto).
+  Rimedio: drop-in `UnsetEnvironment=MANGOHUD MANGOHUD_CONFIGFILE` per `plasma-kwin_wayland.service` e
+  `plasma-login-kwin_wayland.service` (`config/systemd/user/90-macbookpro14-3-no-mangohud.conf`, da `install-power.sh`),
+  e `mangohud.conf` riscritto solo se cambia. Le app lanciate dal desktop non sono figlie di KWin: il limite resta [I].
 [NV]: limite FPS reale in un gioco a batteria (serve un nuovo accesso perché le app carichino MangoHud), tetto di
 temperatura sotto carico, consumo con la Radeon in `low`, giochi di Steam dentro il contenitore di Steam Runtime.
 

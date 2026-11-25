@@ -99,8 +99,11 @@ fi
 # rileggono il file da soli; 0 = nessun limite -------------------------------------------------------------
 fps="$(num "$(get FPS_LIMIT)" 0)"
 if [ -d "$(dirname "$MANGO")" ]; then
-    printf '# Scritto da power-source.sh (%s): limite FPS per MangoHud, cambia con l alimentazione.\nno_display\nfps_limit=%s\n' \
-        "$side" "$fps" > "$MANGO.tmp" && chmod 644 "$MANGO.tmp" && mv -f "$MANGO.tmp" "$MANGO"
+    # riscritto solo se cambia: ogni scrittura fa rileggere il file a tutti i processi con MangoHud
+    new="$(printf '# Scritto da power-source.sh (%s): limite FPS per MangoHud, cambia con l alimentazione.\nno_display\nfps_limit=%s' "$side" "$fps")"
+    if [ "$(cat "$MANGO" 2>/dev/null)" != "$new" ]; then
+        printf '%s\n' "$new" > "$MANGO.tmp" && chmod 644 "$MANGO.tmp" && mv -f "$MANGO.tmp" "$MANGO"
+    fi
 fi
 
 log "$( [ "$side" = AC ] && echo alimentatore || echo batteria ): Radeon $rmode, turbo $([ "$turbo_off" = 1 ] && echo spento || echo attivo), CPU max $maxpct %, profilo $profile, limite $([ "$watts" = 0 ] && echo firmware || echo "$watts W"), FPS $([ "$fps" = 0 ] && echo liberi || echo "max $fps")"

@@ -175,8 +175,15 @@ step_kernel() {
     install_file 755 "$REPO_DIR/config/dkms-catchup.sh" /usr/local/lib/macbookpro14-3/dkms-catchup.sh
     install_file 644 "$REPO_DIR/config/systemd/macbookpro14-3-dkms-catchup.service" \
         /etc/systemd/system/macbookpro14-3-dkms-catchup.service
+    # Guardia del firmware del T1: a ogni avvio controlla EFI/APPLE/EMBEDDEDOS e lo ripristina se sparisce.
+    install_file 755 "$REPO_DIR/config/t1-guard.sh" /usr/local/lib/macbookpro14-3/t1-guard.sh
+    install_file 644 "$REPO_DIR/config/systemd/macbookpro14-3-t1-guard.service" \
+        /etc/systemd/system/macbookpro14-3-t1-guard.service
     run systemctl daemon-reload
-    run systemctl enable macbookpro14-3-dkms-catchup.service
+    run systemctl enable macbookpro14-3-dkms-catchup.service macbookpro14-3-t1-guard.service
+    if [ "$DRY_RUN" != 1 ] && [ ! -s /var/lib/macbookpro14-3/t1-guard/ref.sha256 ]; then
+        /usr/local/lib/macbookpro14-3/t1-guard.sh init || warn "Riferimento del firmware T1 non preso (il T1 funziona?)."
+    fi
     # Pulizia: la curva di luminosità automatica di KWin non fa più parte della repo.
     local h; h="$(getent passwd "$USER_NAME" | cut -d: -f6)"
     if [ -e "$h/.config/systemd/user/macbookpro14-3-kwin-curve.service" ]; then
@@ -237,7 +244,7 @@ run_step bluetooth "Bluetooth (audio delle chiamate)" step_bluetooth
 run_step touchbar-display "Touch Bar, modalità display (T1Bridge, webcam, fnstrip)" step_touchbar_display
 run_step tiny-dfr "Touch Bar, renderer alternativo tiny-dfr" step_tiny_dfr
 run_step touchid "Touch ID (T1Bridge: rete privata, xART, broker, fprintd)" step_touchid
-run_step kernel "Driver per i kernel futuri (ricompilazione automatica)" step_kernel
+run_step kernel "Driver per i kernel futuri e guardia del firmware del T1" step_kernel
 run_step manager "MacBook Manager (stato e azioni rapide, GUI)" step_manager
 run_step apps "App Chromium/Electron: GPU Radeon sotto Wayland (AMD_DEBUG=notiling)" step_apps
 run_step wifi "Wi-Fi 5 GHz (NVRAM dal chip)" step_wifi

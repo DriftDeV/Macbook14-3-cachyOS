@@ -386,6 +386,17 @@ def touchid():
     items.append(_item("Touch ID", "relaycount", "Attivazioni del relay", "%d in questo avvio (blocco a ~%d)" % (n, RELAY_LIMIT),
                        lvl, "" if lvl == INFO else "Vicino al limite della issue #14: se l'impronta smette di funzionare "
                        "serve uno spegnimento completo. La password resta valida."))
+    try:
+        import json
+        with open("/var/lib/macbookpro14-3/t1-guard/last.json") as f:
+            g = json.load(f)
+        lvl = {"ok": OK, "restored": WARN}.get(g.get("status"), ERR)
+        when = time.strftime("%d/%m %H:%M", time.localtime(g.get("ts", 0)))
+        items.append(_item("Touch ID", "t1-guard", "Firmware del T1 (guardia)", "%s (%s)" % (g.get("message", "?"), when),
+                           lvl, "Se è stato ripristinato: spegni completamente il Mac. Cronologia: sudo "
+                           "/usr/local/lib/macbookpro14-3/t1-guard.sh status"))
+    except (OSError, ValueError):
+        pass
     if os.path.exists("/usr/lib/pam.d/kde-fingerprint"):
         items.append(_item("Touch ID", "tid-lock", "Schermata di blocco", "impronta attiva" if touchid_lockscreen_on()
                            else "solo password", INFO, "Ogni sblocco con l'impronta consuma un'attivazione del relay."))

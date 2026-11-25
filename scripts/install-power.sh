@@ -21,6 +21,8 @@ LIMIT_BIN=/usr/local/lib/macbookpro14-3/cpu-limit.py
 LIMIT_UNIT=/etc/systemd/system/macbookpro14-3-cpu-limit.service
 MANGO=/etc/macbookpro14-3/mangohud.conf
 ENVD=/etc/environment.d/90-macbookpro14-3-mangohud.conf
+KWIN_DROPINS="/etc/systemd/user/plasma-kwin_wayland.service.d /etc/systemd/user/plasma-login-kwin_wayland.service.d"
+NOMANGO=90-macbookpro14-3-no-mangohud.conf
 
 UNDO=0
 for a in "$@"; do
@@ -36,6 +38,7 @@ if [ "$UNDO" = 1 ]; then
     run systemctl disable macbookpro14-3-power-source.service 2>/dev/null || true
     run systemctl disable --now macbookpro14-3-cpu-limit.service 2>/dev/null || true
     run rm -f "$BIN" "$RULE" "$UNIT" "$LIMIT_BIN" "$LIMIT_UNIT" "$MANGO" "$ENVD"
+    for d in $KWIN_DROPINS; do run rm -f "$d/$NOMANGO" "$d/$NOMANGO.bak"; done
     run sh -c 'echo 100 > /sys/devices/system/cpu/intel_pstate/max_perf_pct'
     if [ -r /run/macbookpro14-3/power/pl1-default ]; then
         run sh -c 'cat /run/macbookpro14-3/power/pl1-default > /sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw'
@@ -71,6 +74,8 @@ grep -q '^\[multilib\]' /etc/pacman.conf && pk+=(lib32-mangohud)   # giochi Vulk
 run pacman -S --needed --noconfirm "${pk[@]}"
 [ -e "$MANGO" ] || run sh -c "printf 'no_display\nfps_limit=0\n' > '$MANGO'"
 install_file 644 "$REPO_DIR/config/power/90-macbookpro14-3-mangohud.conf" "$ENVD"
+# ...ma non dentro KWin (sessione e schermata di login): lì MangoHud lo faceva crollare
+for d in $KWIN_DROPINS; do install_file 644 "$REPO_DIR/config/systemd/user/$NOMANGO" "$d/$NOMANGO"; done
 
 log "Tetto di temperatura della CPU (servizio macbookpro14-3-cpu-limit)"
 install_file 755 "$REPO_DIR/config/power/cpu-limit.py" "$LIMIT_BIN"
