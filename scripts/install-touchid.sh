@@ -242,7 +242,7 @@ do_install() {
     done
     [ -z "$(git -C "$SRC" status --porcelain)" ] || warn "makepkg ha lasciato file in $SRC (controlla .gitignore)."
 
-    log "Driver della rete privata (DKMS t1bridge-ncm, solo kernel 7.x, LLVM=1 automatico)"
+    log "Driver della rete privata (DKMS t1bridge-ncm, per ogni kernel, LLVM=1 automatico)"
     dkms status "t1bridge-ncm/$VER" 2>/dev/null | grep -q . && run dkms remove "t1bridge-ncm/$VER" --all >/dev/null 2>&1 || true
     run rm -rf "/usr/src/t1bridge-ncm-$VER"
     run cp -a "$REPO_DIR/dkms/t1bridge-ncm" "/usr/src/t1bridge-ncm-$VER"

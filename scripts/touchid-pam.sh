@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Interruttori PAM di Touch ID sul MacBookPro14,3 (installato come /usr/local/bin/touchid-pam da install-touchid.sh).
 #   touchid-pam status
-#   touchid-pam lockscreen on|off   impronta nella schermata di blocco di KDE (off = /etc/pam.d/kde-fingerprint con pam_deny)
+#   touchid-pam lockscreen on|off   impronta nella schermata di blocco di KDE (off = /etc/pam.d/kde-fingerprint con pam_deny);
+#                                   su Hyprland/Omarchy hyprlock usa fprintd direttamente: si regola nella sua configurazione
 #   touchid-pam sudo on|off         impronta per sudo: "auth sufficient pam_fprintd.so max-tries=1 timeout=10" prima di
 #                                   system-auth; se l'impronta non c'è, sbaglia o il servizio è fermo resta la password
 # Perché la schermata di blocco è spenta di default: ogni riconoscimento consuma un'attivazione del relay della keybag e
@@ -45,6 +46,14 @@ set_sudo() {
 }
 
 set_lock() {
+    if [ ! -e /usr/lib/pam.d/kde-fingerprint ] && [ ! -e "$LOCK_PAM" ]; then
+        echo "Schermata di blocco di KDE non presente." >&2
+        if command -v hyprlock >/dev/null; then
+            echo "hyprlock (Hyprland/Omarchy) parla con fprintd da solo: l'impronta si accende o spegne nella sua" >&2
+            echo "configurazione (auth > fingerprint > enabled = true|false, in ~/.config/hypr/hyprlock.conf)." >&2
+        fi
+        exit 3
+    fi
     if [ "$1" = on ]; then
         if [ -e "$LOCK_PAM" ] && ! lock_ours; then
             echo "$LOCK_PAM non è nostro: non lo tocco." >&2; exit 1

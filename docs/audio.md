@@ -150,3 +150,15 @@ woofer sinistro ancora muto. Il guasto è intermittente [I: woofer sinistro, o c
   headset confermati dall'utente il 23/11/2026.
 - [NV] Se il comando sopravvive allo spegnimento/riaccensione del Bluetooth da KDE (spegnere il Bluetooth non riavvia
   `bluetooth.service`).
+
+## Schiocchi con la voce di Claude Desktop [F] (25/11/2026)
+
+Popping su più altoparlanti (anche tweeter sinistro) soprattutto con la voce sintetica di Claude Desktop, a volume 37 %.
+Misure: il segnale che entra nel filtro e quello che il filtro manda ai 4 altoparlanti sono puliti (nessun buco, nessuna
+saturazione, picco woofer -9,6 dBFS); nel journal `pipewire-pulse: [Claude] underrun` e `spa.audioconvert ... out of
+buffers` quando a batteria la CPU era limitata (40 %, power-saver, 15 W). Il flusso di Claude chiedeva 512/48000 (~11 ms).
+Rimedio: `pulse.min.req/frag/quantum = 1024/48000` per pipewire-pulse (`config/pipewire/90-macbookpro14-3-latency.conf`,
+installato da `install-audio-dsp.sh`): il flusso chiede 1024, nessun underrun dopo, l'utente non sente più gli schiocchi.
+[I] Il segnale registrato dentro PipeWire non mostra il difetto: lo schiocco nasce quando i dati non arrivano in tempo
+alla scheda audio.
+

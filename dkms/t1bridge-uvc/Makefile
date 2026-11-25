@@ -1,15 +1,9 @@
-# Webcam del T1 in configurazione USB 2 (solo H.264): uvcvideo di Linux 7.3 con le due patch di
-# T1Bridge v0.1.12 (kernel/uvcvideo-t1/upstream: parser H.264, niente autosospensione per il T1).
-# Differenze rispetto a Linux 7.3: uvcvideo-t1-on-linux-7.3.patch, più uvcvideo-t1-h264-big-frames.patch
-# (nostra: buffer da un fotogramma intero, la camera ne dichiara 270 KB ma ne manda fino a ~330 KB). Modulo con nome diverso
-# (uvcvideo_t1), bloccato dal caricamento automatico: lo carica solo la modalità display.
-obj-m := uvcvideo_t1.o
-uvcvideo_t1-objs := src/uvc_driver.o src/uvc_h264.o src/uvc_queue.o src/uvc_v4l2.o src/uvc_video.o \
-	src/uvc_ctrl.o src/uvc_status.o src/uvc_isight.o src/uvc_debugfs.o src/uvc_metadata.o
-ifeq ($(CONFIG_MEDIA_CONTROLLER),y)
-uvcvideo_t1-objs += src/uvc_entity.o
-endif
-
+# Webcam del T1 in configurazione USB 2 (solo H.264): uvcvideo del kernel di destinazione con le due patch di questa
+# cartella, preparato da prepare-src.sh (PRE_BUILD di DKMS) in build/src: uvcvideo-t1-on-linux-7.3.patch (T1Bridge
+# v0.1.12: parser H.264, niente autosospensione per il T1) e uvcvideo-t1-h264-big-frames.patch (nostra: buffer da un
+# fotogramma intero, la camera ne dichiara 270 KB ma ne manda fino a ~330 KB). src/ è la copia già corretta di Linux 7.3,
+# usata senza rete per la serie 7.3. Modulo uvcvideo_t1, bloccato dal caricamento automatico: lo carica solo la
+# modalità display.
 KVERSION := $(KERNELRELEASE)
 ifeq ($(origin KERNELRELEASE), undefined)
 KVERSION := $(shell uname -r)
@@ -20,7 +14,8 @@ LLVM_FLAG := LLVM=1
 endif
 
 all:
-	$(MAKE) -C $(KDIR) M=$(CURDIR) $(LLVM_FLAG) modules
+	@[ -f build/src/Kbuild ] || ./prepare-src.sh $(KVERSION)
+	$(MAKE) -C $(KDIR) M=$(CURDIR)/build/src $(LLVM_FLAG) modules
 
 clean:
-	$(MAKE) -C $(KDIR) M=$(CURDIR) $(LLVM_FLAG) clean
+	rm -rf build

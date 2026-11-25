@@ -68,11 +68,12 @@ nobuild() { if [ "$DRY_RUN" = 1 ]; then warn "$1"; else die "$1"; fi; }
 for f in t1-touchbar-hw t1-touchbar; do [ -x "$BUILD/$f" ] || nobuild "Manca $BUILD/$f: lancia prima scripts/build-t1bridge.sh (da utente)."; done
 [ "$(cat "$BUILD/t1bridge-commit" 2>/dev/null)" = "$T1BRIDGE_REF" ] || nobuild "I programmi in $BUILD non sono del commit $T1BRIDGE_REF: ricompila."
 
-log "Driver con DKMS (solo kernel 7.x; il driver webcam solo 7.3)"
+log "Driver con DKMS, per ogni kernel installato (la webcam con i sorgenti uvcvideo del kernel, da kernel.org)"
 for p in $DKMS_PKGS; do
     if dkms status "$p/$VER" 2>/dev/null | grep -q .; then run dkms remove "$p/$VER" --all >/dev/null 2>&1 || true; fi
     run rm -rf "/usr/src/$p-$VER"
     run cp -a "$REPO_DIR/dkms/$p" "/usr/src/$p-$VER"
+    run install -m755 "$REPO_DIR/scripts/kernel-src.sh" "/usr/src/$p-$VER/kernel-src.sh"
     run dkms add "$p/$VER"
     for k in /usr/lib/modules/*/; do
         kv="$(basename "$k")"

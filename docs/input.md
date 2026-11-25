@@ -43,6 +43,8 @@ Tag come in [`README.md`](README.md).
   - [I] Il sensore sotto il vetro della Touch Bar dà valori molto bassi con la luce ambiente (1-4 lux in una stanza
     illuminata, fino a ~2900 solo con luce diretta): probabilmente manca la calibrazione che applica macOS. KWin
     distingue il buio dalla luce diretta, non le condizioni intermedie.
+  - **Rimossa il 25/11/2026** su richiesta dell'utente (luminosità manuale): lo script e i file qui sotto non sono più
+    nella repo; `install.sh --only kernel` toglie il servizio utente rimasto. Restano come documentazione storica.
   - **Soluzione [F]**: curva di partenza `config/kde/kwin-brightness-curve.json`
     (`[[0,0.35],[1,0.5],[4,0.55],[20,0.75],[200,1]]`), scritta da `scripts/set-kwin-brightness-curve.sh` con un servizio
     utente che gira **prima di KWin** al login e poi si disattiva. Scriverla con KWin acceso non funziona: KWin salva la

@@ -1,0 +1,35 @@
+From: Macbook14-3-cachyOS
+Subject: [PATCH] dkmsPrepare: use the sound/hda files of the exact kernel from kernel.org
+
+kernel-src.sh (copied next to dkmsPrepare by scripts/install-audio.sh) downloads the files for the
+target kernel version and caches them; the vendored series stays as the offline fallback.
+---
+diff --git a/dkmsPrepare b/dkmsPrepare
+index 0a77dcd..6c36993 100755
+--- a/dkmsPrepare
++++ b/dkmsPrepare
+@@ -53,13 +53,19 @@ if isUbuntu; then
+ else
+   series=$(echo "$kver" | sed -E 's/^([0-9]+\.[0-9]+).*/\1/')
+   src=kernel/$series/sound/hda
+-  if [ ! -d "$src" ]; then
+-    echo "dkmsPrepare: no vendored sources for kernel $series (have: $(ls kernel | tr '\n' ' '))" >&2
+-    echo "dkmsPrepare: run ./vendorKernel $series in the repo and rebuild the package" >&2
++  # Macbook14-3-cachyOS: first the files of this exact kernel version from kernel.org (kernel-src.sh, cached in
++  # /var/cache/macbookpro14-3/kernel-src, so later rebuilds work offline), then the vendored series.
++  # shellcheck disable=SC2086
++  if [ -x ./kernel-src.sh ] && tag=$(./kernel-src.sh "$kver" sound/hda "$hda" $files); then
++    from="kernel.org $tag"
++  elif [ -d "$src" ]; then
++    cp -r "$src"/. "$hda"/
++    from=kernel/$series
++  else
++    echo "dkmsPrepare: no sources for kernel $kver: kernel.org unreachable and nothing vendored for $series" >&2
++    echo "dkmsPrepare: (have: $(ls kernel | tr '\n' ' ')); retry with network: sudo dkms autoinstall -k $kver" >&2
+     exit 1
+   fi
+-  cp -r "$src"/. "$hda"/
+-  from=kernel/$series
+ fi
+ 
+ cp makefiles/Makefile "$hda"/Makefile

@@ -2,8 +2,9 @@
 # Installa via DKMS il driver Cirrus CS8409 per speaker, cuffie e microfoni
 # (davidjo/snd_hda_macbookpro, fork dnlbtz branch offlineDkmsDeb, vedi config/sources.conf)
 # con le patch di patches/audio/ (LLVM=1 per kernel clang).
-# La build non scarica nulla: i file del kernel sono inclusi nel fork (kernel/<serie>),
-# quindi compila solo per le serie che il fork contiene; le altre vengono saltate.
+# Per ogni kernel la build usa i file sound/hda di quella versione esatta, scaricati da kernel.org con
+# scripts/kernel-src.sh (patch 0002, in cache per le ricompilazioni senza rete); senza rete ripiega sulla serie inclusa
+# nel fork (kernel/7.3). Così DKMS lo ricompila da solo anche per i kernel futuri e per l'LTS.
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
@@ -39,6 +40,7 @@ for p in "$REPO_DIR"/patches/audio/*.patch; do
     log "Applico $(basename "$p")"
     git -C "$WORK/src" apply "$p" || die "Patch $(basename "$p") non applicabile su $AUDIO_REF."
 done
+install -m755 "$REPO_DIR/scripts/kernel-src.sh" "$WORK/src/kernel-src.sh"
 rm -rf "$WORK/src/.git"
 
 PKGNAME="$(sed -n 's/^PACKAGE_NAME="\(.*\)"$/\1/p' "$WORK/src/dkms.conf")"
@@ -58,15 +60,13 @@ BUILT=""
 for k in /usr/lib/modules/*/; do
     kv="$(basename "$k")"
     [ -d "$k/build" ] || { warn "Header mancanti per $kv: salto."; continue; }
-    series="$(echo "$kv" | sed -E 's/^([0-9]+\.[0-9]+).*/\1/')"
-    if [ ! -d "/usr/src/$PKGNAME-$PKGVER/kernel/$series" ]; then
-        warn "Il driver non ha i sorgenti per il kernel $series ($kv): salto. Su quel kernel gli speaker restano muti."
-        continue
-    fi
     log "dkms build/install per $kv"
-    dkms build "$PKGNAME/$PKGVER" -k "$kv" || die "Build DKMS fallita su $kv. Vedi /var/lib/dkms/$PKGNAME/$PKGVER/build/make.log"
-    dkms install "$PKGNAME/$PKGVER" -k "$kv" --force
-    BUILT="$BUILT $kv"
+    if dkms build "$PKGNAME/$PKGVER" -k "$kv"; then
+        dkms install "$PKGNAME/$PKGVER" -k "$kv" --force
+        BUILT="$BUILT $kv"
+    else
+        warn "Build DKMS fallita su $kv (speaker muti su quel kernel): /var/lib/dkms/$PKGNAME/$PKGVER/build/make.log"
+    fi
 done
 [ -n "$BUILT" ] || die "Nessun kernel compatibile: il driver non è stato installato."
 ok "Audio: $PKGNAME $PKGVER installato per:$BUILT. Riavvia per usarlo."

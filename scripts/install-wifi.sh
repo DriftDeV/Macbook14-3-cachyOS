@@ -44,6 +44,13 @@ fi
 [ "$(cat /sys/class/dmi/id/product_name 2>/dev/null)" = MacBookPro14,3 ] || [ "${FORCE:-0}" = 1 ] \
     || die "Solo per MacBookPro14,3: template e tabella front-end sono di questa scheda."
 grep -qx 0x43ba /sys/bus/pci/devices/*/device 2>/dev/null || die "Nessun BCM43602 (14e4:43ba) trovato."
+# Omarchy (e altri) possono installare il driver proprietario "wl" (broadcom-wl), che toglie di mezzo brcmfmac:
+# questo script lavora su brcmfmac, l'unico con cui il 5 GHz del BCM43602 è stato provato.
+if lsmod 2>/dev/null | grep -qw '^wl' || pacman -Q broadcom-wl broadcom-wl-dkms >/dev/null 2>&1 \
+        || grep -qsrw 'blacklist brcmfmac' /etc/modprobe.d /usr/lib/modprobe.d; then
+    warn "Trovato il driver Broadcom proprietario (wl) o brcmfmac bloccato: questo passo usa brcmfmac."
+    warn "Rimuovi broadcom-wl / il blacklist di brcmfmac e riavvia, poi rilancia: sudo ./install.sh --only wifi"
+fi
 for c in python3 curl zstd sha256sum modprobe nmcli; do
     command -v "$c" >/dev/null || die "$c non installato."
 done

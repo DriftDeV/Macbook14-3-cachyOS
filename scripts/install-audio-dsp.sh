@@ -12,6 +12,7 @@ REPO_DIR="$(dirname "$SCRIPT_DIR")"
 source "$SCRIPT_DIR/lib.sh"
 
 PKGS="bankstown-lv2 mbp143-audio"   # in quest'ordine: mbp143-audio dipende da bankstown-lv2
+LATENCY=/etc/pipewire/pipewire-pulse.conf.d/90-macbookpro14-3-latency.conf
 UNDO=0
 for a in "$@"; do
     case "$a" in
@@ -37,6 +38,7 @@ if [ "$UNDO" = 1 ]; then
     for p in mbp143-audio bankstown-lv2; do pacman -Q "$p" >/dev/null 2>&1 && inst="$inst $p"; done
     # shellcheck disable=SC2086
     [ -z "$inst" ] || run pacman -R --noconfirm $inst
+    run rm -f "$LATENCY"
     ok "DSP tolto. Riavvia l'audio (systemctl --user restart pipewire pipewire-pulse wireplumber) o la sessione."
     exit 0
 fi
@@ -66,5 +68,8 @@ for p in $PKGS; do
     FILES+=("$f")
 done
 run pacman -U --needed --noconfirm "${FILES[@]}"
+# Buffer minimo dei programmi a 1024 campioni: senza, la voce di Claude Desktop (512) scoppietta con il filtro e la CPU
+# limitata a batteria (docs/audio.md).
+run install -Dm644 "$REPO_DIR/config/pipewire/90-macbookpro14-3-latency.conf" "$LATENCY"
 ok "DSP degli altoparlanti installato: \"MacBook Pro 14,3 Speakers\" e \"MacBook Pro 14,3 Microphone\" al prossimo avvio."
 echo "Nota: senza il driver audio caricato (dopo il riavvio) le regole non trovano la scheda e non fanno nulla."

@@ -31,7 +31,7 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
 |---|---|
 | `install.sh` | post-installazione su CachyOS appena installato, **senza domande** (dal 25/11/2026): installa tutto (display con fnstrip predefinito + tiny-dfr inattivo, Touch ID, DSP audio, manager, Wi-Fi); modalità e renderer si scelgono da MacBook Manager. `--only/--skip`, riepilogo, registro in `/var/log/macbookpro14-3-install.log`; prima `--dry-run` (16 passi ok in prova) |
 | `macos/prepare.sh` | da macOS: backup, download ISO, ridimensiona APFS, crea `COSLIVE` + partizione Linux, estrae ISO |
-| `scripts/` | `lib.sh`, `backup-esp.sh`, `install-touchbar.sh`, `install-audio.sh`, `install-audio-dsp.sh` (pkgs bankstown-lv2 + mbp143-audio con makepkg da utente), `install-wifi.sh`, `install-wifi-nvram.sh`, `install-sleep.sh`, `sleep-test.sh`, `install-power.sh`, `install-bt.sh`, `bt-sco-route.py`, `build-t1bridge.sh`, `install-touchbar-display.sh`, `touchbar-mode.sh`, `install-fnstrip.sh`, `set-kwin-brightness-curve.sh`, `t1-reenumerate.sh`, `install-manager.sh`, `install-touchid.sh`, `install-tiny-dfr.sh`, `touchid-pam.sh`, `fix-chromium-gpu.sh` (app Chromium/Electron: `AMD_DEBUG=notiling` su Wayland, da utente) |
+| `scripts/` | `lib.sh`, `backup-esp.sh`, `install-touchbar.sh`, `install-audio.sh`, `install-audio-dsp.sh` (pkgs bankstown-lv2 + mbp143-audio con makepkg da utente), `install-wifi.sh`, `install-wifi-nvram.sh`, `install-sleep.sh`, `sleep-test.sh`, `install-power.sh`, `install-bt.sh`, `bt-sco-route.py`, `build-t1bridge.sh`, `install-touchbar-display.sh`, `touchbar-mode.sh`, `install-fnstrip.sh`, `kernel-src.sh` (sorgenti del kernel esatto da kernel.org per i moduli DKMS), `t1-reenumerate.sh`, `install-manager.sh`, `install-touchid.sh`, `install-tiny-dfr.sh`, `touchid-pam.sh`, `fix-chromium-gpu.sh` (app Chromium/Electron: `AMD_DEBUG=notiling` su Wayland, da utente) |
 | `config/` | mkinitcpio, libinput, kde, sleep, power, systemd, udev, tmpfiles, networkmanager, modprobe, `sources.conf` (sorgenti esterne; Touch Bar pinnata) |
 | `manager/` | MacBook Manager: `macbook-manager` (stato/azioni, CLI + GUI PySide6 con icona nella barra di sistema, editor di fnstrip in `fnstrip.py`/`gui_fnstrip.py`, Touch Bar in diretta/screenshot/video in `tbcapture.py`/`gui_live.py` dalla registrazione di debug di fnstrip, scheda Touch Bar che si adatta al renderer (`gui_touchbar.py`, editor tiny-dfr in `tinydfr.py`/`gui_tinydfr.py`), scheda Ottimizzazione delle app Chromium/web app in `optimize.py`/`gui_optimize.py` con `fix-chromium-gpu`, scheda Audio con preset e regolazioni sicure del DSP degli altoparlanti in `audio.py`/`gui_audio.py` + script WirePlumber `config/wireplumber/macbook-manager-audio.lua` che le riapplica, scheda GPU (stato, uso per processo da fdinfo, GPU dello schermo, profili Radeon, GPU per app, limite FPS) in `gpu.py`/`gui_gpu.py` + `scripts/gpu-control.sh`, scheda CPU con regole per alimentatore/batteria (turbo, frequenza, profilo, RAPL, tetto di temperatura) in `power.py`/`gui_cpu.py` + `config/power/cpu-limit.py` e MangoHud per il limite FPS, scheda Batteria con grafico dal vivo, sessioni e report in `battery.py`/`gui_battery.py` + registratore `manager/systemd/macbook-manager-battery-log.timer` ogni minuto), helper root via pkexec che accetta solo gli id di `actions.py`; installato da `scripts/install-manager.sh` |
 | `pkgs/`, `dkms/` | PKGBUILD (`macbookpro14-3-meta`, `apple-ibridge-dkms`, `mbp143-audio` DSP degli altoparlanti + `bankstown-lv2` bassi psicoacustici), `dkms.conf` di riserva, `t1bridge-appletbdrm`, `t1bridge-uvc`, `t1bridge-ncm` (rete privata per Touch ID) |
@@ -72,6 +72,14 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
 - Il 14,3 **non ha il T2**: ignora `t2linux` e le pagine CachyOS sui T2.
 - Bootloader su EFI Apple: rEFInd o GRUB `--removable`. systemd-boot e Limine sconsigliati.
 - Il kernel `linux-cachyos` non ha una cartella di patch utente: preferire DKMS + header.
+- **Moduli per ogni kernel [F] (25/11/2026)**: audio (patch `0002-dkmsPrepare`) e webcam (`dkms/t1bridge-uvc/prepare-src.sh`)
+  scaricano con `scripts/kernel-src.sh` i file del kernel esatto da kernel.org git stable (`plain`, tag vX.Y.Z o vX.Y,
+  cache in `/var/cache/macbookpro14-3/kernel-src`); senza rete ripiegano sulle copie 7.3. appletbdrm e ncm senza
+  `BUILD_EXCLUSIVE_KERNEL`. Compilati e provati per 7.3.5 e 6.18.60 LTS. `macbookpro14-3-dkms-catchup.service` ricompila
+  all'avvio quelli mancanti per il kernel in uso. La patch big-frames si applica con `-F3` (contesto diverso sul 6.18).
+- **Omarchy/Hyprland** (25/11/2026, non provato sul 14,3): `desktop_kind`/`is_omarchy` in `lib.sh`; differenze in README
+  (l'installatore cancella anche la ESP Apple!, kernel `linux-omarchy`, `omarchy update`, hyprlock con fprintd diretto,
+  niente menu impronte di Omarchy, agente polkit, uwsm per servizi utente e environment.d).
 - L'ISO desktop più recente trovata sul mirror a fine novembre 2026 è `261122` (3,2 GB, entra in FAT32); lo script
   risolve da solo la cartella più nuova.
 - **Touch Bar [F] funziona** sul 14,3 con `nonderbe` branch **`t1-fixes`** + `patches/touchbar/`, installata con DKMS e
@@ -86,8 +94,8 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
   patchato): da ~21 a ~290 Mbit/s, -45 dBm. Resta a 40 MHz invece di 80 (ipotesi: regdom IT, vedi `docs/wifi.md`).
 - **Trackpad [F]**: quirk `config/libinput/local-overrides.quirks` (tastiera SPI e Touch Bar interne) installato in
   `/etc/libinput/` e funzionante (disabilita durante la digitazione). Vedi `docs/input.md`.
-- **Luminosità automatica [F]**: sensore Touch Bar 0-5000 lux (stanza 1-4); KWin 6.8 la gestisce con una curva
-  appresa: `scripts/set-kwin-brightness-curve.sh` scrive una curva di partenza prima di KWin. Provata: 35-100 %.
+- **Luminosità automatica: tolta (25/11/2026)** su richiesta dell'utente (non serve, luminosità manuale): niente più curva KWin;
+  `install.sh --only kernel` toglie il servizio utente rimasto. Sensore e iio-sensor-proxy restano (li usa tiny-dfr).
 - **Bluetooth [F]**: A2DP (AAC) OK; profilo headset (audio + microfono) funziona solo con CVSD dopo `scripts/install-bt.sh` (comando Broadcom
   SCO via HCI, chip su UART `BCM2E7C`); mSBC muto e disattivato in WirePlumber. Vedi `docs/audio.md`.
 - **Chromium/Electron sotto Wayland [F]**: il processo GPU crolla (SIGILL) con i buffer tiled della Radeon Polaris e

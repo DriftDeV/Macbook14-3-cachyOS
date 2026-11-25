@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-# Post-installazione per MacBookPro14,3 (15" 2017, Touch Bar T1) su CachyOS appena installato.
+# Post-installazione per MacBookPro14,3 (15" 2017, Touch Bar T1) su CachyOS (o Arch/Omarchy) appena installato.
 # Applica, nell'ordine, tutti i passaggi provati su questa macchina (vedi README e docs/), senza domande:
 #   backup ESP Apple + firmware T1 -> pacchetti -> trackpad -> Touch Bar (modalità tastiera, usata in sospensione) ->
 #   audio (driver) -> DSP degli altoparlanti (crossover, EQ, bassi bankstown) -> sospensione -> energia -> Bluetooth ->
-#   luminosità automatica -> Touch Bar in modalità display (T1Bridge, webcam H.264 corretta, renderer fnstrip) ->
-#   renderer tiny-dfr (alternativo) -> Touch ID -> MacBook Manager -> app Chromium/Electron (GPU sotto Wayland) -> Wi-Fi
+#   Touch Bar in modalità display (T1Bridge, webcam H.264 corretta, renderer fnstrip) ->
+#   renderer tiny-dfr (alternativo) -> Touch ID -> driver per i kernel futuri -> MacBook Manager -> app Chromium/Electron (GPU sotto Wayland) -> Wi-Fi
 # La Touch Bar parte in modalità display con il renderer di T1Bridge: modalità (display/tastiera) e renderer
 # (fnstrip/T1Bridge o tiny-dfr) si scelgono poi da MacBook Manager, scheda Touch Bar.
-# Prima: sudo pacman -Syu e un riavvio (il kernel in uso deve essere quello installato).
+# Prima: sistema aggiornato (CachyOS/Arch: sudo pacman -Syu; Omarchy: omarchy update) e un riavvio, perché il kernel
+# in uso deve essere quello installato. Funziona con KDE Plasma (provato) e con Hyprland/Omarchy (non provato sul 14,3).
 #
 #   sudo ./install.sh --dry-run                  mostra cosa farebbe
 #   sudo ./install.sh                            installa tutto
@@ -17,7 +18,7 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/lib.sh
 source "$REPO_DIR/scripts/lib.sh"
 
-STEPS="backup packages input touchbar audio audio-dsp sleep power bluetooth brightness touchbar-display tiny-dfr touchid manager apps wifi"
+STEPS="backup packages input touchbar audio audio-dsp sleep power bluetooth touchbar-display tiny-dfr touchid kernel manager apps wifi"
 LOG=/var/log/macbookpro14-3-install.log
 ONLY="" SKIP="" WIFI_FILE="" DO_INITRAMFS=0
 
@@ -79,6 +80,9 @@ if [ "$DRY_RUN" != 1 ]; then
     exec > >(tee -a "$LOG") 2>&1
     echo "===== $(date -Is) install.sh $ARGS (utente $USER_NAME, kernel $(uname -r))"
 fi
+DESKTOP="$(desktop_kind)"
+log "Desktop: $DESKTOP$(is_omarchy && echo ' (Omarchy)')"
+[ "$DESKTOP" = kde ] || warn "Desktop diverso da KDE Plasma: provato solo su KDE. Su Hyprland/Omarchy vedi README, sezione Omarchy."
 curl -sfI --max-time 10 https://github.com >/dev/null || warn "Rete non raggiungibile: i passi che scaricano sorgenti falliranno."
 [ "$(cat /sys/class/power_supply/ADP1/online 2>/dev/null)" = 1 ] || warn "Alimentatore non collegato: collegalo (compilazioni DKMS e Rust)."
 
@@ -130,13 +134,24 @@ step_packages() {
     # Modalità display (T1Bridge, fnstrip, tiny-dfr), webcam H.264 decodificata dalla Intel, DSP audio.
     pkgs+=(rust ffmpeg intel-media-driver brightnessctl cairo librsvg freetype2 fontconfig pipewire-audio wireplumber)
     modinfo v4l2loopback >/dev/null 2>&1 || pkgs+=(v4l2loopback-dkms)
+    # Scheda Batteria (cronologia di UPower) e profili energetici (regole della scheda CPU): su KDE ci sono già.
+    pkgs+=(upower power-profiles-daemon)
+    # Hyprland/Omarchy: serve un agente polkit per le password del manager (KDE ha il suo).
+    if [ "$DESKTOP" = hyprland ] && ! pacman -Qq 2>/dev/null \
+            | grep -qxE 'hyprpolkitagent|polkit-gnome|polkit-kde-agent|lxqt-policykit|mate-polkit|polkit-mate'; then
+        pkgs+=(hyprpolkitagent)
+    fi
     for p in "${pkgs[@]}"; do
         if pacman -Si "$p" >/dev/null 2>&1 || pacman -Qi "$p" >/dev/null 2>&1; then avail+=("$p")
         else warn "pacchetto $p non trovato nei repository: salto"; fi
     done
     run pacman -S --needed --noconfirm "${avail[@]}"
+    run systemctl enable --now upower.service power-profiles-daemon.service 2>/dev/null || true
+    if [ "$DESKTOP" = hyprland ] && pacman -Q hyprpolkitagent >/dev/null 2>&1; then
+        as_user systemctl --user enable hyprpolkitagent.service || true
+    fi
     [ -d "/usr/lib/modules/$(uname -r)/build" ] || [ "$DRY_RUN" = 1 ] \
-        || die "Header del kernel in uso ($(uname -r)) mancanti: aggiorna e riavvia (pacman -Syu)."
+        || die "Header del kernel in uso ($(uname -r)) mancanti: aggiorna e riavvia ($(is_omarchy && echo 'omarchy update' || echo 'sudo pacman -Syu'))."
 }
 
 step_input() {
@@ -153,7 +168,23 @@ step_sleep() { sub install-sleep.sh; }
 step_power() { sub install-power.sh; }
 step_bluetooth() { sub install-bt.sh; }
 step_manager() { sub install-manager.sh; }
-step_brightness() { as_user bash "$REPO_DIR/scripts/set-kwin-brightness-curve.sh"; }
+
+# Driver DKMS per i kernel futuri: ogni modulo si ricompila da solo agli aggiornamenti (hook di pacman, sorgenti del
+# kernel esatto da kernel.org); in più all'avvio ricompila quelli rimasti indietro (per esempio aggiornamento senza rete).
+step_kernel() {
+    install_file 755 "$REPO_DIR/config/dkms-catchup.sh" /usr/local/lib/macbookpro14-3/dkms-catchup.sh
+    install_file 644 "$REPO_DIR/config/systemd/macbookpro14-3-dkms-catchup.service" \
+        /etc/systemd/system/macbookpro14-3-dkms-catchup.service
+    run systemctl daemon-reload
+    run systemctl enable macbookpro14-3-dkms-catchup.service
+    # Pulizia: la curva di luminosità automatica di KWin non fa più parte della repo.
+    local h; h="$(getent passwd "$USER_NAME" | cut -d: -f6)"
+    if [ -e "$h/.config/systemd/user/macbookpro14-3-kwin-curve.service" ]; then
+        as_user systemctl --user disable macbookpro14-3-kwin-curve.service || true
+        run rm -f "$h/.config/systemd/user/macbookpro14-3-kwin-curve.service" \
+            "$h/.local/share/macbookpro14-3/apply-kwin-brightness-curve.py"
+    fi
+}
 
 step_touchbar_display() {
     as_user bash "$REPO_DIR/scripts/build-t1bridge.sh"
@@ -203,10 +234,10 @@ run_step audio-dsp "DSP degli altoparlanti (mbp143-audio + bankstown)" step_audi
 run_step sleep "Sospensione (S3, Thunderbolt, NVMe)" step_sleep
 run_step power "Energia (batteria/alimentatore)" step_power
 run_step bluetooth "Bluetooth (audio delle chiamate)" step_bluetooth
-run_step brightness "Luminosità automatica (curva KWin)" step_brightness
 run_step touchbar-display "Touch Bar, modalità display (T1Bridge, webcam, fnstrip)" step_touchbar_display
 run_step tiny-dfr "Touch Bar, renderer alternativo tiny-dfr" step_tiny_dfr
 run_step touchid "Touch ID (T1Bridge: rete privata, xART, broker, fprintd)" step_touchid
+run_step kernel "Driver per i kernel futuri (ricompilazione automatica)" step_kernel
 run_step manager "MacBook Manager (stato e azioni rapide, GUI)" step_manager
 run_step apps "App Chromium/Electron: GPU Radeon sotto Wayland (AMD_DEBUG=notiling)" step_apps
 run_step wifi "Wi-Fi 5 GHz (NVRAM dal chip)" step_wifi
@@ -223,8 +254,10 @@ cat <<'EOF'
 Dopo la riaccensione:
   1. Apri "MacBook Manager" dal menu (o l'icona nella barra di sistema): stato di tutto, azioni rapide,
      scheda Touch Bar per scegliere modalità (display/tastiera) e renderer (fnstrip/T1Bridge o tiny-dfr).
-  2. Touch ID: sudo scripts/install-touchid.sh import, poi registra un dito (Impostazioni di sistema > Utenti,
-     o MacBook Manager > Azioni). La prima registrazione può fallire: riprova.
+  2. Touch ID: sudo scripts/install-touchid.sh import, poi registra un dito (MacBook Manager > Azioni > Registra
+     un'impronta, o fprintd-enroll; su KDE anche Impostazioni di sistema > Utenti). La prima volta può fallire: riprova.
+     Su Omarchy NON usare il suo menu Setup > Security > Fingerprint: installerebbe il fprintd normale al posto di
+     quello per il T1.
   3. Controlli da terminale, se servono:
        macbook-manager status                        tutto in una schermata
        grep Subsystem /proc/asound/card*/codec#0     0x106b3900 = audio a posto
@@ -232,3 +265,10 @@ Dopo la riaccensione:
        sudo touchbar-mode status                     modalità e renderer della Touch Bar
        iw dev wlan0 link                             5 GHz se il router li offre
 EOF
+if [ "$DESKTOP" = hyprland ]; then
+    cat <<'EOF'
+Hyprland/Omarchy: icona del manager, renderer della Touch Bar e limite FPS partono con la sessione di systemd (uwsm).
+Se la tua sessione non usa uwsm, aggiungi l'avvio di "macbook-manager gui --tray" (su Omarchy in
+~/.config/hypr/autostart.lua) e controlla con: systemctl --user status macbookpro14-3-touchbar-renderer
+EOF
+fi

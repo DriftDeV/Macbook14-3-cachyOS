@@ -1,0 +1,12 @@
+[Unit]
+Description=MacBookPro14,3: ricompila i driver mancanti per il kernel in uso
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/macbookpro14-3/dkms-catchup.sh
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

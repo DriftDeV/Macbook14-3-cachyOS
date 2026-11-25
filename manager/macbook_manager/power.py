@@ -18,8 +18,8 @@ SETTINGS = [
      "spento il massimo resta comunque 2,9 GHz.",
      [(str(p), "%d %% (%.1f GHz)" % (p, MAX_GHZ * p / 100)) for p in (100, 90, 80, 70, 60, 50, 40)],
      {"AC": "100", "BATTERY": "100"}, ("AC", "BATTERY")),
-    ("CPU_PROFILE", "cpu", "Profilo energetico", "Profilo di power-profiles-daemon (lo stesso del pannello di KDE): "
-     "cambia quanto la CPU sale di frequenza sotto carico. \"Non cambiarlo\" lascia quello scelto in KDE.",
+    ("CPU_PROFILE", "cpu", "Profilo energetico", "Profilo di power-profiles-daemon (lo stesso del pannello energia del desktop): "
+     "cambia quanto la CPU sale di frequenza sotto carico. \"Non cambiarlo\" lascia quello scelto nel desktop.",
      [("keep", "non cambiarlo"), ("performance", "prestazioni massime"), ("balanced", "bilanciato"),
       ("power-saver", "risparmio energetico")], {"AC": "keep", "BATTERY": "keep"}, ("AC", "BATTERY")),
     ("CPU_POWER_W", "cpu", "Limite di potenza", "Potenza media massima della CPU (RAPL PL1). Il firmware la lascia a "

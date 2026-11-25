@@ -386,8 +386,12 @@ def touchid():
     items.append(_item("Touch ID", "relaycount", "Attivazioni del relay", "%d in questo avvio (blocco a ~%d)" % (n, RELAY_LIMIT),
                        lvl, "" if lvl == INFO else "Vicino al limite della issue #14: se l'impronta smette di funzionare "
                        "serve uno spegnimento completo. La password resta valida."))
-    items.append(_item("Touch ID", "tid-lock", "Schermata di blocco", "impronta attiva" if touchid_lockscreen_on() else
-                       "solo password", INFO, "Ogni sblocco con l'impronta consuma un'attivazione del relay."))
+    if os.path.exists("/usr/lib/pam.d/kde-fingerprint"):
+        items.append(_item("Touch ID", "tid-lock", "Schermata di blocco", "impronta attiva" if touchid_lockscreen_on()
+                           else "solo password", INFO, "Ogni sblocco con l'impronta consuma un'attivazione del relay."))
+    else:
+        items.append(_item("Touch ID", "tid-lock", "Schermata di blocco", "regolata da hyprlock (auth:fingerprint)", INFO,
+                           "Su Hyprland/Omarchy l'impronta del blocco schermo si regola in ~/.config/hypr/hyprlock.conf."))
     items.append(_item("Touch ID", "tid-sudo", "sudo", "impronta o password" if touchid_sudo_on() else "solo password", INFO))
     return items
 

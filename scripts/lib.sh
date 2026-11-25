@@ -71,3 +71,17 @@ has_cs8409() {
     grep -qiE '0x10138409|CS8409' /proc/asound/card*/codec#* 2>/dev/null && return 0
     dmesg 2>/dev/null | grep -qiE 'cs8409|10138409'
 }
+
+# Desktop installato: kde (Plasma), hyprland (anche Omarchy) o other. Serve per le parti che dipendono dal desktop
+# (schermata di blocco, impostazioni delle impronte, avvio automatico).
+desktop_kind() {
+    if pacman -Q plasma-workspace >/dev/null 2>&1; then echo kde
+    elif pacman -Q hyprland >/dev/null 2>&1 || command -v Hyprland >/dev/null 2>&1; then echo hyprland
+    else echo other; fi
+}
+
+# Vero su Omarchy (Arch + Hyprland di Basecamp): aggiornamenti con `omarchy update`, kernel linux-omarchy.
+is_omarchy() {
+    [ -d /usr/share/omarchy ] || command -v omarchy >/dev/null 2>&1 || command -v omarchy-update >/dev/null 2>&1
+}
+

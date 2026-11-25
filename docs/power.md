@@ -92,3 +92,6 @@ dell'utente (Radeon `low`, turbo spento, CPU max 40 %, profilo power-saver, PL1 
 di media (24,6 W dal contatore di carica), package CPU 6,0 W a 64 °C, Radeon 9,0 W a 214 MHz con Horizon al 46 % del suo
 tempo; il resto (~9 W) è schermo, Wi-Fi, audio, memoria. Autonomia stimata: ~3 h con la batteria piena (72,3 Wh), ~2 h 15
 dal 77 % (UPower 2 h 14).
+Stesse regole, senza gioco, con Claude Code al lavoro (25/11/2026): batteria 19,5 W di media (20,0 W dal contatore),
+CPU 5,5 W a 60 °C, Radeon 7,2 W a 214 MHz, luminosità 30 %, un flusso audio aperto (filtro DSP attivo), MacBook Manager
+aperto. Autonomia stimata ~3 h 40 con la batteria piena, ~2 h 45 dal 75 % (UPower 3 h 05).
