@@ -24,7 +24,34 @@ Tag come in [`README.md`](README.md).
 Campioni a 1 s con il desktop fermo: `gpu_busy_percent` 0 %, sclk 320-838 MHz, mclk 300 MHz, **7,4-9,3 W** sulla Radeon
 (`power1_input`); batteria in scarica a ~23 W totali (Wi-Fi attivo, luminosità 30 %). Temperatura GPU 48 °C.
 
-## Opzioni (non provate) [NV]
+## Schermo sulla Intel: OpenCore `SignalAppleOS` + `gpu-power-prefs=1` [F] (25/11/2026)
+
+Il Mac parte da OpenCore Legacy Patcher 3.0.0 (`EFI\OC\OpenCore.efi` sulla ESP Apple, che poi avvia GRUB). L'opzione
+**"Windows GMUX"** di OCLP accende `Booter > Quirks > SignalAppleOS` (sorgente OCLP, `efi_builder/graphics_audio.py`):
+il firmware crede di avviare macOS per ogni sistema, come con `apple_set_os.efi`.
+
+| Prova | Esito |
+|---|---|
+| Solo `SignalAppleOS` (`gpu-power-prefs` = `00 00 00 00`) | nulla cambia: `vga_switcheroo` `DIS:+:Pwr`, `IGD: :Pwr`, i915 senza eDP (`disabling eDP`) |
+| `SignalAppleOS` + `gpu-power-prefs` = `01 00 00 00` (come `gpu-switch -i`), riavvio da OpenCore | **i915 `eDP-1` collegato e attivo**, `boot_vga` Intel = 1, `fbcon: i915drmfb is primary`; **KWin disegna con la Intel** (`Mesa Intel HD Graphics 630`); `card2-eDP-2` collegato ma spento (`EDID err` di amdgpu, innocuo) |
+
+Variabile scritta da Linux (`/sys/firmware/efi/efivars/gpu-power-prefs-fa4ce28d-b62f-4c99-9cc3-6815686e30f9`, 8 byte:
+attributi `07 00 00 00` + `01 00 00 00`, dopo `chattr -i`). Per tornare alla Radeon: `00 00 00 00` nello stesso modo, oppure
+da macOS `sudo nvram gpu-power-prefs=%00%00%00%00`, oppure reset della NVRAM. Senza `SignalAppleOS` (avvio diretto di
+GRUB) la variabile da sola non basta [I: è la combinazione documentata da `gpu-switch`/`apple_set_os`].
+
+Primo avvio sulla Intel: Touch Bar (tiny-dfr), Touch ID e webcam partiti come prima. **Luminosità [F]**: i tasti/slider
+di KDE la cambiano (scrivono `gmux_backlight`, regolata dal chip gmux e non dalla Radeon) e il pannello resta sulla Intel
+(`eDP-1` attivo, nessuno switch nei log). Restano da verificare [NV]:
+- **consumi**: la Radeon resta accesa (~7 W a riposo, `power_dpm_force_performance_level=auto`) perché KWin la apre come
+  seconda GPU (uscite USB-C/Thunderbolt); per spegnerla serve togliere i client e usare `vga_switcheroo` (runtime PM non
+  disponibile), al prezzo delle uscite esterne;
+- scala dello schermo e curva della luminosità automatica (KDE vede un'uscita nuova `eDP-1`, la curva era salvata per
+  `eDP-2`; al primo avvio luminosità al 100 % e automatica spenta);
+- sospensione S3 e risveglio con il pannello sulla Intel; monitor esterni; app Chromium/Electron (`AMD_DEBUG=notiling`
+  serviva per la Radeon).
+
+## Opzioni [NV salvo dove indicato]
 
 1. **Così com'è**: stabile, tutto funziona (sospensione, uscite video), costo ~7-9 W.
 2. **Ridurre il consumo della Radeon**: profilo energetico / `power_dpm_force_performance_level=low` (sclk fisso al minimo).
@@ -33,6 +60,8 @@ Campioni a 1 s con il desktop fermo: `gpu_busy_percent` 0 %, sclk 320-838 MHz, m
    la Intel all'avvio (variabile EFI `gpu-power-prefs`, come `gpu-switch -i`), poi spegnere la Radeon da `vga_switcheroo`.
    Rischi: schermo nero all'avvio (rimedio [I]: reset NVRAM), uscite video USB-C/Thunderbolt probabilmente perse (cablate
    sulla Radeon [I]), sospensione e audio da riprovare. Riscontri sul 14,3 contrastanti (Dunedan #6; cschaba: schermo nero).
+   **Prima metà [F] riuscita il 25/11/2026** con OpenCore (sezione sopra): schermo e desktop sulla Intel. Lo spegnimento
+   della Radeon non è ancora provato.
 
 ## Browser e app Chromium/Electron: GPU spenta sulla Radeon sotto Wayland [F] (24/11/2026)
 

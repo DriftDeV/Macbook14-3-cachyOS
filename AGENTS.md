@@ -93,6 +93,10 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
   Claude Desktop salva "accelerazione disattivata" dopo i crolli: il lanciatore la riattiva.
 - **GPU [F]**: nessuno switch automatico; schermo e desktop sempre sulla Radeon (`card2`, eDP-2), Intel sospesa e senza eDP
   (`disabling eDP`), Radeon 7-9 W a riposo, runtime PM non disponibile. Opzioni in `docs/gpu.md`.
+  **Schermo sulla Intel [F] (25/11/2026)**: avvio da OpenCore (OCLP 3.0.0, "Windows GMUX" = `SignalAppleOS`) +
+  `gpu-power-prefs=01` → i915 `eDP-1`, KWin sulla Intel, luminosità via gmux funzionante. Radeon ancora accesa (~7 W,
+  seconda GPU di KWin): l'utente non vuole spegnerla (romperebbe le uscite e il resto). Sospensione e uscite esterne da
+  riprovare. Senza OpenCore la Intel resta cieca.
 - **Consumi [F]** (`docs/power.md`): unica leva netta a riposo = Radeon `manual`+`POWER_SAVING`+PCIe 2,5 GT/s (-1,5 W);
   `scripts/install-power.sh` la applica a batteria. Slider KDE e turbo non cambiano nulla a riposo. ~18 W ≈ 4 h.
 - **Touch ID [F]** (24/11/2026): `scripts/install-touchid.sh` (install/status/import/undo, passo `touchid` di `install.sh`

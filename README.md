@@ -31,7 +31,7 @@ della tastiera, media, volume. Screenshot reale a 2170×60, catturato con *Touch
 | Webcam | ✅ | `uvcvideo` (**non** `facetimehd`) | in modalità display solo H.264: Discord con `t1-webcam on` |
 | Sospensione (coperchio, S3) | ✅ | S3 (`deep`) come macOS, ventole ferme; Thunderbolt scollegato prima dello sleep + NVMe senza D3cold | notte intera provata: 8 h, 17 mAh (~0,03 W), nessun risveglio spontaneo ([sleep](docs/sleep.md)) |
 | Energia | 🟡 | a batteria Radeon in risparmio, CPU senza turbo | ~18 W a riposo ≈ 4 ore ([power](docs/power.md)) |
-| Grafica | 🟡 | sempre sulla Radeon | la Intel non può pilotare lo schermo; nessuno switch ([gpu](docs/gpu.md)) |
+| Grafica | 🟡 | Radeon; Intel con OpenCore | di base sulla Radeon; avviando da OpenCore ("Windows GMUX") con `gpu-power-prefs=1` lo schermo va sulla Intel (la Radeon resta accesa, resto da riprovare) ([gpu](docs/gpu.md)) |
 | Thunderbolt / USB-C, monitor esterni | ❓ | kernel | non provati |
 | Kernel LTS (`linux-cachyos-lts`) | ❓ | | mai avviato; DKMS compila la Touch Bar in modalità tastiera, non l'audio né la modalità display |
 | Ibernazione | ❌ | | `amdgpu` non riparte (serve una patch non ancora nel kernel) |
