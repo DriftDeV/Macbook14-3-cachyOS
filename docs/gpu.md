@@ -43,7 +43,8 @@ GRUB) la variabile da sola non basta [I: è la combinazione documentata da `gpu-
 Primo avvio sulla Intel: Touch Bar (tiny-dfr), Touch ID e webcam partiti come prima. **Luminosità [F]**: i tasti/slider
 di KDE la cambiano (scrivono `gmux_backlight`, regolata dal chip gmux e non dalla Radeon) e il pannello resta sulla Intel
 (`eDP-1` attivo, nessuno switch nei log). Restano da verificare [NV]:
-- **consumi**: la Radeon resta accesa (~7 W a riposo, `power_dpm_force_performance_level=auto`) perché KWin la apre come
+- **consumi** (misura in `power.md`: ~16-17 W a riposo contro ~18,3 W; pannello senza PSR, FBC spenta perché KWin usa
+  `ABGR8888` con alfa, anche forzando 8 bit): la Radeon resta accesa (~7 W a riposo, `power_dpm_force_performance_level=auto`) perché KWin la apre come
   seconda GPU (uscite USB-C/Thunderbolt); per spegnerla serve togliere i client e usare `vga_switcheroo` (runtime PM non
   disponibile), al prezzo delle uscite esterne;
 - scala dello schermo e curva della luminosità automatica (KDE vede un'uscita nuova `eDP-1`, la curva era salvata per

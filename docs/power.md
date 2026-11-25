@@ -27,6 +27,20 @@ Note: per cambiare `pp_power_profile_mode` sulla Radeon serve prima `power_dpm_f
 (altrimenti EINVAL). ASPM L1 è già attivo sul collegamento della Radeon.
 
 A riposo con la leva Radeon: ~18,3 W → con 72,5 Wh circa **4 ore**. Senza: ~20,5 W → circa 3,5 ore.
+
+**Schermo sulla Intel [F] (25/11/2026**, OpenCore + `gpu-power-prefs=1`, vedi `gpu.md`): 5 min a riposo, 150 campioni a
+2 s, luminosità 35 % (359/1023), Wi-Fi acceso, app di Claude aperta ma ferma, leva Radeon attiva (`manual`, PCIe a 8 GT/s).
+Batteria **media 17,0 W, mediana 16,3 W** (min 15,4, picchi fino a 25,9); dal contatore di carica (123 mAh in 300 s) ~18 W.
+Radeon invariata a **7,0 W** (resta accesa come seconda GPU di KWin). Rispetto ai ~18,3 W di prima: circa **-1,5/-2 W**,
+dentro la deriva di 1-3 W della batteria ma con la mediana sotto il minimo precedente; ~4-4,5 ore con 72,5 Wh. Il risparmio
+non viene dalla Radeon e **non dal Panel Self Refresh**: debugfs di i915 (25/11) dice `Sink support: PSR = no` (il pannello
+non lo supporta). **FBC spenta**: `pixel format not supported` sul piano primario. Il formato è già a 8 bit:
+`i915_display_info` mostra `AB24` (ABGR8888, con alfa) e modificatore `0x100000000000004` (Y-tiled con CCS, compressione
+di rendering già attiva); la FBC di Kaby Lake accetta solo formati senza alfa [I: XRGB/XBGR8888]. Provato
+`KWIN_DRM_PREFER_COLOR_DEPTH=24` (drop-in del servizio `plasma-kwin_wayland`, nuovo accesso): stesso formato, FBC ancora
+spenta, tolto. KWin non ha un'opzione per scegliere il formato senza alfa. DMC `kbl_dmc_ver1_04` caricato, `DC3 -> DC5` 6 volte,
+`DC5 -> DC6` mai. Origine dei ~1,5-2 W in meno: ignota [I: forse solo rumore della batteria, o meno lavoro della Radeon
+senza scanout].
 Il grosso del consumo resta la Radeon (~7 W anche al minimo); l'unico modo di toglierlo è spegnerla (vedi `gpu.md`).
 
 ## Automatismo: `scripts/install-power.sh`
