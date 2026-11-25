@@ -97,6 +97,12 @@ vale solo per gli altoparlanti e passa da crossover, limitatori e protezione ter
 amt 1,65 e 125 Hz. Prova A/B dal vivo (filtro separato davanti, bypass acceso/spento): l'utente preferisce acceso; dopo
 l'installazione fissa "suona bene". Regolabile dal vivo con `pw-cli s <id> Props '{ params = [ "bassex:amt" 1.65 ] }'`.
 
+**Scheda Audio di MacBook Manager [F] (25/11/2026)**: preset (fabbrica, + bassi, + bassi intensi, notte) e regolazioni
+limitate (bankstown, livello massimo e bilanciamento sul guadagno `f6` solo verso il basso, Loudness e compressori
+accesi/spenti); limitatori, protezione termica, BuzzKill, crossover ed EQ non raggiungibili. Applicazione dal vivo con
+`pw-cli`, salvataggio nel file di stato di WirePlumber, script Lua che riapplica alla nascita del filtro (provato con un
+riavvio di WirePlumber; il caso cuffie scollegate usa lo stesso evento [I]). Dettagli in `manager/README.md`.
+
 **Altoparlanti difettosi di questo Mac [F] (25/11/2026)**: a volume alto si interrompono il woofer sinistro e i due tweeter.
 Abbassando dal vivo il guadagno `f6c0gain`/`f6c1gain` (uguale sui 4 canali, `pw-cli s <id> Props`) fino a -6 dB si
 interrompono ancora; registrando l'uscita del filtro a -6 dB e volume 100 %: picchi woofer -7,5/-8,3 dBFS, tweeter

@@ -153,7 +153,7 @@ La Touch Bar non ha una luminosità propria regolabile dall'hardware: lo slider 
 | Webcam in Discord o nel browser | MacBook Manager → Azioni, oppure `t1-webcam on`; poi scegli la camera "T1 camera (Discord)" nell'app |
 | App lente (Brave, Discord, web app…) | MacBook Manager → scheda **Ottimizzazione** (già fatto dall'installazione per le app presenti) |
 | Screenshot o video della Touch Bar | MacBook Manager → Touch Bar → **Touch Bar in diretta…** |
-| Altoparlanti | l'uscita audio si chiama **MacBook Pro 14,3 Speakers**, il microfono **MacBook Pro 14,3 Microphone**: usa questi |
+| Altoparlanti: preset e regolazioni | MacBook Manager → scheda **Audio**: DSP di fabbrica, con bassi, bassi intensi, notte; intensità e frequenza dei bassi, livello massimo, bilanciamento. L'uscita si chiama **MacBook Pro 14,3 Speakers**, il microfono **MacBook Pro 14,3 Microphone** |
 | Risparmio energetico | automatico: a batteria la scheda video va in risparmio e la CPU senza turbo |
 
 ## Problemi noti e rimedi

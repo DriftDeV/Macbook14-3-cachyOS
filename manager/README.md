@@ -90,6 +90,29 @@ chiudendo la finestra tutto viene rimosso. Solo in modalità display con fnstrip
 Limite: fnstrip invia un fotogramma solo quando qualcosa cambia; all'apertura, finché la barra è ferma, la finestra chiede
 di toccarla (o di cambiare volume/luminosità). Poi mostra sempre l'ultimo, che è quello sullo schermo.
 
+## Audio (scheda Audio)
+
+Preset e personalizzazioni del DSP degli altoparlanti (`pkgs/mbp143-audio` con `pkgs/bankstown-lv2`, passo `audio-dsp`
+di `install.sh`), in `audio.py` / `gui_audio.py`, da utente, senza password.
+
+- **Preset**: *DSP di fabbrica* (solo l'elaborazione di Apple, bankstown in bypass), *DSP + bassi* (consigliato:
+  bankstown con i valori di Asahi per il MacBook Pro 14"), *DSP + bassi intensi* (valori del 16": 1,65, 125 Hz),
+  *Volume basso / notte* (bassi, livello massimo -6 dB). Cambiando un controllo il preset diventa *Personalizzato*.
+- **Personalizzazioni**, tutte limitate:
+  - bassi psicoacustici: accesi/spenti, intensità 0,5-2,5, frequenza 100-250 Hz, carattere (2ª ↔ 3ª armonica);
+  - livello massimo 0 … -12 dB e bilanciamento (abbassa il lato opposto fino a -12 dB), sul guadagno `f6` che sta dopo
+    compressori ed EQ: **non può superare il valore di fabbrica**, uguale sui due altoparlanti di ogni lato;
+  - compensazione dei bassi a basso volume (Loudness) e compressione dinamica (Mozart, DualBand): accese/spente.
+- **Non modificabili**: crossover, EQ di Apple, BuzzKill, limitatori ControlFreak, protezione termica.
+- Ogni modifica si applica subito al filtro attivo (`pw-cli s <nodo> Props`) e si salva in
+  `~/.local/state/wireplumber/macbook-manager-audio` (file di stato di WirePlumber: i parametri del grafo più una copia
+  JSON per il manager). Lo script `config/wireplumber/macbook-manager-audio.lua` (installato da `install-manager.sh` in
+  `/usr/local/share/wireplumber/scripts/macbook-manager/audio-settings.lua`, con
+  `/etc/wireplumber/wireplumber.conf.d/92-macbook-manager-audio.conf`) le riapplica ogni volta che il filtro nasce, con gli
+  stessi limiti. [F] 25/11/2026: salvato "notte", riavviato WirePlumber, il filtro è rinato a -6 dB. Il componente deve
+  essere `required`: con `optional` WirePlumber non lo carica.
+- Con le cuffie il filtro non esiste: la scheda lo dice e le impostazioni valgono quando torna.
+
 ## Ottimizzazione (scheda Ottimizzazione)
 
 Elenca le app Chromium/Electron e le **web app** installate dal browser (Brave, Discord, Claude Desktop, Sidra, …) con

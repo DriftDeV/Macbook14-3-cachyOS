@@ -87,6 +87,9 @@ class MainWindow(QMainWindow):
         self.touchbar = TouchBarTab(lambda t: self.log.appendPlainText(t), self.open_live, self.run_action)
         self.fnstrip = self.touchbar.fnstrip
         self.tabs.addTab(self.touchbar, QIcon.fromTheme("input-keyboard"), "Touch Bar")
+        from .gui_audio import AudioTab
+        self.audio = AudioTab(lambda t: self.log.appendPlainText(t))
+        self.tabs.addTab(self.audio, QIcon.fromTheme("audio-speakers"), "Audio")
         from .gui_optimize import OptimizeTab
         self.optimize = OptimizeTab(lambda t: self.log.appendPlainText(t))
         self.tabs.addTab(self.optimize, QIcon.fromTheme("speedometer"), "Ottimizzazione")
@@ -235,6 +238,8 @@ class MainWindow(QMainWindow):
         w = self.tabs.widget(i)
         if w is self.touchbar:
             self.touchbar.sync()
+        elif w is self.audio:
+            self.audio.sync()
         elif self.tabs.tabText(i) == "Sospensioni":
             self.load_sleep()
 

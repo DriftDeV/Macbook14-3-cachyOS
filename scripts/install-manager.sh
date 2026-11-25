@@ -16,6 +16,9 @@ BIN=/usr/local/bin/macbook-manager
 POLICY=/usr/share/polkit-1/actions/org.macbookpro14-3.manager.policy
 APP=/usr/local/share/applications/macbook-manager.desktop
 AUTOSTART=/etc/xdg/autostart/macbook-manager-tray.desktop
+# Scheda Audio: script di WirePlumber che riapplica le impostazioni salvate al filtro degli altoparlanti.
+WP_SCRIPT=/usr/local/share/wireplumber/scripts/macbook-manager/audio-settings.lua
+WP_CONF=/etc/wireplumber/wireplumber.conf.d/92-macbook-manager-audio.conf
 
 TRAY=1 UNDO=0
 for a in "$@"; do
@@ -30,7 +33,8 @@ need_root
 
 if [ "$UNDO" = 1 ]; then
     run rm -rf "$DEST"
-    run rm -f "$BIN" "$POLICY" "$APP" "$AUTOSTART"
+    run rm -f "$BIN" "$POLICY" "$APP" "$AUTOSTART" "$WP_SCRIPT" "$WP_CONF"
+    run rmdir --ignore-fail-on-non-empty "$(dirname "$WP_SCRIPT")" 2>/dev/null || true
     ok "MacBook Manager rimosso (le impostazioni cambiate con le sue azioni restano)."
     exit 0
 fi
@@ -50,6 +54,10 @@ run ln -sfn "$DEST/macbook-manager" "$BIN"
 log "Polkit: password di amministratore solo per l'helper"
 run install -Dm644 "$REPO_DIR/manager/org.macbookpro14-3.manager.policy" "$POLICY"
 
+log "Scheda Audio: script di WirePlumber per le impostazioni del DSP degli altoparlanti"
+run install -Dm644 "$REPO_DIR/config/wireplumber/macbook-manager-audio.lua" "$WP_SCRIPT"
+run install -Dm644 "$REPO_DIR/config/wireplumber/92-macbook-manager-audio.conf" "$WP_CONF"
+
 log "Voce nel menu delle applicazioni"
 run install -Dm644 "$REPO_DIR/manager/macbook-manager.desktop" "$APP"
 if [ "$TRAY" = 1 ]; then
@@ -67,3 +75,5 @@ if [ "$DRY_RUN" != 1 ] && pgrep -f '/usr/local/bin/macbook-manager gui' >/dev/nu
     warn "Il manager aperto è stato chiuso per caricare la versione nuova: riaprilo dal menu."
 fi
 ok "Installato. Apri \"MacBook Manager\" dal menu, oppure: macbook-manager status"
+echo "Le impostazioni audio salvate vengono riapplicate da WirePlumber dal prossimo accesso (o dopo:"
+echo "  systemctl --user restart wireplumber)."
