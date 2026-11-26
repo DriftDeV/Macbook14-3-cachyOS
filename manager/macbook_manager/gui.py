@@ -6,9 +6,10 @@ import time
 from PySide6.QtCore import QObject, QProcess, QRunnable, Qt, QThreadPool, QTimer, Signal
 from PySide6.QtGui import QAction, QIcon
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
-from PySide6.QtWidgets import (QApplication, QGridLayout, QGroupBox, QHBoxLayout, QHeaderView, QLabel, QMainWindow,
-                               QMenu, QMessageBox, QPlainTextEdit, QPushButton, QScrollArea, QSizePolicy,
-                               QSystemTrayIcon, QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QGridLayout, QGroupBox, QHBoxLayout, QHeaderView, QLabel, QListWidget,
+                               QListWidgetItem, QMainWindow, QMenu, QMessageBox, QPlainTextEdit, QPushButton,
+                               QScrollArea, QSizePolicy, QSystemTrayIcon, QTableWidget, QTableWidgetItem, QTabWidget,
+                               QToolButton, QVBoxLayout, QWidget)
 
 from . import theme as T
 from . import HELPER, VERSION, status
@@ -120,17 +121,66 @@ class MainWindow(QMainWindow):
         sl.addWidget(self.sleep_note)
         sl.addWidget(self.sleep_table)
         self.tabs.addTab(sleep_tab, QIcon.fromTheme("system-suspend"), "Sospensioni")
+        # Ogni pagina scorre solo in verticale; righe di pulsanti e riquadri si adattano alla larghezza (responsive.py).
+        from .responsive import responsify, scrollable
+        for i in range(self.tabs.count()):
+            page = self.tabs.widget(i)
+            if not isinstance(page, QScrollArea) and page.findChild(QScrollArea) is None:
+                icon, text = self.tabs.tabIcon(i), self.tabs.tabText(i)
+                self.tabs.removeTab(i)
+                self.tabs.insertTab(i, scrollable(page), icon, text)
+        responsify(self.tabs)
+        self.tabs.setCurrentIndex(0)
         self.tabs.currentChanged.connect(self._tab_changed)
-        lay.addWidget(self.tabs, 1)
 
-        lay.addWidget(QLabel("Registro"))
+        # Navigazione laterale al posto della fila di schede: con icona e nome, solo icone nelle finestre strette.
+        self.tabs.tabBar().hide()
+        self.tabs.setDocumentMode(True)
+        self.nav = QListWidget()
+        self.nav.setObjectName("nav")
+        self.nav.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.nav.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.nav_glyphs = "nerd" in QApplication.font().family().lower()
+        for i in range(self.tabs.count()):
+            it = QListWidgetItem()
+            it.setToolTip(self.tabs.tabText(i))
+            if not self.nav_glyphs:
+                it.setIcon(self.tabs.tabIcon(i))
+            self.nav.addItem(it)
+        self.nav.currentRowChanged.connect(lambda r: r >= 0 and self.tabs.setCurrentIndex(r))
+        self.tabs.currentChanged.connect(lambda i: (self.nav.blockSignals(True), self.nav.setCurrentRow(i),
+                                                    self.nav.blockSignals(False)))
+        self.nav.setCurrentRow(0)
+        self.compact = None
+        self._layout_nav(force=True)
+        body = QHBoxLayout()
+        body.setSpacing(10)
+        body.addWidget(self.nav)
+        body.addWidget(self.tabs, 1)
+        lay.addLayout(body, 1)
+
+        # Registro: chiuso di base, si apre da solo quando un'azione scrive qualcosa.
+        logbar = QHBoxLayout()
+        self.log_toggle = QToolButton()
+        self.log_toggle.setText("Registro")
+        self.log_toggle.setCheckable(True)
+        self.log_toggle.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self.log_toggle.setArrowType(Qt.RightArrow)
+        self.log_toggle.toggled.connect(self._show_log)
+        logbar.addWidget(self.log_toggle)
+        logbar.addStretch(1)
+        lay.addLayout(logbar)
         self.log = QPlainTextEdit()
         self.log.setReadOnly(True)
         self.log.setMaximumHeight(150)
+        self.log.setVisible(False)
+        self.log.textChanged.connect(lambda: self.log.toPlainText() and self.log_toggle.setChecked(True))
         self.log.setPlaceholderText("L'output delle azioni compare qui. Le azioni di sistema chiedono la password "
                                     "(polkit) e la ricordano per qualche minuto.")
         lay.addWidget(self.log)
         self.setCentralWidget(central)
+        self.summary.setWordWrap(True)
+        self.resize(1100, 780)
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.refresh)
@@ -252,7 +302,8 @@ class MainWindow(QMainWindow):
         self.live.activateWindow()
 
     def _tab_changed(self, i):
-        w = self.tabs.widget(i)
+        from .responsive import unwrap
+        w = unwrap(self.tabs.widget(i))
         if w is self.touchbar:
             self.touchbar.sync()
         elif w is self.audio:
@@ -359,12 +410,39 @@ class MainWindow(QMainWindow):
         else:
             self.show_front()
 
+    # Icone (Nerd Font, come la barra di Omarchy) delle sezioni, per titolo.
+    GLYPHS = {"Stato": "\U000F02FD", "Azioni": "\U000F0241", "Touch Bar": "\U000F030C", "Audio": "\U000F057E",
+              "GPU": "\U000F08AE", "CPU": "\U000F0EE0", "Batteria": "\U000F0079", "NVRAM": "\U000F061A",
+              "Ottimizzazione": "\U000F04C5", "Sospensioni": "\U000F04B2"}
+
+    def _layout_nav(self, force=False):
+        compact = self.width() < 820
+        if compact == self.compact and not force:
+            return
+        self.compact = compact
+        for i in range(self.nav.count()):
+            name = self.tabs.tabText(i)
+            g = self.GLYPHS.get(name, "\u2022") if self.nav_glyphs else ""
+            self.nav.item(i).setText(g if compact else ("%s   %s" % (g, name) if g else name))
+            self.nav.item(i).setTextAlignment(Qt.AlignCenter if compact else Qt.AlignLeft | Qt.AlignVCenter)
+        self.nav.setFixedWidth(52 if compact else 190)
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        if hasattr(self, "nav"):
+            self._layout_nav()
+
+    def _show_log(self, on):
+        self.log.setVisible(on)
+        self.log_toggle.setArrowType(Qt.DownArrow if on else Qt.RightArrow)
+
     def retheme(self):
         """Tema di Omarchy cambiato: rilegge lo stato (colori di significato) e ridisegna grafici e schede."""
         if T.name():
             self.setWindowTitle("MacBook Manager · " + T.name())
         self.refresh(force=True)
-        w = self.tabs.currentWidget()
+        from .responsive import unwrap
+        w = unwrap(self.tabs.currentWidget())
         if hasattr(w, "sync"):
             try:
                 w.sync()

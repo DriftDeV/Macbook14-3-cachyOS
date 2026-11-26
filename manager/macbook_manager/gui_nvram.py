@@ -31,9 +31,10 @@ class NvramTab(QWidget):
         self.chime = self._group(lay, "Suono di avvio", ["nvram-chime-on", "nvram-chime-off"],
                                  "Variabile StartupMute. Se resta muto anche con \"attivo\", il volume salvato da macOS "
                                  "(SystemAudioVolume, sotto) è a zero [non verificato].")
-        self.autoboot = self._group(lay, "Accensione aprendo il coperchio o collegando l'alimentatore",
+        self.autoboot = self._group(lay, "Accensione col coperchio",
                                     ["nvram-autoboot-on", "nvram-autoboot-off"],
-                                    "Variabile AutoBoot (03 o assente = sì, 00 = no) [non verificato sul 14,3].")
+                                    "Il Mac si accende aprendo il coperchio o collegando l'alimentatore. Variabile "
+                                    "AutoBoot (03 o assente = sì, 00 = no) [non verificato sul 14,3].")
         self.gpu = self._group(lay, "GPU dello schermo", ["gpu-display-intel", "gpu-display-radeon"],
                                "Variabile gpu-power-prefs, la stessa della scheda GPU: basta da sola, anche senza "
                                "OpenCore.")

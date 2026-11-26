@@ -34,20 +34,28 @@ class LayerEditor(QWidget):
         self.lock = lock
         self.buttons = []
         self.loading = False
-        lay = QGridLayout(self)
+        # Elenco dei tasti e modulo del tasto scelto: affiancati se c'è spazio, uno sotto l'altro se la finestra è stretta.
+        from .responsive import FlowLayout, ReflowLayout
+        lay = ReflowLayout(self, spacing=10, min_col=300)
+        left = QWidget()
+        ll = QGridLayout(left)
+        ll.setContentsMargins(0, 0, 0, 0)
         self.name = QLineEdit()
         self.name.textEdited.connect(lambda _t: self.changed())
-        lay.addWidget(QLabel("Nome"), 0, 0)
-        lay.addWidget(self.name, 0, 1)
+        ll.addWidget(QLabel("Nome"), 0, 0)
+        ll.addWidget(self.name, 0, 1)
         self.list = QListWidget()
+        self.list.setMinimumHeight(180)
         self.list.currentRowChanged.connect(self._select)
-        lay.addWidget(self.list, 1, 0, 6, 2)
-        for i, (txt, icon, fn) in enumerate((("Aggiungi", "list-add", self._add), ("Togli", "list-remove", self._remove),
-                                             ("Su", "go-up", lambda: self._move(-1)),
-                                             ("Giù", "go-down", lambda: self._move(1)))):
+        ll.addWidget(self.list, 1, 0, 1, 2)
+        brow = FlowLayout(spacing=6)
+        for txt, icon, fn in (("Aggiungi", "list-add", self._add), ("Togli", "list-remove", self._remove),
+                              ("Su", "go-up", lambda: self._move(-1)), ("Giù", "go-down", lambda: self._move(1))):
             b = QPushButton(QIcon.fromTheme(icon), txt)
             b.clicked.connect(fn)
-            lay.addWidget(b, i + 1, 2)
+            brow.addWidget(b)
+        ll.addLayout(brow, 2, 0, 1, 2)
+        lay.addWidget(left)
         box = QGroupBox("Tasto")
         form = QFormLayout(box)
         self.kind = QComboBox()
@@ -96,9 +104,10 @@ class LayerEditor(QWidget):
         form.addRow("Larghezza", self.width)
         if lock:
             form.addRow(QLabel("A sessione bloccata la barra non invia tasti."))
-        lay.addWidget(box, 0, 3, 7, 1)
-        lay.setColumnStretch(0, 3)
-        lay.setColumnStretch(3, 4)
+        for cb in (self.kind, self.icon, self.clock, self.playing, self.keys):
+            cb.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+            cb.setMinimumContentsLength(8)
+        lay.addWidget(box)
         self.kind.currentIndexChanged.connect(self._kind_changed)
         self.text.textEdited.connect(self._edited)
         for w in (self.icon, self.clock, self.playing, self.keys):
@@ -492,7 +501,7 @@ class OmaBarEditor(QScrollArea):
                 self.image.setText("⚠ " + err)
                 return
             pm = QPixmap(out)
-            width = max(400, self.viewport().width() - 60)
+            width = max(200, self.viewport().width() - 60)
             self.image.setPixmap(pm.scaledToWidth(width, Qt.SmoothTransformation))
         finally:
             os.unlink(out)

@@ -33,6 +33,7 @@ class _GpuBox(QGroupBox):
             g.addWidget(lab, i, 0)
             g.addWidget(val, i, 1)
             self.v[k] = (lab, val)
+        g.setRowStretch(len(self.ROWS), 1)   # affiancato a un riquadro più alto: righe in cima, non sparse
 
     def set(self, k, text, visible=True):
         lab, val = self.v[k]

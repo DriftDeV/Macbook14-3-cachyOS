@@ -150,6 +150,10 @@ QHeaderView::section { background: %(light_bg)s; color: %(fg)s; border: none; bo
 QTableWidget, QTableView, QListWidget, QTreeWidget { background: %(dark_bg)s; alternate-background-color: %(light_bg)s;
     gridline-color: %(muted)s; border: 1px solid %(muted)s; }
 QTableWidget::item:selected, QTableView::item:selected, QListWidget::item:selected { background: %(sel_fill)s; color: %(fg)s; }
+QListWidget#nav { background: %(dark_bg)s; border: none; border-right: 1px solid %(muted)s; padding: 6px 0; }
+QListWidget#nav::item { padding: 9px 10px; border: none; border-left: 2px solid transparent; color: %(muted_fg)s; }
+QListWidget#nav::item:hover { background: %(hover)s; color: %(fg)s; }
+QListWidget#nav::item:selected { background: %(selected)s; border-left: 2px solid %(accent)s; color: %(fg)s; }
 QScrollArea { border: none; background: transparent; }
 QScrollBar:vertical { background: transparent; width: 8px; margin: 0; }
 QScrollBar:horizontal { background: transparent; height: 8px; margin: 0; }

@@ -32,6 +32,14 @@ sottolineata col colore d'accento), carattere di sistema (`omarchy font current`
 significato (ok/avviso/errore, curve dei grafici) presi da verde/giallo/rosso/accento del tema. Il titolo della finestra
 riporta il nome del tema. Su KDE non cambia niente; `MACBOOK_MANAGER_THEME=native` lo disattiva anche su Omarchy.
 
+**Finestra adattiva** (`responsive.py`, in entrambe le versioni): sezioni in una barra laterale (icona e nome; solo
+icone sotto gli 820 px), ogni pagina scorre solo in verticale, righe di pulsanti che vanno a capo, riquadri affiancati
+(GPU, batteria, coppie nome/valore della CPU, editor dei tasti di OmaBar) che si impilano quando lo spazio non basta,
+titoli lunghi dei riquadri con la parte tra parentesi spostata in una nota. La finestra scende fino a ~330 px di
+larghezza (prima non sotto i 984 px: in una metà schermo di Hyprland il contenuto veniva tagliato). Il registro delle
+azioni è chiuso e si apre da solo quando un'azione scrive qualcosa. [F] provata affiancata su Hyprland (881×1071) e
+offscreen a 560, 880 e 1300 px.
+
 ## Cosa mostra (scheda Stato, `macbook-manager status`)
 
 | Gruppo | Voci | Da dove |
