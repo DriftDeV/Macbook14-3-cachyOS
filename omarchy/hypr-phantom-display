@@ -1,0 +1,138 @@
+#!/usr/bin/python3 -I
+"""Disattiva in Hyprland lo schermo "fantasma" del MacBookPro14,3.
+
+Con lo schermo sulla Intel (gpu-power-prefs, docs/gpu.md) la Radeon tiene un connettore eDP che amdgpu dà sempre per
+"collegato", ma il pannello è passato alla Intel tramite il gmux: niente EDID, niente modalità. Hyprland lo mostra come
+uno schermo 0x0 su cui possono finire dei workspace. Con lo schermo sulla Radeon il caso opposto non si presenta (i915
+non registra l'eDP). Il nome (eDP-1/eDP-2) dipende dall'ordine dei driver, quindi non si usa: uno schermo è fantasma
+solo se TUTTE queste condizioni sono vere:
+  1. Hyprland lo vede a 0x0 e senza modalità disponibili;
+  2. in sysfs è un connettore eDP "connected" con EDID vuoto e senza modalità;
+  3. appartiene a una scheda grafica PCI (mai la Touch Bar: appletbdrm è USB, e sta in seat-touchbar);
+  4. esiste un altro eDP vero (EDID e modalità) su una GPU diversa.
+Lo disattiva con hl.monitor({output=..., disabled=true}) e ricontrolla a ogni schermo aggiunto e a ogni ricarica della
+configurazione (eventi di Hyprland).
+
+  hypr-phantom-display            servizio (omarchy-phantom-display.service, sessione utente)
+  hypr-phantom-display --check    dice cosa farebbe e perché, senza toccare niente
+"""
+import glob, json, os, socket, subprocess, sys, time
+
+CHECK = "--check" in sys.argv
+
+
+def log(msg):
+    print("hypr-phantom-display: " + msg, flush=True)
+
+
+def hypr_dir():
+    run = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/run/user/%d" % os.getuid()), "hypr")
+    sig = os.environ.get("HYPRLAND_INSTANCE_SIGNATURE")
+    if sig and os.path.exists(os.path.join(run, sig, ".socket2.sock")):
+        return os.path.join(run, sig)
+    dirs = [d for d in glob.glob(run + "/*") if os.path.exists(d + "/.socket2.sock")]
+    return max(dirs, key=os.path.getmtime) if dirs else None
+
+
+def hyprctl(d, *args):
+    env = dict(os.environ, HYPRLAND_INSTANCE_SIGNATURE=os.path.basename(d))
+    return subprocess.run(["hyprctl", *args], env=env, capture_output=True, text=True, timeout=5).stdout
+
+
+def read(path, binary=False):
+    try:
+        with open(path, "rb" if binary else "r") as f:
+            return f.read()
+    except OSError:
+        return b"" if binary else ""
+
+
+def connectors():
+    """name -> {status, edid, modes, driver, bus} per ogni connettore DRM."""
+    out = {}
+    for c in glob.glob("/sys/class/drm/card*-*"):
+        card = os.path.realpath(os.path.dirname(os.path.realpath(c)))
+        dev = os.path.realpath(card + "/device")
+        name = os.path.basename(c).split("-", 1)[1]
+        out[name] = {
+            "status": read(c + "/status").strip(),
+            "edid": len(read(c + "/edid", True)),
+            "modes": read(c + "/modes").split(),
+            "driver": os.path.basename(os.path.realpath(dev + "/driver")),
+            "bus": os.path.basename(os.path.realpath(dev + "/subsystem")),
+        }
+    return out
+
+
+def phantoms(d):
+    mons = json.loads(hyprctl(d, "-j", "monitors", "all") or "[]")
+    conn = connectors()
+    real = [n for n, c in conn.items() if n.startswith("eDP") and c["status"] == "connected" and c["edid"] > 0
+            and c["modes"] and c["bus"] == "pci"]
+    result = []
+    for m in mons:
+        n, c = m["name"], conn.get(m["name"])
+        why = []
+
+        def need(cond, msg):
+            if not cond:
+                why.append(msg)
+
+        need(m["width"] == 0 and m["height"] == 0 and not m.get("availableModes"), "Hyprland gli dà modalità")
+        need(c is not None, "nessun connettore in sysfs")
+        others = []
+        if c:
+            others = [r for r in real if r != n and conn[r]["driver"] != c["driver"]]
+            need(n.startswith("eDP"), "non è un eDP")
+            need(c["status"] == "connected", "non collegato")
+            need(c["edid"] == 0 and not c["modes"], "ha EDID o modalità")
+            need(c["bus"] == "pci", "non è una scheda PCI (%s)" % c["bus"])
+            need(bool(others), "nessun altro eDP vero su un'altra GPU")
+        if not why:
+            result.append((n, m.get("disabled", False), "%s su %s, pannello vero: %s" % (n, c["driver"], ", ".join(others))))
+        elif CHECK:
+            log("%s: non fantasma (%s)" % (n, "; ".join(why)))
+    return result
+
+
+def apply(d):
+    for name, disabled, why in phantoms(d):
+        if disabled:
+            if CHECK: log("%s: fantasma, già disattivato (%s)" % (name, why))
+            continue
+        if CHECK:
+            log("%s: FANTASMA, lo disattiverei (%s)" % (name, why))
+            continue
+        r = hyprctl(d, "eval", 'hl.monitor({ output = "%s", disabled = true })' % name).strip()
+        log("%s disattivato (%s): %s" % (name, why, r))
+
+
+def main():
+    while True:
+        d = hypr_dir()
+        if not d:
+            if CHECK: sys.exit("Hyprland non trovato.")
+            time.sleep(5); continue
+        apply(d)
+        if CHECK:
+            return
+        try:
+            s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            s.connect(d + "/.socket2.sock")
+            buf = b""
+            while True:
+                data = s.recv(4096)
+                if not data:
+                    break
+                buf += data
+                *lines, buf = buf.split(b"\n")
+                if any(l.startswith((b"monitoradded", b"configreloaded")) for l in lines):
+                    time.sleep(1)   # lascia a Hyprland il tempo di configurare l'uscita
+                    apply(d)
+        except OSError as e:
+            log("socket di Hyprland: %s" % e)
+        time.sleep(2)
+
+
+if __name__ == "__main__":
+    main()

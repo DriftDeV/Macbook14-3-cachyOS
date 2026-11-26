@@ -68,6 +68,10 @@ di KDE la cambiano (scrivono `gmux_backlight`, regolata dal chip gmux e non dall
   che non esiste più) e schermo sulla Intel. L'idea che servisse `SignalAppleOS` ("senza OpenCore la Intel resta
   cieca") era un'inferenza dalla ricetta `apple_set_os`/`gpu-switch` del 2017-2018, mai provata qui: è falsa sul 14,3.
   Solo SignalAppleOS (variabile a 00) → nulla cambia. Cosa cambi `SignalAppleOS` oltre alla GPU: [NV].
+- **Schermo fantasma in Hyprland [F]**: con il pannello sulla Intel, `eDP-2` di amdgpu resta "connected" (EDID vuoto,
+  `EDID err: 2`, nessuna modalità) e Hyprland lo mostra a 0×0 con un workspace sopra. Non sono le uscite USB-C (`DP-3`…`DP-6`
+  di amdgpu, scollegate) né la Touch Bar (`USB-1` di appletbdrm, USB, `seat-touchbar`). `omarchy/hypr-phantom-display`
+  lo disattiva (`hl.monitor({output=…, disabled=true})`) e lo rifà dopo `configreloaded`/`monitoradded` (provato).
 - Attributi della variabile dopo l'avvio: `07 00 00 80` (il firmware aggiunge il bit 31), valore `01 00 00 00`.
 - `install [--from DIR] [--rebuild] [--gpu …]`: se `EFI/OC` manca (per esempio dopo l'installatore di Omarchy, che
   cancella la ESP) lo rimette da una copia (`--from`, per esempio `efi-backup/EFI/OC` della chiavetta) oppure lo

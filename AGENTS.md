@@ -146,7 +146,8 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
   15:20 (come il manager: `gpu-control.sh display`; NON in NVRAM Add/Delete di OpenCore, che sovrascriverebbe il manager).
   Avvio delle 15:22 senza OpenCore (niente `boot-path`/`opencore-version`; `Boot0000 OpenCore` punta al PARTUUID
   `65c5675b…` della vecchia ESP, che non esiste più) **con lo schermo sulla Intel** [F]. Su Omarchy OpenCore non è mai
-  partito. Hyprland vede anche un `eDP-2` fantasma (amdgpu, 0×0). Da provare: `gpu intel` + riavvio + `sleep-test.sh real-deep` (S3 sul 7.2). OpenCorePkg 1.0.8 fissato con
+  partito. Hyprland vedeva un `eDP-2` fantasma (amdgpu, eDP senza EDID; NON USB-C né Touch Bar): lo disattiva
+  `omarchy/hypr-phantom-display` (servizio utente, passo `hyprland` di install.sh, 4 condizioni insieme) [F]. Da provare: `gpu intel` + riavvio + `sleep-test.sh real-deep` (S3 sul 7.2). OpenCorePkg 1.0.8 fissato con
   SHA-256; `ocvalidate` solo in CI (eseguire binari scaricati qui è stato bloccato dai permessi).
 - **Omarchy installato [F] (26/11/2026)** su tutto il disco: `nvme0n1p1` vfat 2 GiB su `/boot` (Limine; `EFI/APPLE` rimesso,
   guardia del T1 integra), `nvme0n1p2` LUKS + btrfs; kernel `7.2.15-4-omarchy`. NVRAM: `Boot0001 Limine`, `Boot0000 OpenCore`.

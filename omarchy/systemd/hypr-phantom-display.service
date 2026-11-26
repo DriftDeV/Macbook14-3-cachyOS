@@ -1,0 +1,13 @@
+[Unit]
+Description=MacBookPro14,3: disattiva in Hyprland lo schermo fantasma della Radeon (schermo sulla Intel)
+PartOf=graphical-session.target
+After=graphical-session.target
+ConditionEnvironment=HYPRLAND_INSTANCE_SIGNATURE
+
+[Service]
+ExecStart=/usr/local/bin/hypr-phantom-display
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target

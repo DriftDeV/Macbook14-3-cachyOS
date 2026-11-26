@@ -183,6 +183,9 @@ all'accensione. Da qui in poi la guardia installata da `install.sh` lo controlla
   segnala. Questa repo usa `brcmfmac`, l'unico provato a 5 GHz.
 - Nel terminale di alcune app (per esempio il pannello Terminale di Claude Desktop) `sudo` è bloccato
   ("nessun nuovo privilegio"): usa **`run0`** al posto di `sudo`.
+- Con lo schermo sulla Intel la Radeon lascia uno schermo "fantasma" (0×0) che Hyprland vedrebbe: il passo `hyprland`
+  di `install.sh` installa un servizio che lo disattiva, solo dopo aver controllato che sia davvero vuoto (mai lo schermo
+  vero né la Touch Bar). `hypr-phantom-display --check` spiega cosa vede.
 - Icona del manager, renderer della Touch Bar e limite FPS partono con la sessione di systemd (uwsm). Se non partono,
   aggiungi `macbook-manager gui --tray` all'avvio (in `~/.config/hypr/autostart.lua`).
 
@@ -357,6 +360,7 @@ Ogni passo è uno script e si può rifare da solo con `sudo ./install.sh --only 
 | `bluetooth` | audio delle chiamate (SCO via HCI), mSBC disattivato |
 | `touchbar-display` | compila T1Bridge, installa driver display e webcam (con la correzione dei buffer H.264), servizi, `touchbar-mode`, renderer fnstrip; salva la modalità display |
 | `tiny-dfr` | compila tiny-dfr con le patch per il T1; resta inattivo finché non lo scegli |
+| `hyprland` | solo Hyprland: servizio che disattiva lo schermo fantasma della Radeon quando lo schermo è sulla Intel |
 | `omabar` | solo Omarchy: compila e installa OmaBar ([`omarchy/install-omabar.sh`](omarchy/install-omabar.sh)), lo rende il renderer scelto e installa la skill `/omabar` di Claude Code |
 | `touchid` | servizi Touch ID di T1Bridge, rete privata del T1, libfprint/fprintd, regola ufw, interruttori PAM (spenti finché non li attivi) |
 | `kernel` | servizio che all'avvio ricompila i driver rimasti indietro dopo un aggiornamento del kernel senza rete; **guardia del firmware del T1** |

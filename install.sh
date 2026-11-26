@@ -19,7 +19,7 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/lib.sh
 source "$REPO_DIR/scripts/lib.sh"
 
-STEPS="backup packages input touchbar audio audio-dsp sleep power bluetooth touchbar-display tiny-dfr omabar touchid kernel manager apps wifi"
+STEPS="backup packages input touchbar audio audio-dsp sleep power bluetooth touchbar-display tiny-dfr omabar hyprland touchid kernel manager apps wifi"
 LOG=/var/log/macbookpro14-3-install.log
 ONLY="" SKIP="" WIFI_FILE="" WIFI_DIR="" DO_INITRAMFS=0
 
@@ -85,7 +85,7 @@ if [ "$DRY_RUN" != 1 ]; then
 fi
 DESKTOP="$(desktop_kind)"
 log "Desktop: $DESKTOP$(is_omarchy && echo ' (Omarchy)')"
-[ "$DESKTOP" = kde ] || warn "Desktop diverso da KDE Plasma: provato solo su KDE. Su Hyprland/Omarchy vedi README, sezione Omarchy."
+[ "$DESKTOP" = other ] && warn "Desktop né KDE Plasma né Hyprland: provato solo su questi due (CachyOS e Omarchy)."
 curl -sfI --max-time 10 https://github.com >/dev/null || warn "Rete non raggiungibile: i passi che scaricano sorgenti falliranno."
 [ "$(cat /sys/class/power_supply/ADP1/online 2>/dev/null)" = 1 ] || warn "Alimentatore non collegato: collegalo (compilazioni DKMS e Rust)."
 
@@ -215,6 +215,16 @@ step_touchbar_display() {
     log "Modalità display salvata (renderer fnstrip): parte al prossimo avvio."
 }
 
+# Hyprland: con lo schermo sulla Intel la Radeon lascia un eDP "collegato" senza modalità che Hyprland mostra a 0x0.
+step_hyprland() {
+    if [ "$DESKTOP" != hyprland ]; then log "Non è Hyprland: niente da fare."; return 0; fi
+    run install -Dm755 "$REPO_DIR/omarchy/hypr-phantom-display" /usr/local/bin/hypr-phantom-display
+    run install -Dm644 "$REPO_DIR/omarchy/systemd/hypr-phantom-display.service" /etc/systemd/user/hypr-phantom-display.service
+    run systemctl --global enable hypr-phantom-display.service
+    as_user systemctl --user daemon-reload || true
+    as_user systemctl --user restart hypr-phantom-display.service || true
+}
+
 # OmaBar (omarchy/): renderer che segue il tema di Omarchy. Solo su Omarchy, dove diventa il renderer scelto.
 step_omabar() {
     if ! is_omarchy; then log "Non è Omarchy: OmaBar non serve (resta fnstrip)."; return 0; fi
@@ -273,6 +283,7 @@ run_step bluetooth "Bluetooth (audio delle chiamate)" step_bluetooth
 run_step touchbar-display "Touch Bar, modalità display (T1Bridge, webcam, fnstrip)" step_touchbar_display
 run_step tiny-dfr "Touch Bar, renderer alternativo tiny-dfr" step_tiny_dfr
 run_step omabar "Touch Bar, renderer OmaBar (solo Omarchy)" step_omabar
+run_step hyprland "Hyprland: schermo fantasma della Radeon disattivato (solo Hyprland)" step_hyprland
 run_step touchid "Touch ID (T1Bridge: rete privata, xART, broker, fprintd)" step_touchid
 run_step kernel "Driver per i kernel futuri e guardia del firmware del T1" step_kernel
 run_step manager "MacBook Manager (stato e azioni rapide, GUI)" step_manager
