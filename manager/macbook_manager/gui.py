@@ -99,6 +99,9 @@ class MainWindow(QMainWindow):
         from .gui_battery import BatteryTab
         self.battery = BatteryTab(lambda t: self.log.appendPlainText(t))
         self.tabs.addTab(self.battery, QIcon.fromTheme("battery"), "Batteria")
+        from .gui_nvram import NvramTab
+        self.nvram = NvramTab(lambda t: self.log.appendPlainText(t), self.run_action)
+        self.tabs.addTab(self.nvram, QIcon.fromTheme("drive-harddisk-system"), "NVRAM")
         from .gui_optimize import OptimizeTab
         self.optimize = OptimizeTab(lambda t: self.log.appendPlainText(t))
         self.tabs.addTab(self.optimize, QIcon.fromTheme("speedometer"), "Ottimizzazione")
@@ -354,7 +357,13 @@ class MainWindow(QMainWindow):
         else:
             self.show_front()
 
-    def show_front(self):
+    def show_front(self, tab=None):
+        """Mostra la finestra, sulla scheda il cui titolo inizia con `tab` (senza maiuscole), se data."""
+        if tab:
+            for i in range(self.tabs.count()):
+                if self.tabs.tabText(i).lower().replace(" ", "").startswith(tab.lower()):
+                    self.tabs.setCurrentIndex(i)
+                    break
         self.showNormal()
         self.raise_()
         self.activateWindow()
@@ -401,7 +410,7 @@ class Tray(QSystemTrayIcon):
         self.setToolTip("MacBook Manager\n" + "\n".join(bits) + ("\n⚠ " + errs[0]["label"] if errs else ""))
 
 
-def main(tray=False):
+def main(tray=False, tab=None, no_tray_icon=False):
     app = QApplication(sys.argv)
     app.setApplicationName("macbook-manager")
     app.setApplicationVersion(VERSION)
@@ -413,7 +422,7 @@ def main(tray=False):
     sock.connectToServer(SOCKET)
     if sock.waitForConnected(300):
         if not tray:
-            sock.write(b"show")
+            sock.write(b"show" + ((":" + tab).encode() if tab else b""))
             sock.waitForBytesWritten(300)
         return 0
     QLocalServer.removeServer(SOCKET)
@@ -421,16 +430,26 @@ def main(tray=False):
     server.listen(SOCKET)
 
     win = MainWindow(app)
-    if QSystemTrayIcon.isSystemTrayAvailable():
+    # Omarchy: c'è il plugin nella barra (omarchy/shell-plugin/macbook-manager), niente seconda icona.
+    plugin = os.path.exists(os.path.expanduser("~/.config/omarchy/plugins/macbook-manager"))
+    if QSystemTrayIcon.isSystemTrayAvailable() and not no_tray_icon and not plugin:
         win.tray = Tray(win)
         win.tray.show()
         win.tray.update_from(win.items)
 
     def on_conn():
         c = server.nextPendingConnection()
-        c.readyRead.connect(lambda: c.readAll() and win.show_front())
+        def on_read():
+            msg = bytes(c.readAll()).decode("utf-8", "replace")
+            if msg.startswith("show"):
+                win.show_front(msg[5:] if msg.startswith("show:") else None)
+        c.readyRead.connect(on_read)
     server.newConnection.connect(on_conn)
 
+    # Senza icona nella barra di sistema, chiudere la finestra chiude il programma (il plugin lo riapre).
+    app.setQuitOnLastWindowClosed(win.tray is None)
     if not tray or win.tray is None:
+        if tab:
+            win.show_front(tab)
         win.show()
     return app.exec()

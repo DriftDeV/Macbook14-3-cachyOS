@@ -16,6 +16,7 @@ TBMODE = "/usr/local/bin/touchbar-mode"
 POWER_APPLY = [LIBDIR + "/power-source.sh"]
 TIDPAM = "/usr/local/bin/touchid-pam"
 GPUCTL = LIBDIR + "/gpu-control.sh"
+NVCTL = LIBDIR + "/nvram-control.sh"
 
 
 def _radeon(name):
@@ -33,6 +34,19 @@ def _radeon(name):
         except OSError:
             continue
     return None
+
+
+def _nv(what):
+    """Stato NVRAM per le spunte: chime, autoboot, first (tipo della prima voce di avvio), next (tipo di BootNext)."""
+    from . import nvram
+    if what == "chime":
+        return nvram.chime()
+    if what == "autoboot":
+        return nvram.autoboot()
+    b = nvram.boot_entries()
+    labels = {n.upper(): l for n, l, _p in b["entries"]}
+    num = b["order"][0] if what == "first" and b["order"] else b["next"] if what == "next" else None
+    return nvram.kind(labels.get((num or "").upper(), "")) if num else None
 
 
 def _display_next():
@@ -123,6 +137,27 @@ ACTIONS = [
          steps=[[GPUCTL, "radeon", "low"]], needs=[GPUCTL], active=lambda: _radeon("level") == "low"),
     dict(id="radeon-high", group="GPU", label="Radeon: clock al massimo", root=True,
          steps=[[GPUCTL, "radeon", "high"]], needs=[GPUCTL], active=lambda: _radeon("level") == "high"),
+    # NVRAM (scheda NVRAM; nvram-control.sh, comandi fissi)
+    dict(id="nvram-chime-on", group="NVRAM", label="Suono di avvio: attivo", root=True,
+         steps=[[NVCTL, "chime", "on"]], needs=[NVCTL], active=lambda: _nv("chime") is not False),
+    dict(id="nvram-chime-off", group="NVRAM", label="Suono di avvio: muto", root=True,
+         steps=[[NVCTL, "chime", "off"]], needs=[NVCTL], active=lambda: _nv("chime") is False),
+    dict(id="nvram-autoboot-on", group="NVRAM", label="Si accende aprendo il coperchio", root=True,
+         steps=[[NVCTL, "autoboot", "on"]], needs=[NVCTL], active=lambda: _nv("autoboot") is True),
+    dict(id="nvram-autoboot-off", group="NVRAM", label="Non si accende aprendo il coperchio", root=True,
+         steps=[[NVCTL, "autoboot", "off"]], needs=[NVCTL], active=lambda: _nv("autoboot") is False,
+         confirm="Il Mac non si accenderà più aprendo il coperchio o collegando l'alimentatore: per accenderlo "
+                 "servirà il tasto di accensione (Touch ID). Continuare?"),
+    dict(id="nvram-boot-default-opencore", group="NVRAM", label="Avvio predefinito: OpenCore", root=True,
+         steps=[[NVCTL, "boot", "default", "opencore"]], needs=[NVCTL], active=lambda: _nv("first") == "opencore"),
+    dict(id="nvram-boot-default-linux", group="NVRAM", label="Avvio predefinito: Linux (Limine/GRUB)", root=True,
+         steps=[[NVCTL, "boot", "default", "linux"]], needs=[NVCTL], active=lambda: _nv("first") == "linux"),
+    dict(id="nvram-boot-next-opencore", group="NVRAM", label="Solo il prossimo avvio: OpenCore", root=True,
+         steps=[[NVCTL, "boot", "next", "opencore"]], needs=[NVCTL], active=lambda: _nv("next") == "opencore",
+         then=("reboot", "Impostato. Riavviare ora?")),
+    dict(id="nvram-boot-next-linux", group="NVRAM", label="Solo il prossimo avvio: Linux (Limine/GRUB)", root=True,
+         steps=[[NVCTL, "boot", "next", "linux"]], needs=[NVCTL], active=lambda: _nv("next") == "linux",
+         then=("reboot", "Impostato. Riavviare ora?")),
     # Rete e audio
     dict(id="wifi-reload", group="Rete e audio", label="Ricarica il driver Wi-Fi", root=True,
          steps=[["modprobe", "-r", "brcmfmac_wcc", "brcmfmac"], ["modprobe", "brcmfmac"]], needs=[]),

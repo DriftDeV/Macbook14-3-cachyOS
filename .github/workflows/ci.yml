@@ -53,6 +53,10 @@ jobs:
           for f in fs:
               compile(open(f, encoding='utf-8').read(), f, 'exec')
           print(len(fs), 'file Python compilati')
+          import json
+          for f in glob.glob('omarchy/shell-plugin/*/manifest.json') + glob.glob('omarchy/shell-plugin/*/i18n/*.json'):
+              json.load(open(f, encoding='utf-8'))
+          print('JSON dei plugin di Omarchy validi')
           EOF
       - name: CLI di MacBook Manager (senza Qt)
         run: PYTHONPATH=manager python manager/macbook-manager --help

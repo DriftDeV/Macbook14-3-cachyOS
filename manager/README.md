@@ -8,8 +8,22 @@ sudo scripts/install-manager.sh          # oppure: sudo ./install.sh --only mana
 ```
 
 Installa `pyside6`, il programma in `/usr/local/lib/macbookpro14-3/manager/`, il link `/usr/local/bin/macbook-manager`,
-la voce "MacBook Manager" nel menu, l'icona nella barra di sistema all'avvio della sessione (`--no-tray` per non
-averla) e la policy polkit. `--undo` rimuove tutto.
+la voce "MacBook Manager" nel menu, la policy polkit e, secondo il sistema:
+
+- **CachyOS / KDE** (e altri desktop): l'icona nella barra di sistema all'avvio della sessione (`--no-tray` per non
+  averla);
+- **Omarchy**: al posto dell'icona, il **plugin nella barra di Omarchy** (`omarchy/shell-plugin/macbook-manager`,
+  id `macbookpro14-3.manager`, copiato in `/usr/local/share/macbookpro14-3/omarchy-plugin/` e collegato da
+  `~/.config/omarchy/plugins/macbook-manager`). Icona del portatile (rossa se ci sono avvisi; percentuale della batteria
+  con l'impostazione `showBattery`); il pannello mostra batteria adesso (stato, watt, tempo rimasto, salute, cicli,
+  temperatura), il **registratore della batteria** (attivo, ultimo campione, campioni; pulsante "Avvia" se è fermo),
+  l'ultima sessione a batteria, gli avvisi di `status`, schermo, suono di avvio e OpenCore, e pulsanti che aprono il
+  manager sulla scheda giusta (`macbook-manager gui --tab batteria|nvram|touchbar`). Legge `macbook-manager bar`
+  (JSON compatto, ~0,1 s) ogni 30 s e `status --json` ogni 5 minuti e all'apertura. La registrazione vera, 24 ore su 24,
+  resta il timer utente `macbook-manager-battery-log.timer` (un campione al minuto anche con la barra chiusa). Con il
+  plugin la finestra non crea un'icona nella barra di sistema e chiudendola il programma termina.
+
+`--undo` rimuove tutto (anche il plugin).
 
 ## Cosa mostra (scheda Stato, `macbook-manager status`)
 
@@ -221,6 +235,22 @@ Scheda **Stato**, gruppo Touch ID: servizi (xART, relay della keybag), **attivaz
 impronta per sudo sì/no, impronta nella schermata di blocco sì/no (con avviso sul limite), **Gestisci impronte** (apre
 Impostazioni di sistema → Utenti, dove si registrano e cancellano le dita), **Prova impronta** (`fprintd-verify`, esito nel
 registro), **Impronte registrate** (`fprintd-list`). Gli interruttori usano `/usr/local/bin/touchid-pam`.
+
+## NVRAM (scheda NVRAM, in entrambe le versioni)
+
+Variabili che il firmware legge all'accensione, lette senza root da `/sys/firmware/efi/efivars` (`nvram.py`) e scritte
+dall'helper con comandi fissi (`scripts/nvram-control.sh`, installato in `/usr/local/lib/macbookpro14-3/`):
+
+- **Suono di avvio** (`StartupMute`, GUID Apple `7C436110-…`: 00 = suona, 01 = muto). Su questo Mac era 01. Se resta
+  muto, il volume salvato da macOS (`SystemAudioVolume`, qui 0x80 = muto, livello 0) potrebbe tenerlo zitto [NV].
+- **Accensione aprendo il coperchio o collegando l'alimentatore** (`AutoBoot`: 03 o assente = sì, 00 = no) [NV sul 14,3].
+- **GPU dello schermo** (`gpu-power-prefs`, le stesse azioni della scheda GPU; basta anche senza OpenCore [F]).
+- **Voce di avvio**: OpenCore o Linux (Limine/GRUB) come predefinita (prima in `BootOrder`) o solo per il prossimo
+  avvio (`BootNext`), con l'elenco delle voci (avviata ora, predefinita, prossima).
+- Elenco in sola lettura di tutte le variabili Apple, del gmux e di OpenCore/OCLP, con il significato di quelle note
+  (`boot-args` e `csr-active-config` servono solo a macOS).
+
+Un reset della NVRAM (⌥ ⌘ P R all'accensione) le riporta ai valori di fabbrica.
 
 ## Azioni (`macbook-manager actions`, `macbook-manager run <id>`)
 

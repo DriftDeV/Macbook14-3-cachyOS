@@ -102,6 +102,33 @@ def cmd_touchbar_screenshot(args):
         cap.stop()
 
 
+def cmd_bar(_args):
+    """Stato compatto e veloce (~0,2 s) per il plugin della barra di Omarchy: batteria, registratore, ultima sessione a
+    batteria, GPU dello schermo, NVRAM. Lo stato completo (lento) resta `status --json`."""
+    import time as _t
+    from . import battery as B, gpu as G, nvram as N
+    out = {"time": int(_t.time())}
+    try:
+        out["battery"] = B.now()
+    except Exception as e:  # noqa: BLE001
+        out["battery"] = {"error": str(e)}
+    active, last, total = B.logger_state()
+    out["logger"] = {"active": active, "last": last, "age_s": int(_t.time() - last) if last else None, "samples": total}
+    reps = B.saved_reports()
+    if reps:
+        r = reps[-1]
+        out["last_session"] = {k: r.get(k) for k in ("start", "end", "duration_min", "drop_pct", "avg_w",
+                                                     "projected_h", "start_pct", "end_pct")}
+    try:
+        d = G.display_prefs()
+        out["display"] = {"now": d["now"], "next": d["next"]}
+    except Exception:  # noqa: BLE001
+        out["display"] = {}
+    out["nvram"] = {"chime": N.chime(), "autoboot": N.autoboot(), "opencore_booted": N.opencore_booted()}
+    print(json.dumps(out))
+    return 0
+
+
 def cmd_battery_log(_args):
     from . import battery as B
     s, report = B.log_sample()
@@ -150,6 +177,8 @@ def main(argv=None):
     sub = p.add_subparsers(dest="cmd")
     g = sub.add_parser("gui", help="apre la finestra (predefinito)")
     g.add_argument("--tray", action="store_true", help="parte nascosta nella barra di sistema")
+    g.add_argument("--tab", help="apre su una scheda (stato, azioni, touchbar, audio, gpu, cpu, batteria, nvram, ...)")
+    g.add_argument("--no-tray-icon", action="store_true", help="senza icona nella barra di sistema (Omarchy: c'è il plugin)")
     s = sub.add_parser("status", help="stato di driver, Touch Bar, sospensione, rete, energia")
     s.add_argument("--json", action="store_true")
     ac = sub.add_parser("actions", help="elenca le azioni")
@@ -161,6 +190,7 @@ def main(argv=None):
     ts.add_argument("--timeout", type=int, default=15)
     sr = sub.add_parser("sleep-report", help="sospensioni dell'avvio attuale (o -1, -2...)")
     sr.add_argument("boot", nargs="?", default="0")
+    sub.add_parser("bar", help="stato compatto in JSON per il plugin della barra di Omarchy")
     bl = sub.add_parser("battery-log", help="registra un campione della batteria (lo usa il timer, ogni minuto)")
     bl.set_defaults(_x=None)
     br = sub.add_parser("battery-report", help="report delle sessioni a batteria (0 = la più recente)")
@@ -177,7 +207,8 @@ def main(argv=None):
         except ImportError as e:
             print("GUI non disponibile (%s): installa pyside6 (sudo pacman -S pyside6)." % e, file=sys.stderr)
             return 1
-        return gui_main(tray=getattr(args, "tray", False))
+        return gui_main(tray=getattr(args, "tray", False), tab=getattr(args, "tab", None),
+                        no_tray_icon=getattr(args, "no_tray_icon", False))
     if args.cmd == "status":
         return cmd_status(args)
     if args.cmd == "actions":
@@ -188,6 +219,8 @@ def main(argv=None):
         return cmd_touchbar_screenshot(args)
     if args.cmd == "sleep-report":
         return cmd_sleep_report(args)
+    if args.cmd == "bar":
+        return cmd_bar(args)
     if args.cmd == "battery-log":
         return cmd_battery_log(args)
     if args.cmd == "battery-report":

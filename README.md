@@ -273,7 +273,8 @@ da sola; se serve, cambia anche il codice e reinstalla.
 
 | Cosa | Come |
 |---|---|
-| Stato di tutto, azioni rapide | **MacBook Manager**, oppure `macbook-manager status` nel terminale |
+| Stato di tutto, azioni rapide | **MacBook Manager** (su Omarchy anche dall'icona del portatile nella barra), oppure `macbook-manager status` |
+| Suono di avvio, accensione col coperchio, voce di avvio (OpenCore o Linux) | MacBook Manager → scheda **NVRAM** |
 | Touch Bar: stile, pulsanti, luminosità | MacBook Manager → scheda **Touch Bar** (oppure `/omabar` in Claude Code) |
 | Webcam in Discord o nel browser | MacBook Manager → Azioni, oppure `t1-webcam on`; poi scegli la camera "T1 camera (Discord)" nell'app |
 | App lente (Brave, Discord, web app…) | MacBook Manager → scheda **Ottimizzazione** (già fatto dall'installazione per le app presenti) |
@@ -364,7 +365,7 @@ Ogni passo è uno script e si può rifare da solo con `sudo ./install.sh --only 
 | `omabar` | solo Omarchy: compila e installa OmaBar ([`omarchy/install-omabar.sh`](omarchy/install-omabar.sh)), lo rende il renderer scelto e installa la skill `/omabar` di Claude Code |
 | `touchid` | servizi Touch ID di T1Bridge, rete privata del T1, libfprint/fprintd, regola ufw, interruttori PAM (spenti finché non li attivi) |
 | `kernel` | servizio che all'avvio ricompila i driver rimasti indietro dopo un aggiornamento del kernel senza rete; **guardia del firmware del T1** |
-| `manager` | MacBook Manager: GUI, icona nella barra di sistema, helper con polkit ([manager/README.md](manager/README.md)) |
+| `manager` | MacBook Manager: GUI, helper con polkit, icona nella barra di sistema (KDE) o plugin nella barra di Omarchy ([manager/README.md](manager/README.md)) |
 | `apps` | da utente: `AMD_DEBUG=notiling` per le app Chromium/Electron sotto Wayland, più un servizio per quelle installate dopo |
 | `wifi` | per ultimo: NVRAM generata dalla calibrazione del chip, firmware, impostazioni di NetworkManager o iwd |
 

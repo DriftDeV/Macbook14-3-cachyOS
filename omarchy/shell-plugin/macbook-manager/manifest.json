@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "macbookpro14-3.manager",
+  "name": "MacBook Manager",
+  "version": "1.0.0",
+  "author": "Macbook14-3-cachyOS",
+  "license": "MIT",
+  "description": "MacBookPro14,3: battery, battery logger, last battery session, warnings and boot settings, with shortcuts into MacBook Manager.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "MacBook Manager",
+    "description": "MacBookPro14,3 status at a glance; click for battery, logger, warnings and shortcuts into MacBook Manager.",
+    "category": "System",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "showBattery": false
+    },
+    "schema": [
+      {
+        "key": "showBattery",
+        "type": "boolean",
+        "label": "Show battery percentage in the bar",
+        "defaultValue": false
+      }
+    ]
+  }
+}

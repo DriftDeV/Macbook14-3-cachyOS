@@ -149,6 +149,11 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
   partito. Hyprland vedeva un `eDP-2` fantasma (amdgpu, eDP senza EDID; NON USB-C né Touch Bar): lo disattiva
   `omarchy/hypr-phantom-display` (servizio utente, passo `hyprland` di install.sh, 4 condizioni insieme) [F]. Da provare: `gpu intel` + riavvio + `sleep-test.sh real-deep` (S3 sul 7.2). OpenCorePkg 1.0.8 fissato con
   SHA-256; `ocvalidate` solo in CI (eseguire binari scaricati qui è stato bloccato dai permessi).
+- **MacBook Manager, due versioni (26/11/2026)**: stesso codice; su KDE icona nella barra di sistema, su Omarchy plugin
+  della barra `macbookpro14-3.manager` (`omarchy/shell-plugin/macbook-manager`, installato da install-manager.sh) [F:
+  pannello visto con dati veri]. Nuovo `macbook-manager bar` (JSON ~0,1 s), `gui --tab`, scheda **NVRAM** (`nvram.py`,
+  `gui_nvram.py`, `scripts/nvram-control.sh`: StartupMute, AutoBoot, BootOrder/BootNext, elenco variabili) [F: lettura e
+  GUI offscreen; scritture non ancora provate]. Su questo Mac StartupMute = 01 (muto), SystemAudioVolume = 0x80.
 - **Omarchy installato [F] (26/11/2026)** su tutto il disco: `nvme0n1p1` vfat 2 GiB su `/boot` (Limine; `EFI/APPLE` rimesso,
   guardia del T1 integra), `nvme0n1p2` LUKS + btrfs; kernel `7.2.15-4-omarchy`. NVRAM: `Boot0001 Limine`, `Boot0000 OpenCore`.
   Partizioni COSLIVE/OMARCHY e CachyOS **non esistono più**: le note sotto su p3/p4/p5 sono storiche.
