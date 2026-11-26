@@ -98,6 +98,26 @@ jobs:
       - name: Compilazione dei driver
         run: bash .github/scripts/build-drivers.sh
 
+  # OpenCore: la configurazione generata da scripts/opencore.sh (per Intel e per Radeon) passa ocvalidate della stessa
+  # release fissata in config/sources.conf.
+  opencore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: OpenCorePkg fissato (SHA-256)
+        run: |
+          . config/sources.conf
+          curl -sSfL "$OPENCORE_URL" -o oc.zip
+          echo "$OPENCORE_SHA256  oc.zip" | sha256sum -c -
+          unzip -q oc.zip -d ocpkg
+      - name: Genera e valida
+        run: |
+          chmod +x ocpkg/Utilities/ocvalidate/ocvalidate.linux
+          for g in intel radeon; do
+            bash scripts/opencore.sh config --pkg ocpkg --out "config-$g.plist" --gpu "$g"
+            ocpkg/Utilities/ocvalidate/ocvalidate.linux "config-$g.plist"
+          done
+
   # PKGBUILD: metadati leggibili da makepkg (da utente normale).
   pkgbuild:
     runs-on: ubuntu-latest

@@ -5,6 +5,8 @@
 #   sudo scripts/sleep-test.sh platform    il kernel fa tutte le fasi e riprende da solo dopo ~5 s,
 #                                          senza dormire davvero (pm_test=platform)
 #   sudo scripts/sleep-test.sh real [s]    sospensione vera, sveglia RTC dopo s secondi (default 60)
+#   sudo scripts/sleep-test.sh real-deep [s]  come real ma in S3 (deep) anche sui kernel dove non è attivo di base
+#                                          (< 7.3): drop-in in /run solo per questa prova, tolto alla fine
 #   scripts/sleep-test.sh report [boot]    senza root: ogni sospensione dell'avvio attuale (o -1, -2...):
 #                                          durata, modalità, causa del risveglio, batteria consumata
 # Se non torna: aspetta almeno 3 minuti prima di forzare lo spegnimento
@@ -126,12 +128,19 @@ case "$mode" in
     platform|devices)
         [ "$(id -u)" -eq 0 ] || { echo "Serve sudo." >&2; exit 1; }
         state; run_cycle "$mode" ;;
-    real)
+    real|real-deep)
         [ "$(id -u)" -eq 0 ] || { echo "Serve sudo." >&2; exit 1; }
+        DEEP_DROPIN=/run/systemd/sleep.conf.d/90-macbookpro14-3-sleep-test-deep.conf
+        if [ "$mode" = real-deep ]; then
+            grep -q deep /sys/power/mem_sleep || { echo "Il kernel non offre deep (S3)." >&2; exit 1; }
+            install -Dm644 /dev/stdin "$DEEP_DROPIN" <<<$'[Sleep]\nMemorySleepMode=deep'
+            note "prova in S3 (deep) con $DEEP_DROPIN"
+        fi
         state
         rtcwake -m no -s "$secs" >/dev/null && note "sveglia RTC tra $secs s"
-        run_cycle none ;;
-    *) echo "Uso: $0 check | report [boot] | platform | real [secondi]" >&2; exit 1 ;;
+        run_cycle none
+        rm -f "$DEEP_DROPIN" ;;
+    *) echo "Uso: $0 check | report [boot] | platform | real [secondi] | real-deep [secondi]" >&2; exit 1 ;;
 esac
 [ "$(id -u)" -eq 0 ] && chmod 644 "$LOG" && echo "Log: $LOG"
 exit 0

@@ -166,7 +166,9 @@ run0 bash /run/media/$USER/OMARCHY/macbook14-3/efi-backup/ripristina.sh /boot
 ```
 
 Controlla la copia, rimette nella partizione EFI (`/boot` su Omarchy) solo i file mancanti e segnala quelli diversi
-senza toccarli. Poi **spegni completamente** il Mac, aspetta 30 secondi e riaccendi: il T1 riceve il firmware solo
+senza toccarli. Se la copia aveva OpenCore (`EFI/OC`), ricrea anche la sua voce di avvio:
+`run0 scripts/opencore.sh install` (dalla cartella della repo; senza copia lo costruisce da OpenCorePkg, vedi
+*Schermo sulla scheda Intel*). Poi **spegni completamente** il Mac, aspetta 30 secondi e riaccendi: il T1 riceve il firmware solo
 all'accensione. Da qui in poi la guardia installata da `install.sh` lo controlla a ogni avvio.
 
 ### 4. Cose diverse su Omarchy
@@ -371,10 +373,21 @@ Touch Bar si cambiano anche da terminale: `sudo touchbar-mode set display|keyboa
 <details>
 <summary>Schermo sulla scheda Intel (facoltativo, con OpenCore)</summary>
 
-Di base lo schermo è collegato alla Radeon. Avviando Linux da **OpenCore Legacy Patcher** con l'opzione "Windows GMUX"
-(`SignalAppleOS`) e la variabile EFI `gpu-power-prefs` impostata sulla Intel, lo schermo passa alla Intel: circa 1,5-2 W in
-meno a riposo, luminosità funzionante. La Radeon resta comunque accesa. Sospensione e monitor esterni non ancora riprovati
-in questa configurazione. Dettagli e come tornare indietro in [docs/gpu.md](docs/gpu.md).
+Di base lo schermo è collegato alla Radeon. Avviando Linux da **OpenCore** con `SignalAppleOS` (il firmware crede di
+avviare macOS, come l'opzione "Windows GMUX" di OCLP) e la variabile EFI `gpu-power-prefs` impostata sulla Intel, lo
+schermo passa alla Intel: circa 1,5-2 W in meno a riposo, luminosità funzionante. La Radeon resta comunque accesa.
+
+```bash
+sudo scripts/opencore.sh status          # OpenCore, SignalAppleOS, GPU dello schermo
+sudo scripts/opencore.sh install         # OpenCore nella partizione EFI (se manca) e voce di avvio
+sudo scripts/opencore.sh gpu intel       # schermo sulla Intel dal prossimo avvio da OpenCore (gpu radeon per tornare)
+```
+
+Se manca, `install` costruisce OpenCore da OpenCorePkg (versione fissata) con una configurazione **senza seriali**: su un
+Mac vero OpenCore lascia al firmware i dati originali; i seriali servono solo ai servizi Apple dentro macOS. La
+configurazione generata passa `ocvalidate` nella CI ma non è ancora stata avviata [non verificato]; quella di OCLP sì. Se
+qualcosa va storto: Option (⌥) all'avvio → "EFI Boot", oppure "Reset NVRAM" dal menu di OpenCore. Sospensione e monitor
+esterni non ancora riprovati con la Intel. Dettagli in [docs/gpu.md](docs/gpu.md).
 </details>
 
 <details>
@@ -391,7 +404,8 @@ omarchy/                solo Omarchy / Hyprland
   omabar/                 OmaBar, renderer della Touch Bar (Rust), con agente di sessione
   install-omabar.sh       compila e installa OmaBar
   claude-skill/omabar/    skill /omabar di Claude Code
-scripts/                comune: un installer per componente, touchbar-mode, sleep-test, build di T1Bridge, fnstrip, tiny-dfr
+scripts/                comune: un installer per componente, touchbar-mode, sleep-test, build di T1Bridge, fnstrip, tiny-dfr,
+                        opencore.sh (OpenCore e GPU dello schermo)
 manager/                comune: MacBook Manager (comando, GUI Qt, helper polkit)
 config/                 comune: sorgenti esterne fissate (sources.conf), udev, systemd, sleep, power, NetworkManager,
                         WirePlumber, libinput, T1Bridge, tiny-dfr
@@ -400,7 +414,8 @@ patches/                patch nostre per Touch Bar, audio e tiny-dfr
 pkgs/                   PKGBUILD: mbp143-audio e bankstown-lv2 (usati da install.sh); meta e apple-ibridge (non aggiornati)
 docs/                   risultati per componente e report di ricerca (indice: docs/README.md)
 .github/                CI: sintassi e ShellCheck di tutti gli script, bash 3.2 di macOS, Python, OmaBar (build, test,
-                        anteprima), driver DKMS compilati contro linux e linux-lts di Arch, PKGBUILD
+                        anteprima), driver DKMS compilati contro linux e linux-lts di Arch, PKGBUILD,
+                        configurazione OpenCore generata (ocvalidate)
 ```
 
 Le sorgenti esterne sono **fissate a un commit** e il loro codice è stato letto prima dell'uso

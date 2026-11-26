@@ -14,7 +14,8 @@ post-installazione) è nel [README principale](../README.md#installare-omarchy);
 
 Perché la live va su chiavetta: l'installatore di Omarchy esclude il disco da cui è partita, quindi una live sul disco
 interno non trova dove installare [F, 26/11/2026]. L'installatore usa tutto il disco e cancella la partizione EFI di
-Apple: il firmware del T1 (Touch Bar, Touch ID, webcam, sensore di luce) va rimesso con `ripristina.sh`.
+Apple: il firmware del T1 (Touch Bar, Touch ID, webcam, sensore di luce) va rimesso con `ripristina.sh`; OpenCore
+(schermo sulla Intel) con `scripts/opencore.sh install` (comune ai due sistemi).
 
 Stato: Omarchy in uso su questo Mac dal 26/11/2026 (kernel `7.2.15-omarchy`): driver, Touch Bar con OmaBar, Wi-Fi a
 5 GHz, guardia del T1 [F]. `prepare-usb.sh` provato su Linux con un disco immagine (formattazione, ISO di prova, copia

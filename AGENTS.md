@@ -139,6 +139,11 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
 
 ## Stato della sessione (aggiornato il 26 novembre 2026)
 
+- **OpenCore (26/11/2026)**: `scripts/opencore.sh` status/install/gpu/config. EFI attuale = OCLP 3.0.0 (`/boot/EFI/OC`,
+  `SignalAppleOS` acceso, seriali presenti ma NON applicati: PlatformInfo Automatic/Update* = false). Avvio corrente da
+  OpenCore (BootCurrent 0000, voci viste attraverso RequestBootVarRouting). Schermo ancora sulla Radeon (`gpu-power-prefs`
+  assente). Da provare: `gpu intel` + riavvio + `sleep-test.sh real-deep` (S3 sul 7.2). OpenCorePkg 1.0.8 fissato con
+  SHA-256; `ocvalidate` solo in CI (eseguire binari scaricati qui è stato bloccato dai permessi).
 - **Omarchy installato [F] (26/11/2026)** su tutto il disco: `nvme0n1p1` vfat 2 GiB su `/boot` (Limine; `EFI/APPLE` rimesso,
   guardia del T1 integra), `nvme0n1p2` LUKS + btrfs; kernel `7.2.15-4-omarchy`. NVRAM: `Boot0001 Limine`, `Boot0000 OpenCore`.
   Partizioni COSLIVE/OMARCHY e CachyOS **non esistono più**: le note sotto su p3/p4/p5 sono storiche.

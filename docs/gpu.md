@@ -52,6 +52,26 @@ di KDE la cambiano (scrivono `gmux_backlight`, regolata dal chip gmux e non dall
 - sospensione S3 e risveglio con il pannello sulla Intel; monitor esterni; app Chromium/Electron (`AMD_DEBUG=notiling`
   serviva per la Radeon).
 
+### Script: `scripts/opencore.sh` (26/11/2026)
+
+- `status`: OpenCore nella partizione EFI, `SignalAppleOS`, `gpu-power-prefs` scritta da OpenCore e nel firmware, quale
+  GPU ha `eDP`, voci di avvio.
+- `gpu intel|radeon`: mette `gpu-power-prefs` in `NVRAM > Add` (e in `Delete`, così OpenCore la riscrive a ogni avvio)
+  del `config.plist` in uso, con `SignalAppleOS` acceso; copia prima il file in `config.plist.bak-<data>`.
+- `install [--from DIR] [--rebuild] [--gpu …]`: se `EFI/OC` manca (per esempio dopo l'installatore di Omarchy, che
+  cancella la ESP) lo rimette da una copia (`--from`, per esempio `efi-backup/EFI/OC` della chiavetta) oppure lo
+  costruisce da OpenCorePkg 1.0.8 fissato (`config/sources.conf`) con un `config.plist` generato da `Sample.plist`:
+  niente kext/ACPI/proprietà, Booter come OCLP (`SignalAppleOS`, `ProtectSecureBoot`), driver `OpenRuntime`,
+  `OpenLinuxBoot`, `ResetNvramEntry`, picker integrato, `LauncherOption=Full`, `PlatformInfo` lasciato al firmware.
+- I seriali della EFI di OCLP non servono a Linux: con `Automatic`/`UpdateSMBIOS`/`UpdateDataHub`/`UpdateNVRAM` = false
+  OpenCore non li applica [F, config.plist di OCLP 3.0.0 letto il 26/11/2026]; contano solo per i servizi Apple in macOS.
+- [F] la configurazione generata passa `ocvalidate` 1.0.8 nella CI; [NV] avvio con la configurazione generata (quella
+  di OCLP è provata). Con OpenCore avviato, `RequestBootVarRouting` fa vedere a Linux le variabili di avvio di OpenCore
+  (per questo `efibootmgr` può mostrare voci vecchie); `LauncherOption=Full` tiene OpenCore primo.
+- [NV] S3 sul kernel 7.2 (`linux-omarchy`) con lo schermo sulla Intel: ipotesi da provare (sul 7.3 S3 va anche con la
+  Radeon; S3 è disattivato sotto il 7.3 perché non provato). Prova: `sudo scripts/opencore.sh gpu intel`, riavvio da
+  OpenCore, poi `sudo scripts/sleep-test.sh real-deep 60` (S3 solo per quella prova).
+
 ## Opzioni [NV salvo dove indicato]
 
 1. **Così com'è**: stabile, tutto funziona (sospensione, uscite video), costo ~7-9 W.
