@@ -4,9 +4,9 @@ from PySide6.QtGui import QColor, QIcon
 from PySide6.QtWidgets import (QHBoxLayout, QHeaderView, QLabel, QMessageBox, QPushButton, QTableWidget,
                                QTableWidgetItem, QVBoxLayout, QWidget)
 
+from . import theme as T
 from . import optimize as O
 
-OK_COLOR, NO_COLOR = QColor("#2ea043"), QColor("#d29922")
 
 
 class OptimizeTab(QWidget):
@@ -81,7 +81,7 @@ class OptimizeTab(QWidget):
             r = self.table.rowCount()
             self.table.insertRow(r)
             state = QTableWidgetItem("✓ ottimizzata" if a["ok"] else "da ottimizzare")
-            state.setForeground(OK_COLOR if a["ok"] else NO_COLOR)
+            state.setForeground(T.qc("ok") if a["ok"] else T.qc("warn"))
             for c, item in enumerate((QTableWidgetItem(a["name"]), QTableWidgetItem("web app" if a["web"] else "app"),
                                       state, QTableWidgetItem(a["detail"] or a["file"]))):
                 self.table.setItem(r, c, item)
@@ -94,7 +94,7 @@ class OptimizeTab(QWidget):
             off = [a for a, acc in run if not acc]
             txt = ", ".join("%s %s" % (a, "✓" if acc else "✗ GPU spenta") for a, acc in run)
             self.live.setText("<b>In esecuzione:</b> " + txt + (
-                "<br><span style='color:#f85149'>Le app con la GPU spenta vanno chiuse del tutto e riaperte dopo "
+                "<br><span style='color:" + T.c("err") + "'>Le app con la GPU spenta vanno chiuse del tutto e riaperte dopo "
                 "l'ottimizzazione.</span>" if off else ""))
         else:
             self.live.setText("Nessuna app Chromium/Electron in esecuzione.")

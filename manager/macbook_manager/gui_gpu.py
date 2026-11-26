@@ -5,6 +5,7 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (QComboBox, QGridLayout, QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
                                QPushButton, QScrollArea, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
+from . import theme as T
 from . import gpu as G
 from .actions import BY_ID, available
 
@@ -207,12 +208,12 @@ class GpuTab(QWidget):
         from . import power as P
         f = P.fps_now()
         if not f["installed"]:
-            ft = ("<span style='color:#d29922'>Limite FPS non installato</span>: "
+            ft = ("<span style='color:" + T.c("warn") + "'>Limite FPS non installato</span>: "
                   "<code>sudo scripts/install-power.sh</code>.")
         else:
             ft = "Limite adesso: <b>%s</b>." % ("nessuno" if not f["limit"] else "%d FPS" % f["limit"])
             if not f["session"]:
-                ft += (" <span style='color:#d29922'>Questa sessione è partita prima dell'installazione: esci e rientra "
+                ft += (" " + "<span style='color:" + T.c("warn") + "'>Questa sessione è partita prima dell'installazione: esci e rientra "
                        "perché le app carichino MangoHud.</span>")
             ft += (" Vale per giochi e app Vulkan (anche Proton/DXVK); le app OpenGL non sono limitate. "
                    "I giochi di Steam: attivo se Steam è partito da questa sessione.")

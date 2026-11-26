@@ -13,9 +13,9 @@ from PySide6.QtWidgets import (QButtonGroup, QComboBox, QFileDialog, QFrame, QGr
                                QLabel, QPushButton, QSizePolicy, QSplitter, QTableWidget, QTableWidgetItem,
                                QTextBrowser, QVBoxLayout, QWidget)
 
+from . import theme as T
 from . import battery as B
 
-BLUE, ORANGE, GREEN, GRAY = QColor("#2a78d6"), QColor("#eb6834"), QColor(46, 160, 67, 40), QColor(140, 140, 140, 55)
 RANGES = [("4 ore", 4 * 3600), ("Oggi", None), ("24 ore", 86400), ("7 giorni", 7 * 86400)]
 SMOOTH = [("1 min", 60), ("5 min", 300), ("15 min", 900)]
 
@@ -111,7 +111,7 @@ class Chart(QWidget):
 
         # fasce: alimentatore, sospensioni
         for rect in (rc, rp):
-            for (a, b), col in [(x, GREEN) for x in d["ac"]] + [(x, GRAY) for x in d["suspends"]]:
+            for (a, b), col in [(x, T.qc("series_ok", 40)) for x in d["ac"]] + [(x, T.qc("info", 55)) for x in d["suspends"]]:
                 xa, xb = max(X(a), rect.left()), min(X(b), rect.right())
                 if xb > xa:
                     p.fillRect(QRectF(xa, rect.top(), xb - xa, rect.height()), col)
@@ -183,10 +183,10 @@ class Chart(QWidget):
                 p.setPen(QPen(color, width, Qt.DashLine if dash else Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
                 p.drawPath(path)
 
-        curve(d["charge"], Yc, BLUE, 2, fill_rect=rc)
-        curve(d["power"], Yp, BLUE, 1.6)
+        curve(d["charge"], Yc, T.qc("accent"), 2, fill_rect=rc)
+        curve(d["power"], Yp, T.qc("accent"), 1.6)
         if d["radeon"]:
-            curve(d["radeon"], Yp, ORANGE, 1.4, dash=True)
+            curve(d["radeon"], Yp, T.qc("accent2"), 1.4, dash=True)
         # puntatore
         if self.mouse_x is not None and rc.left() <= self.mouse_x <= rc.right():
             tm = t0 + (self.mouse_x - rc.left()) / rc.width() * span

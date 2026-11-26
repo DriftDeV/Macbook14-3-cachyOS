@@ -8,6 +8,7 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QPushButton,
                                QScrollArea, QSlider, QVBoxLayout, QWidget)
 
+from . import theme as T
 from . import audio as A
 
 
@@ -166,13 +167,13 @@ class AudioTab(QWidget):
         nid, vals = A.node_info()
         bank = A.has_bankstown(vals)
         if not A.installed():
-            txt = ("<span style='color:#d29922'>DSP degli altoparlanti non installato.</span> "
+            txt = ("<span style='color:" + T.c("warn") + "'>DSP degli altoparlanti non installato.</span> "
                    "Installalo con <code>sudo scripts/install-audio-dsp.sh</code> (o <code>install.sh</code>).")
         elif nid is None:
-            txt = ("<span style='color:#d29922'>Filtro non attivo</span>: cuffie collegate, oppure l'audio non è "
+            txt = ("<span style='color:" + T.c("warn") + "'>Filtro non attivo</span>: cuffie collegate, oppure l'audio non è "
                    "ancora partito. Le impostazioni si possono preparare e valgono quando torna.")
         else:
-            txt = "<span style='color:#2ea043'>Filtro attivo</span> (\"MacBook Pro 14,3 Speakers\")."
+            txt = "<span style='color:" + T.c("ok") + "'>Filtro attivo</span> (\"MacBook Pro 14,3 Speakers\")."
         if A.installed() and not bank:
             txt += " Questa versione del DSP non ha bankstown: aggiorna con <code>sudo scripts/install-audio-dsp.sh</code>."
         self.state.setText(txt)

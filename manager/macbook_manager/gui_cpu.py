@@ -3,6 +3,7 @@ scheda GPU. Le regole sono in power.py; ogni scelta esegue un'azione root fissa 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (QComboBox, QGridLayout, QGroupBox, QLabel, QScrollArea, QVBoxLayout, QWidget)
 
+from . import theme as T
 from . import power as P
 from .actions import BY_ID, available
 
@@ -138,7 +139,7 @@ class CpuTab(QWidget):
                           if n["freq_avg"] else "-")
         t = n["temp"]
         v["temp"].setText(("%.0f °C" % t if t is not None else "-") +
-                          ("  <span style='color:#d29922'>calda</span>" if t and t >= 90 else ""))
+                          ("  " + "<span style='color:" + T.c("warn") + "'>calda</span>" if t and t >= 90 else ""))
         v["temp"].setTextFormat(Qt.RichText)
         v["power"].setText("%.1f W" % s["package_w"] if s.get("package_w") is not None else
                            "- (servizio macbookpro14-3-cpu-limit non attivo)")

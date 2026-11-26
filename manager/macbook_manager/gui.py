@@ -10,10 +10,12 @@ from PySide6.QtWidgets import (QApplication, QGridLayout, QGroupBox, QHBoxLayout
                                QMenu, QMessageBox, QPlainTextEdit, QPushButton, QScrollArea, QSizePolicy,
                                QSystemTrayIcon, QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget)
 
+from . import theme as T
 from . import HELPER, VERSION, status
 from .actions import ACTIONS, BY_ID, active_ids, available, expand
 
-DOT = {"ok": "#2ea043", "warn": "#d29922", "err": "#f85149", "info": "#8b949e"}
+def dot(level):
+    return T.c(level if level in ("ok", "warn", "err") else "info")
 SOCKET = "macbook-manager-%d" % os.getuid()
 TRAY_ACTIONS = ["touchbar-display", "touchbar-keyboard", None, "webcam-on", "webcam-off", None, "sleep-deep",
                 None, "wifi-reload", "bt-headset"]
@@ -43,7 +45,7 @@ class Job(QRunnable):
 
 def _dot(level):
     lab = QLabel("●")
-    lab.setStyleSheet("color: %s; font-size: 14pt;" % DOT.get(level, DOT["info"]))
+    lab.setStyleSheet("color: %s; font-size: 14pt; background: transparent;" % dot(level))
     lab.setFixedWidth(22)
     return lab
 
@@ -309,7 +311,7 @@ class MainWindow(QMainWindow):
             if it["level"] in ("warn", "err") and it["hint"]:
                 h = QLabel(it["hint"])
                 h.setWordWrap(True)
-                h.setStyleSheet("color: %s;" % DOT[it["level"]])
+                h.setStyleSheet("color: %s;" % dot(it["level"]))
                 grid.addWidget(h, r + 1, 1, 1, 3)
         errs = [i for i in items if i["level"] == "err"]
         warns = [i for i in items if i["level"] == "warn"]
@@ -356,6 +358,20 @@ class MainWindow(QMainWindow):
             self.hide()
         else:
             self.show_front()
+
+    def retheme(self):
+        """Tema di Omarchy cambiato: rilegge lo stato (colori di significato) e ridisegna grafici e schede."""
+        if T.name():
+            self.setWindowTitle("MacBook Manager · " + T.name())
+        self.refresh(force=True)
+        w = self.tabs.currentWidget()
+        if hasattr(w, "sync"):
+            try:
+                w.sync()
+            except Exception:  # noqa: BLE001
+                pass
+        for child in self.findChildren(QWidget):
+            child.update()
 
     def show_front(self, tab=None):
         """Mostra la finestra, sulla scheda il cui titolo inizia con `tab` (senza maiuscole), se data."""
@@ -416,6 +432,8 @@ def main(tray=False, tab=None, no_tray_icon=False):
     app.setApplicationVersion(VERSION)
     app.setDesktopFileName("macbook-manager")
     app.setQuitOnLastWindowClosed(False)
+    # Su Omarchy: colori, controlli, carattere e icone del tema attivo (theme.py); altrove resta lo stile del desktop.
+    themed = T.apply(app)
 
     # Una sola istanza: se è già aperta (per esempio nella barra di sistema) le si chiede di mostrarsi.
     sock = QLocalSocket()
@@ -430,6 +448,9 @@ def main(tray=False, tab=None, no_tray_icon=False):
     server.listen(SOCKET)
 
     win = MainWindow(app)
+    if themed:
+        win.setWindowTitle("MacBook Manager · " + (T.name() or "Omarchy"))
+        T.watch(app, win.retheme)
     # Omarchy: c'è il plugin nella barra (omarchy/shell-plugin/macbook-manager), niente seconda icona.
     plugin = os.path.exists(os.path.expanduser("~/.config/omarchy/plugins/macbook-manager"))
     if QSystemTrayIcon.isSystemTrayAvailable() and not no_tray_icon and not plugin:

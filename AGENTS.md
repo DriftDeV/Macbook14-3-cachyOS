@@ -154,6 +154,8 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
   pannello visto con dati veri]. Nuovo `macbook-manager bar` (JSON ~0,1 s), `gui --tab`, scheda **NVRAM** (`nvram.py`,
   `gui_nvram.py`, `scripts/nvram-control.sh`: StartupMute, AutoBoot, BootOrder/BootNext, elenco variabili) [F: lettura e
   GUI offscreen; scritture non ancora provate]. Su questo Mac StartupMute = 01 (muto), SystemAudioVolume = 0x80.
+  Aspetto su Omarchy (`theme.py`): palette/QSS dai token di colors.toml e shell.toml, carattere e icone del tema, cambio
+  di tema dal vivo (QFileSystemWatcher su theme.name) [F offscreen; installazione e prova su Wayland da fare].
 - **Omarchy installato [F] (26/11/2026)** su tutto il disco: `nvme0n1p1` vfat 2 GiB su `/boot` (Limine; `EFI/APPLE` rimesso,
   guardia del T1 integra), `nvme0n1p2` LUKS + btrfs; kernel `7.2.15-4-omarchy`. NVRAM: `Boot0001 Limine`, `Boot0000 OpenCore`.
   Partizioni COSLIVE/OMARCHY e CachyOS **non esistono più**: le note sotto su p3/p4/p5 sono storiche.

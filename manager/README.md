@@ -25,6 +25,13 @@ la voce "MacBook Manager" nel menu, la policy polkit e, secondo il sistema:
 
 `--undo` rimuove tutto (anche il plugin).
 
+**Aspetto su Omarchy** (`theme.py`): la finestra segue il tema attivo, anche quando cambia (`omarchy theme set`, senza
+riavviare il manager): colori da `~/.local/state/omarchy/current/theme/colors.toml`, controlli disegnati con i token
+`[controls]` di `shell.toml` come la shell di Omarchy (riempimenti e bordi in trasparenza, angoli vivi, scheda attiva
+sottolineata col colore d'accento), carattere di sistema (`omarchy font current`), tema di icone del tema, e colori di
+significato (ok/avviso/errore, curve dei grafici) presi da verde/giallo/rosso/accento del tema. Il titolo della finestra
+riporta il nome del tema. Su KDE non cambia niente; `MACBOOK_MANAGER_THEME=native` lo disattiva anche su Omarchy.
+
 ## Cosa mostra (scheda Stato, `macbook-manager status`)
 
 | Gruppo | Voci | Da dove |
