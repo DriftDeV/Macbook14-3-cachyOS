@@ -199,11 +199,8 @@ class GpuTab(QWidget):
         d = G.display_prefs()
         txt = "Adesso lo schermo è sulla <b>%s</b>; al prossimo avvio: <b>%s</b>." % (
             KIND_NAME.get(d["now"], d["now"]), KIND_NAME.get(d["next"], d["next"]))
-        if d["next"] == "intel" and not d["opencore"]:
-            txt += (" <span style='color:#d29922'>Questo avvio non è passato da OpenCore: senza OpenCore (\"Windows "
-                    "GMUX\") la Intel non vede lo schermo e resta la Radeon.</span>")
-        elif d["opencore"]:
-            txt += " Avvio da OpenCore: sì."
+        # Solo informativo: sul 14,3 la variabile basta anche senza OpenCore (26/11/2026, docs/gpu.md).
+        txt += " Avvio da OpenCore: %s." % ("sì" if d["opencore"] else "no")
         self.disp.setText(txt)
         self._mark_active()
         self.rules.sync()

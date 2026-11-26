@@ -373,18 +373,20 @@ Touch Bar si cambiano anche da terminale: `sudo touchbar-mode set display|keyboa
 <details>
 <summary>Schermo sulla scheda Intel (facoltativo, con OpenCore)</summary>
 
-Di base lo schermo è collegato alla Radeon. Avviando Linux da **OpenCore** con `SignalAppleOS` (il firmware crede di
-avviare macOS, come l'opzione "Windows GMUX" di OCLP) e la variabile EFI `gpu-power-prefs` impostata sulla Intel, lo
-schermo passa alla Intel: circa 1,5-2 W in meno a riposo, luminosità funzionante. La Radeon resta comunque accesa.
+Di base lo schermo è collegato alla Radeon. Con la variabile EFI `gpu-power-prefs` impostata sulla Intel (MacBook
+Manager → scheda **GPU** → "Schermo sulla Intel al prossimo avvio", poi riavvio) lo schermo passa alla Intel: circa
+1,5-2 W in meno a riposo, luminosità funzionante. La Radeon resta comunque accesa. **Non serve OpenCore**: provato il
+26/11/2026 con un avvio diretto di Limine. OpenCore (`SignalAppleOS`, come l'opzione "Windows GMUX" di OCLP) resta
+facoltativo, per esempio come menu di avvio con "Reset NVRAM":
 
 ```bash
 sudo scripts/opencore.sh status          # OpenCore, SignalAppleOS, GPU dello schermo
-sudo scripts/opencore.sh install         # OpenCore nella partizione EFI (se manca) e voce di avvio
+sudo scripts/opencore.sh install         # OpenCore nella partizione EFI (se manca) e voce di avvio sistemata
 sudo scripts/opencore.sh gpu intel       # SignalAppleOS + schermo sulla Intel dal prossimo avvio (gpu radeon per tornare)
 ```
 
-La GPU si sceglie anche da MacBook Manager → scheda **GPU** (scrive la stessa variabile EFI, `gpu-power-prefs`); OpenCore
-serve perché il firmware la rispetti. Se manca, `install` costruisce OpenCore da OpenCorePkg (versione fissata) con una configurazione **senza seriali**: su un
+`install` toglie anche le voci "OpenCore" rimaste da un'installazione precedente (puntano a una partizione che non
+c'è più). Se manca, costruisce OpenCore da OpenCorePkg (versione fissata) con una configurazione **senza seriali**: su un
 Mac vero OpenCore lascia al firmware i dati originali; i seriali servono solo ai servizi Apple dentro macOS. La
 configurazione generata passa `ocvalidate` nella CI ma non è ancora stata avviata [non verificato]; quella di OCLP sì. Se
 qualcosa va storto: Option (⌥) all'avvio → "EFI Boot", oppure "Reset NVRAM" dal menu di OpenCore. Sospensione e monitor

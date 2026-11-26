@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # OpenCore sul MacBookPro14,3 per avviare Linux (CachyOS, Omarchy) "come se fosse macOS" e scegliere la GPU dello schermo.
 #
-# Perché: la GPU dello schermo la sceglie il firmware all'accensione dalla variabile EFI gpu-power-prefs (01 = Intel),
-# che scrive MacBook Manager (scheda GPU, scripts/gpu-control.sh display). Provato il 25/11/2026 (docs/gpu.md): con
-# SignalAppleOS (OpenCore dice al firmware che parte macOS) + variabile a 01 lo schermo passa alla Intel; con solo
-# SignalAppleOS non cambia nulla; con solo la variabile, senza OpenCore, non provato [NV]. Questo script si occupa solo
-# di OpenCore e di SignalAppleOS: la variabile resta del manager (OpenCore non la tocca).
+# La GPU dello schermo la sceglie il firmware all'accensione dalla variabile EFI gpu-power-prefs (01 = Intel), che scrive
+# MacBook Manager (scheda GPU, scripts/gpu-control.sh display). Sul 14,3 la variabile BASTA DA SOLA: il 26/11/2026 un
+# avvio di Limine senza OpenCore è partito con lo schermo sulla Intel (docs/gpu.md). OpenCore (SignalAppleOS: il
+# firmware crede di avviare macOS) quindi non serve per la GPU; resta utile come menu di avvio con "Reset NVRAM" e per
+# chi vuole il comportamento "da macOS" del firmware [NV: differenze oltre alla GPU non note]. Questo script si occupa di
+# OpenCore, di SignalAppleOS e della sua voce di avvio; la variabile resta del manager (OpenCore non la tocca).
 #
 # Niente seriali: su un Mac vero OpenCore lascia al firmware i suoi dati (PlatformInfo con Automatic/UpdateSMBIOS/
 # UpdateDataHub/UpdateNVRAM = false), come la EFI di OCLP di questo Mac. Nessuna kext: servono solo a macOS.
@@ -16,12 +17,12 @@
 #                                                      altrimenti OpenCorePkg fissato in config/sources.conf con una
 #                                                      configurazione generata) e la voce di avvio "OpenCore"
 #   sudo scripts/opencore.sh install --rebuild         rigenera EFI/OC (il vecchio resta in EFI/OC.bak-<data>)
-#   sudo scripts/opencore.sh gpu intel|radeon          SignalAppleOS acceso + gpu-power-prefs come il manager (gpu-control.sh)
+#   sudo scripts/opencore.sh gpu intel|radeon          SignalAppleOS acceso + gpu-power-prefs come il manager (gpu-control.sh);
+#                                                      per la sola GPU basta il manager, anche senza OpenCore
 #   scripts/opencore.sh config --pkg DIR --out FILE    solo genera config.plist (usato dalla CI)
 #   --dry-run mostra senza cambiare. Ogni config.plist toccato viene prima copiato in config.plist.bak-<data>.
 #
-# Se qualcosa va storto all'avvio: tieni premuto Option (⌥) e scegli "EFI Boot" (Limine/GRUB senza OpenCore, schermo
-# sulla Radeon); dal menu di OpenCore c'è anche "Reset NVRAM". Stato: generazione [F] in CI con ocvalidate; avvio con la
+# Se qualcosa va storto all'avvio: tieni premuto Option (⌥) e scegli "EFI Boot" (Limine/GRUB senza OpenCore); dal menu di OpenCore c'è anche "Reset NVRAM". Stato: generazione [F] in CI con ocvalidate; avvio con la
 # configurazione generata [NV] (quella di OCLP è provata).
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -215,6 +216,17 @@ install)
     # OpenCore; poco male: LauncherOption=Full fa sì che OpenCore registri e tenga per prima la propria voce.
     SRC="$(findmnt -rno SOURCE "$ESP")"
     DISK="/dev/$(lsblk -no PKNAME "$SRC")"; PARTN="$(cat "/sys/class/block/$(basename "$SRC")/partition")"
+    # Voci "OpenCore" rimaste da un'installazione precedente (partizione EFI ricreata, per esempio dall'installatore di
+    # Omarchy): puntano a un PARTUUID che non esiste più e il firmware non le può avviare. Si tolgono.
+    efibootmgr -v | grep -i 'OpenCore' | while read -r line; do
+        num="$(echo "$line" | sed -n 's/^Boot\([0-9A-Fa-f]\{4\}\).*/\1/p')"
+        uuid="$(echo "$line" | grep -oiE 'GPT,[0-9a-f-]{36}' | head -1 | cut -d, -f2)"
+        [ -n "$num" ] && [ -n "$uuid" ] || continue
+        if ! lsblk -rno PARTUUID | grep -qix "$uuid"; then
+            log "Voce di avvio Boot$num (OpenCore) punta a una partizione che non c'è più ($uuid): la tolgo"
+            run efibootmgr -q -b "$num" -B
+        fi
+    done
     if efibootmgr -v | grep -i 'OpenCore' | grep -qi "$(lsblk -no PARTUUID "$SRC")"; then
         ok "Voce di avvio OpenCore già presente per $SRC."
     else

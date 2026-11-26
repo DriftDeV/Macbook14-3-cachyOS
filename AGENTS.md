@@ -118,7 +118,8 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
   **Schermo sulla Intel [F] (25/11/2026)**: avvio da OpenCore (OCLP 3.0.0, "Windows GMUX" = `SignalAppleOS`) +
   `gpu-power-prefs=01` → i915 `eDP-1`, KWin sulla Intel, luminosità via gmux funzionante. Radeon ancora accesa (~7 W,
   seconda GPU di KWin): l'utente non vuole spegnerla (romperebbe le uscite e il resto). Sospensione e uscite esterne da
-  riprovare. Senza OpenCore la Intel resta cieca.
+  riprovare. **Correzione 26/11/2026 [F]: basta `gpu-power-prefs=01`, anche SENZA OpenCore** (avvio Limine diretto,
+  schermo su i915); "senza OpenCore la Intel resta cieca" era un'inferenza falsa.
 - **Consumi [F]** (`docs/power.md`): unica leva netta a riposo = Radeon `manual`+`POWER_SAVING`+PCIe 2,5 GT/s (-1,5 W);
   `scripts/install-power.sh` la applica a batteria. Slider KDE e turbo non cambiano nulla a riposo. ~18 W ≈ 4 h.
 - **Touch ID [F]** (24/11/2026): `scripts/install-touchid.sh` (install/status/import/undo, passo `touchid` di `install.sh`
@@ -143,7 +144,9 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
   `SignalAppleOS` acceso, seriali presenti ma NON applicati: PlatformInfo Automatic/Update* = false). Avvio corrente da
   OpenCore (BootCurrent 0000, voci viste attraverso RequestBootVarRouting). `gpu-power-prefs` = 01 scritta il 26/11 alle
   15:20 (come il manager: `gpu-control.sh display`; NON in NVRAM Add/Delete di OpenCore, che sovrascriverebbe il manager).
-  Solo variabile senza OpenCore: mai provato [NV]. Da provare: `gpu intel` + riavvio + `sleep-test.sh real-deep` (S3 sul 7.2). OpenCorePkg 1.0.8 fissato con
+  Avvio delle 15:22 senza OpenCore (niente `boot-path`/`opencore-version`; `Boot0000 OpenCore` punta al PARTUUID
+  `65c5675b…` della vecchia ESP, che non esiste più) **con lo schermo sulla Intel** [F]. Su Omarchy OpenCore non è mai
+  partito. Hyprland vede anche un `eDP-2` fantasma (amdgpu, 0×0). Da provare: `gpu intel` + riavvio + `sleep-test.sh real-deep` (S3 sul 7.2). OpenCorePkg 1.0.8 fissato con
   SHA-256; `ocvalidate` solo in CI (eseguire binari scaricati qui è stato bloccato dai permessi).
 - **Omarchy installato [F] (26/11/2026)** su tutto il disco: `nvme0n1p1` vfat 2 GiB su `/boot` (Limine; `EFI/APPLE` rimesso,
   guardia del T1 integra), `nvme0n1p2` LUKS + btrfs; kernel `7.2.15-4-omarchy`. NVRAM: `Boot0001 Limine`, `Boot0000 OpenCore`.

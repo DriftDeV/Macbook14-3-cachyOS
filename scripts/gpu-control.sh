@@ -2,8 +2,8 @@
 # Controlli GPU del MacBookPro14,3 per MacBook Manager (scheda GPU). Solo comandi fissi, nessun valore libero.
 # Installato da scripts/install-manager.sh in /usr/local/lib/macbookpro14-3/gpu-control.sh; lo usa l'helper di root.
 #   gpu-control.sh display intel|radeon   GPU dello schermo al PROSSIMO avvio (variabile EFI gpu-power-prefs, come
-#                                          gpu-switch). La Intel vede lo schermo solo avviando da OpenCore con
-#                                          "Windows GMUX" (SignalAppleOS): vedi docs/gpu.md.
+#                                          gpu-switch). Basta da sola, anche senza OpenCore (provato il
+#                                          26/11/2026, docs/gpu.md).
 #   gpu-control.sh radeon auto|game|save|low|high
 #       auto: livello automatico (profilo predefinito)   game: automatico + profilo 3D_FULL_SCREEN (come con l'alimentatore)
 #       save: manual + POWER_SAVING (come a batteria)     low/high: clock fissi al minimo / al massimo
@@ -37,9 +37,6 @@ case "${1:-} ${2:-}" in
         dd if="$tmp" of="$VAR" bs=8 count=1 status=none
         rm -f "$tmp"
         echo "GPU dello schermo al prossimo avvio: $2 (gpu-power-prefs = $(od -An -tx1 "$VAR" | awk '{print $5}'))."
-        if [ "$2" = intel ]; then
-            echo "Serve l'avvio da OpenCore con \"Windows GMUX\": altrimenti la Intel non vede lo schermo e resta la Radeon."
-        fi
         echo "Riavvia per applicarla." ;;
     "radeon auto"|"radeon game"|"radeon save"|"radeon low"|"radeon high")
         [ "$(id -u)" = 0 ] || { echo "Serve root." >&2; exit 1; }

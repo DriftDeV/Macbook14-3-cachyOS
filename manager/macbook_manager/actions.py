@@ -103,8 +103,7 @@ ACTIONS = [
     dict(id="gpu-display-intel", group="GPU", label="Schermo sulla Intel al prossimo avvio (risparmio)", root=True,
          steps=[[GPUCTL, "display", "intel"]], needs=[GPUCTL], active=lambda: _display_next() == "intel",
          confirm="Al prossimo avvio lo schermo passa alla Intel: circa 1,5-2 W in meno, ma i giochi che usano la Radeon "
-                 "vanno peggio (ogni fotogramma viene copiato alla Intel, di solito 60 fps fissi). Funziona solo avviando "
-                 "da OpenCore con \"Windows GMUX\". Continuare?",
+                 "vanno peggio (ogni fotogramma viene copiato alla Intel, di solito 60 fps fissi). Continuare?",
          then=("reboot", "Impostato. Riavviare ora per applicarlo?")),
     dict(id="gpu-display-radeon", group="GPU", label="Schermo sulla Radeon al prossimo avvio (prestazioni)", root=True,
          steps=[[GPUCTL, "display", "radeon"]], needs=[GPUCTL], active=lambda: _display_next() == "radeon",

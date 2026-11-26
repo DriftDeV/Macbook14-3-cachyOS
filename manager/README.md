@@ -158,8 +158,8 @@ di `install.sh`), in `audio.py` / `gui_audio.py`, da utente, senza password.
 - **Chi sta usando le GPU**: da `/proc/<pid>/fdinfo` (`drm-engine-*`, nanosecondi di lavoro per client DRM, contati una
   volta per `drm-client-id`): su quale GPU lavora davvero ogni programma e quanto. Solo i processi dell'utente (KWin no).
 - **GPU dello schermo al prossimo avvio** (`gpu-control.sh display intel|radeon`, variabile EFI `gpu-power-prefs`, poi
-  "Riavvia"): Intel per risparmiare (serve l'avvio da OpenCore con "Windows GMUX"), Radeon per i giochi. La scheda avvisa
-  se si sceglie la Intel senza OpenCore.
+  "Riavvia"): Intel per risparmiare, Radeon per i giochi. Basta la variabile, anche senza OpenCore (provato il
+  26/11/2026); la scheda dice anche se l'avvio è passato da OpenCore.
 - **Radeon**: automatica + profilo giochi (come con l'alimentatore), automatica predefinita, risparmio (manual +
   POWER_SAVING, come a batteria), clock al minimo / al massimo. Valgono fino al prossimo cambio di alimentazione, quando
   `power-source.sh` riapplica `power.conf`; lì anche "Radeon in risparmio a batteria: sì/no".
