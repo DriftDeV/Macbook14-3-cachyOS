@@ -28,6 +28,11 @@ sul canale DFS 128, annuncia VHT 80 / HE 160 MHz, paese IT). Tag come in [`READM
 - Il file `.Apple Inc.-MacBookPro14,3.txt` e il firmware patchato vanno in `/usr/lib/firmware/updates/brcm/`
   (hanno la precedenza su linux-firmware e i suoi aggiornamenti non li toccano). Valori letti in `/var/lib/mbp143-wifi/`.
 
+- iwd (Omarchy: iwd senza NetworkManager), dal 26/11/2026: se c'è iwd lo script mette
+  `DisableMacAddressRandomization=true` nella sezione `[Scan]` di `/etc/iwd/main.conf` (iwd non ha drop-in), con una
+  riga marcatore; un valore già presente viene commentato e `--undo` lo ripristina (provato su 4 casi di file finti).
+  `nmcli` non è più obbligatorio. Effetto sul 5 GHz con iwd: [NV].
+
 ## Dopo [F]
 
 | | prima | dopo |

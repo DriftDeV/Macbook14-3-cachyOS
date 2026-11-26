@@ -1,0 +1,3 @@
+# Cartella dove la sessione dell'utente (omabar-theme-sync) scrive i colori del tema per OmaBar.
+# Il gruppo @GROUP@ è quello dell'utente della Touch Bar (scripts/install-omabar.sh lo sostituisce).
+d /run/omabar 0775 root @GROUP@ -

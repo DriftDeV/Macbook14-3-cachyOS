@@ -1,0 +1,25 @@
+# Touch Bar T1 in modalità display con OmaBar (omabar/) al posto di t1-touchbar-hw + renderer utente o di
+# tiny-dfr. Avviato da touchbar-mode quando TOUCHBAR_RENDERER=omabar; installato da scripts/install-omabar.sh.
+[Unit]
+Description=Touch Bar T1 (modalità display): renderer OmaBar
+BindsTo=dev-dri-touchbar.device
+After=dev-dri-touchbar.device
+# Stesso schermo e stesso sensore: mai insieme.
+Conflicts=macbookpro14-3-touchbar-hw.service macbookpro14-3-touchbar-hw.socket macbookpro14-3-tiny-dfr.service
+
+[Service]
+ExecStartPre=/usr/local/lib/macbookpro14-3/omabar/touchbar-touch attach
+ExecStart=/usr/local/lib/macbookpro14-3/omabar/omabar
+ExecStopPost=/usr/local/lib/macbookpro14-3/omabar/touchbar-touch detach
+Restart=on-failure
+RestartSec=2
+# OmaBar apre schermo e uinput da root, poi passa a nobody (gruppi input e video). Legge solo
+# /etc/omabar, /usr/share/omabar, le icone di sistema e /run/omabar/theme.toml (scritto dalla sessione).
+ProtectHome=yes
+PrivateTmp=yes
+ProtectSystem=full
+LockPersonality=yes
+NoNewPrivileges=yes
+
+[Install]
+# Nessuna: lo avvia touchbar-mode.

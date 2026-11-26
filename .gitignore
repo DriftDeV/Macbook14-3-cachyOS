@@ -8,3 +8,6 @@ pkg/
 __pycache__/
 # clone e build di makepkg in pkgs/*/
 pkgs/*/*/
+omarchy/omabar/target/
+# I sorgenti di OmaBar fanno parte della repo (la regola src/ sopra è per i sorgenti scaricati).
+!omarchy/omabar/src/

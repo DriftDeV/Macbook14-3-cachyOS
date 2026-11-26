@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Copia i colori del tema attivo di Omarchy in /run/omabar/theme.toml, dove li legge OmaBar (renderer di sistema,
+# che non vede la home). Lo avviano omabar-theme-sync.service all'accesso e omabar-theme-sync.path a ogni
+# `omarchy theme set`. Senza Omarchy non fa niente e OmaBar usa i colori neutri.
+set -euo pipefail
+OUT_DIR=/run/omabar
+CUR="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/current"
+SRC="$CUR/theme/colors.toml"
+
+[ -r "$SRC" ] || { echo "omabar-theme-sync: $SRC assente, niente da copiare"; exit 0; }
+[ -d "$OUT_DIR" ] && [ -w "$OUT_DIR" ] || { echo "omabar-theme-sync: $OUT_DIR assente o non scrivibile (tmpfiles di install-omabar.sh)" >&2; exit 1; }
+
+name="$(head -n1 "$CUR/theme.name" 2>/dev/null | tr -d '"\\' || true)"
+tmp="$(mktemp "$OUT_DIR/.theme.XXXXXX")"
+trap 'rm -f "$tmp"' EXIT
+{
+    [ -n "$name" ] && printf 'name = "%s"\n' "$name"
+    grep -Ev '^[[:space:]]*name[[:space:]]*=' "$SRC" || true
+} > "$tmp"
+chmod 644 "$tmp"
+# Rename atomico: OmaBar non legge mai un file a metà.
+mv -f "$tmp" "$OUT_DIR/theme.toml"
+trap - EXIT
+echo "omabar-theme-sync: tema ${name:-senza nome}"

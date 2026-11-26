@@ -214,7 +214,8 @@ def _audio():
 
 def _touchbar():
     mode = _read("/run/macbookpro14-3/touchbar/mode", "")
-    renderer = "tiny-dfr" if os.path.exists("/run/macbookpro14-3/touchbar/tiny-dfr") else ("t1bridge" if mode == "display" else "")
+    renderer = next((r for r in ("omabar", "tiny-dfr") if os.path.exists("/run/macbookpro14-3/touchbar/" + r)),
+                    "t1bridge" if mode == "display" else "")
     return mode, renderer
 
 

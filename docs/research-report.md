@@ -94,7 +94,7 @@ L'installazione vera e propria usa Calamares con partizionamento manuale e conse
 | Priorità | Attività | Criterio di accettazione | Fattibilità |
 |---|---|---|---|
 | P0 | **Sicurezza e preflight**: `scripts/preflight` (modello, EFI64, batteria, SIP/FileVault, snapshot, backup mappa partizioni e ESP/T1 firmware) | backup verificato e `--dry-run` di default | alta |
-| P0 | **Installazione da macOS**: `macos/prepare.sh` (download con sha256/firma, resize, FAT32, estrazione ISO, loader, istruzioni Option) con prova su `COSLIVE`; piano B GRUB standalone | live avviato con tastiera interna o USB-C | media (non documentata) |
+| P0 | **Installazione da macOS**: `cachyos/macos/prepare.sh` (download con sha256/firma, resize, FAT32, estrazione ISO, loader, istruzioni Option) con prova su `COSLIVE`; piano B GRUB standalone | live avviato con tastiera interna o USB-C | media (non documentata) |
 | P1 | **Base mainline**: `mkinitcpio.conf.d`, quirk libinput, controllo `APPLESPI` nel kernel | tastiera al prompt LUKS; palm rejection | alta |
 | P1 | **Touch Bar T1**: `apple-ibridge-dkms` basato su nonderbe/nohzafk/AJ-dev-i60 (senza `applespi`), con `skip_acpi_power`, regole udev, override `39-usbmuxd.rules`, `tb_mode` e `fnmode` configurabili; ri-enumerazione T1 come servizio | modprobe non si blocca, barra attiva dopo upgrade del kernel | media |
 | P1 | **Audio**: `snd-hda-macbookpro-dkms` dal fork dnlbtz, controllo `cs8409`, ricostruzione per kernel ≥6.17, filter-chain PipeWire | speaker e microfono funzionanti dopo cold boot e ibernazione | media |

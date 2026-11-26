@@ -27,7 +27,7 @@ sospensione con durata, modalità, batteria consumata e causa del risveglio (`ma
 
 ## Scheda Touch Bar: si adatta al renderer
 
-In alto il menu **Renderer** (fnstrip / T1Bridge oppure tiny-dfr) mostra quello in uso e permette di passare all'altro
+In alto il menu **Renderer** (fnstrip / T1Bridge, tiny-dfr oppure OmaBar) mostra quello in uso e permette di passare a un altro
 («Usa questo renderer», password via polkit: `touchbar-mode renderer ...`). Sotto compare l'editor del renderer scelto;
 si può preparare la configurazione dell'altro prima di passarci.
 
@@ -37,6 +37,21 @@ fnstrip lo slider scurisce i nove colori del tema (sfondo, tasti, scritte, icone
 applica». La percentuale e i colori di partenza stanno in `~/.config/macbook-manager/fnstrip-brightness.json`, così
 rileggendo il file si ritrovano tema e colori originali. Con Pastello e Arcobaleno le sfumature dei tasti restano piene.
 [F] Provata dall'utente il 25/11/2026 (scheda che cambia con il renderer, editor di tiny-dfr, slider).
+
+## Touch Bar con OmaBar: editor di /etc/omabar/config.toml
+
+OmaBar (`omarchy/omabar/`, `omarchy/install-omabar.sh`) segue da solo i colori del tema di Omarchy. L'editor scrive solo le
+sezioni che cambiano rispetto a `/usr/share/omabar/config.toml`:
+- **Anteprima** disegnata dal binario di OmaBar (`omabar preview --config`) con il tema in uso, per il livello aperto
+  (anche quello della sessione bloccata), con un brano finto se si vuole.
+- **Luminosità** massima e minima e «segue lo schermo», salvate dal vivo.
+- **Aspetto**: fondo dal tema o nero, sfondo dei tasti a riposo, carattere, dimensione, dissolvenza, pixel shift.
+- **Tasti**: livello normale, livello con Fn (altri livelli aggiungibili) e livello di blocco (che non invia tasti); ogni
+  tasto ha testo, icona (anche «mentre suona»), ora, batteria, brano o separatore, tasti inviati e larghezza.
+- Prima di salvare la configurazione passa da `omabar check` (stesso parser del renderer): un file che OmaBar
+  scarterebbe non viene scritto. Copia precedente in `~/.config/macbook-manager/omabar.toml.bak`.
+
+[F] Provato fuori schermo (offscreen) con il binario vero il 26/11/2026; [NV] nella sessione reale.
 
 ## Touch Bar con tiny-dfr: editor di /etc/tiny-dfr/config.toml
 
@@ -211,7 +226,7 @@ registro), **Impronte registrate** (`fprintd-list`). Gli interruttori usano `/us
 
 | Gruppo | Azioni |
 |---|---|
-| Touch Bar | modalità display (subito) / tastiera (salvata, attiva dopo lo spegnimento: il manager propone di spegnere), riavvia il renderer, renderer fnstrip/T1Bridge o tiny-dfr (dopo `scripts/install-tiny-dfr.sh`), webcam virtuale on/off |
+| Touch Bar | modalità display (subito) / tastiera (salvata, attiva dopo lo spegnimento: il manager propone di spegnere), riavvia il renderer, renderer fnstrip/T1Bridge, tiny-dfr (dopo `scripts/install-tiny-dfr.sh`) o OmaBar (dopo `omarchy/install-omabar.sh`), webcam virtuale on/off |
 | Sospensione | S3 (deep) / s2idle |
 | Energia | Radeon in risparmio a batteria sì/no, turbo CPU a batteria sì/no (`power.conf` + riapplica) |
 | Rete e audio | ricarica il driver Wi-Fi, ripristina l'audio delle chiamate Bluetooth (CVSD) |

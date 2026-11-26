@@ -1,0 +1,31 @@
+[package]
+name = "omabar"
+version = "0.1.0"
+edition = "2021"
+description = "Renderer della Touch Bar T1 del MacBookPro14,3 che segue il tema del sistema"
+license = "MIT"
+
+[dependencies]
+anyhow = "1"
+cairo-rs = { version = "0.22", default-features = false, features = ["png"] }
+pango = "0.22"
+pangocairo = "0.22"
+chrono = { version = "0.4", features = ["unstable-locales"] }
+drm = "0.14"
+input = "0.9"
+input-linux = { version = "0.7", features = ["serde"] }
+input-linux-sys = "0.9"
+librsvg-rebind = "0.3"
+nix = { version = "0.29", features = ["event", "fs", "inotify", "mman", "socket", "user"] }
+serde = { version = "1", features = ["derive"] }
+base64 = "0.22"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp", "gif"] }
+serde_json = "1"
+zbus = "5"
+wayland-client = "0.31"
+wayland-protocols-wlr = { version = "0.3", features = ["client"] }
+toml = "0.8"
+
+[profile.release]
+lto = true
+codegen-units = 1

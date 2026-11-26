@@ -130,12 +130,18 @@ def touchbar_mode():
 
 TDFR_UNIT = "macbookpro14-3-tiny-dfr.service"
 TDFR_BIN = "/usr/local/lib/macbookpro14-3/tiny-dfr/tiny-dfr"
+OMABAR_UNIT = "macbookpro14-3-omabar.service"
+OMABAR_BIN = "/usr/local/lib/macbookpro14-3/omabar/omabar"
 
 
 def touchbar_renderer():
-    """Renderer in uso in modalità display: "tiny-dfr" (scripts/install-tiny-dfr.sh) o "t1bridge" (fnstrip o quello
-    di T1Bridge). touchbar-mode crea il file quando avvia tiny-dfr."""
-    return "tiny-dfr" if os.path.exists("/run/macbookpro14-3/touchbar/tiny-dfr") else "t1bridge"
+    """Renderer in uso in modalità display: "tiny-dfr" (scripts/install-tiny-dfr.sh), "omabar"
+    (omarchy/install-omabar.sh) o "t1bridge" (fnstrip o quello di T1Bridge). touchbar-mode crea il file quando avvia
+    tiny-dfr o OmaBar."""
+    for r in ("omabar", "tiny-dfr"):
+        if os.path.exists("/run/macbookpro14-3/touchbar/" + r):
+            return r
+    return "t1bridge"
 
 
 def touchbar():
@@ -160,7 +166,17 @@ def touchbar():
     else:
         items.append(_item("Touch Bar", "touchbar", "Modalità", "%s, salvata: %s" % (cur, saved), WARN,
                            "La modalità salvata non è attiva.", "touchbar-" + saved))
-    if cur == "display" and touchbar_renderer() == "tiny-dfr":
+    if cur == "display" and touchbar_renderer() == "omabar":
+        r = system_unit_active(OMABAR_UNIT)
+        agent = user_unit_active("omabar-agent.service")
+        items.append(_item("Touch Bar", "renderer", "Renderer",
+                           "OmaBar, " + ("attivo" if r else "fermo") + ("" if not r or agent else ", agente fermo"),
+                           (OK if agent else WARN) if r else ERR,
+                           ("" if agent else "Senza omabar-agent la barra non vede blocco, screensaver e musica "
+                            "(systemctl --user start omabar-agent).") if r else
+                           "Barra senza grafica: riavvia OmaBar (journalctl -u %s)." % OMABAR_UNIT,
+                           None if r else "renderer-omabar"))
+    elif cur == "display" and touchbar_renderer() == "tiny-dfr":
         r = system_unit_active(TDFR_UNIT)
         items.append(_item("Touch Bar", "renderer", "Renderer", "tiny-dfr, " + ("attivo" if r else "fermo"),
                            OK if r else ERR, "" if r else "Barra senza grafica: riavvia tiny-dfr "

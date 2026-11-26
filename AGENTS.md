@@ -14,6 +14,12 @@ installati da `scripts/install-touchid.sh`: vedi `docs/touchid-t1.md`. In modali
 **Grafica della Touch Bar [F] provata a runtime** (23/11/2026; ora `scripts/install-touchbar-display.sh` + `touchbar-mode`):
 grafica, tocco, volume, sospensione (passaggio automatico a modalità tastiera) e webcam (H.264; Discord via v4l2loopback).
 Renderer fnstrip (`scripts/install-fnstrip.sh`) provato e funzionante.
+**OmaBar [F]** (26/11/2026): renderer nostro in `omarchy/omabar/` (da zero, senza codice di tiny-dfr), segue i colori
+del tema di Omarchy dal vivo, con agente di sessione (blocco, screensaver, schermi spenti, musica: fase 2 [F] sul
+socket, rilevamenti reali [NV]); `omarchy/install-omabar.sh` (passo `omabar` di `install.sh`, solo Omarchy) + `touchbar-mode renderer omabar`. Stato e [NV] in
+`omarchy/omabar/README.md`. Copertina del brano, batteria in carica da `ADP1/online`, testo con Pango (CJK), separatori tolti.
+Skill di Claude Code `/omabar` in `omarchy/claude-skill/omabar/` (installata in `~/.claude/skills/omabar` da install-omabar.sh). Fino al 26/11 si chiamava CachyBar (rinominato: è per Omarchy); scheda e editor in MacBook
+Manager (`omabar.py`/`gui_omabar.py`).
 **tiny-dfr [F]** (25/11/2026) come renderer alternativo in modalità display: `scripts/install-tiny-dfr.sh` +
 `touchbar-mode renderer tiny-dfr|t1bridge`, con `patches/tiny-dfr/` (nome del sensore, luminosità in software per non
 togliere l'ALS a `hid-sensor-hub`) e tocco via `hid-multitouch` `new_id`. Vedi `docs/t1bridge.md`.
@@ -29,18 +35,20 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
 
 | Percorso | Contenuto |
 |---|---|
-| `install.sh` | post-installazione su CachyOS appena installato, **senza domande** (dal 25/11/2026): installa tutto (display con fnstrip predefinito + tiny-dfr inattivo, Touch ID, DSP audio, manager, Wi-Fi); modalità e renderer si scelgono da MacBook Manager. `--only/--skip`, riepilogo, registro in `/var/log/macbookpro14-3-install.log`; prima `--dry-run` (16 passi ok in prova) |
-| `macos/prepare.sh` | da macOS: backup, download ISO, ridimensiona APFS, crea `COSLIVE` + partizione Linux, estrae ISO |
+| `install.sh` | post-installazione su CachyOS **o Omarchy** appena installato (riconosce il sistema: OmaBar e iwd su Omarchy, fnstrip/NM/KWin su KDE), **senza domande** (dal 25/11/2026): installa tutto (display con fnstrip predefinito + tiny-dfr inattivo, Touch ID, DSP audio, manager, Wi-Fi); modalità e renderer si scelgono da MacBook Manager. `--only/--skip`, riepilogo, registro in `/var/log/macbookpro14-3-install.log`; prima `--dry-run` (16 passi ok in prova) |
+| `cachyos/` | **solo CachyOS/KDE** (dal 26/11/2026): `macos/prepare.sh` (da macOS: backup, download ISO, ridimensiona APFS, crea `COSLIVE` + partizione Linux, estrae ISO), `kde/` (drop-in KWin anti-MangoHud) |
+| `omarchy/` | **solo Omarchy/Hyprland**: `prepare-usb.sh` (chiavetta da macOS o Linux: ISO estratta con `archisolabel=OMARCHY`, copia verificata di `EFI/APPLE`+`EFI/OC` con `ripristina.sh`, Wi-Fi della live, tar della repo; `--embed-wifi` ricostruisce `airootfs.sfs`), `wifi-live.sh`, `omabar/`, `install-omabar.sh`, `claude-skill/omabar/` |
+| `.github/` | CI: sintassi + ShellCheck (`--severity=warning`) di tutti gli script con shebang, bash 3.2 su macOS, Python, OmaBar (build/test/anteprima in Arch), driver DKMS contro `linux` e `linux-lts` di Arch (`.github/scripts/build-drivers.sh`), `makepkg --printsrcinfo` |
 | `scripts/` | `lib.sh`, `backup-esp.sh`, `install-touchbar.sh`, `install-audio.sh`, `install-audio-dsp.sh` (pkgs bankstown-lv2 + mbp143-audio con makepkg da utente), `install-wifi.sh`, `install-wifi-nvram.sh`, `install-sleep.sh`, `sleep-test.sh`, `install-power.sh`, `install-bt.sh`, `bt-sco-route.py`, `build-t1bridge.sh`, `install-touchbar-display.sh`, `touchbar-mode.sh`, `install-fnstrip.sh`, `kernel-src.sh` (sorgenti del kernel esatto da kernel.org per i moduli DKMS), `t1-reenumerate.sh`, `install-manager.sh`, `install-touchid.sh`, `install-tiny-dfr.sh`, `touchid-pam.sh`, `fix-chromium-gpu.sh` (app Chromium/Electron: `AMD_DEBUG=notiling` su Wayland, da utente) |
 | `config/` | mkinitcpio, libinput, kde, sleep, power, systemd, udev, tmpfiles, networkmanager, modprobe, `sources.conf` (sorgenti esterne; Touch Bar pinnata) |
-| `manager/` | MacBook Manager: `macbook-manager` (stato/azioni, CLI + GUI PySide6 con icona nella barra di sistema, editor di fnstrip in `fnstrip.py`/`gui_fnstrip.py`, Touch Bar in diretta/screenshot/video in `tbcapture.py`/`gui_live.py` dalla registrazione di debug di fnstrip, scheda Touch Bar che si adatta al renderer (`gui_touchbar.py`, editor tiny-dfr in `tinydfr.py`/`gui_tinydfr.py`), scheda Ottimizzazione delle app Chromium/web app in `optimize.py`/`gui_optimize.py` con `fix-chromium-gpu`, scheda Audio con preset e regolazioni sicure del DSP degli altoparlanti in `audio.py`/`gui_audio.py` + script WirePlumber `config/wireplumber/macbook-manager-audio.lua` che le riapplica, scheda GPU (stato, uso per processo da fdinfo, GPU dello schermo, profili Radeon, GPU per app, limite FPS) in `gpu.py`/`gui_gpu.py` + `scripts/gpu-control.sh`, scheda CPU con regole per alimentatore/batteria (turbo, frequenza, profilo, RAPL, tetto di temperatura) in `power.py`/`gui_cpu.py` + `config/power/cpu-limit.py` e MangoHud per il limite FPS, scheda Batteria con grafico dal vivo, sessioni e report in `battery.py`/`gui_battery.py` + registratore `manager/systemd/macbook-manager-battery-log.timer` ogni minuto), helper root via pkexec che accetta solo gli id di `actions.py`; installato da `scripts/install-manager.sh` |
+| `manager/` | MacBook Manager: `macbook-manager` (stato/azioni, CLI + GUI PySide6 con icona nella barra di sistema, editor di fnstrip in `fnstrip.py`/`gui_fnstrip.py`, Touch Bar in diretta/screenshot/video in `tbcapture.py`/`gui_live.py` dalla registrazione di debug di fnstrip, scheda Touch Bar che si adatta al renderer (`gui_touchbar.py`, editor tiny-dfr in `tinydfr.py`/`gui_tinydfr.py`, editor OmaBar in `omabar.py`/`gui_omabar.py`), scheda Ottimizzazione delle app Chromium/web app in `optimize.py`/`gui_optimize.py` con `fix-chromium-gpu`, scheda Audio con preset e regolazioni sicure del DSP degli altoparlanti in `audio.py`/`gui_audio.py` + script WirePlumber `config/wireplumber/macbook-manager-audio.lua` che le riapplica, scheda GPU (stato, uso per processo da fdinfo, GPU dello schermo, profili Radeon, GPU per app, limite FPS) in `gpu.py`/`gui_gpu.py` + `scripts/gpu-control.sh`, scheda CPU con regole per alimentatore/batteria (turbo, frequenza, profilo, RAPL, tetto di temperatura) in `power.py`/`gui_cpu.py` + `config/power/cpu-limit.py` e MangoHud per il limite FPS, scheda Batteria con grafico dal vivo, sessioni e report in `battery.py`/`gui_battery.py` + registratore `manager/systemd/macbook-manager-battery-log.timer` ogni minuto), helper root via pkexec che accetta solo gli id di `actions.py`; installato da `scripts/install-manager.sh` |
 | `pkgs/`, `dkms/` | PKGBUILD (`macbookpro14-3-meta`, `apple-ibridge-dkms`, `mbp143-audio` DSP degli altoparlanti + `bankstown-lv2` bassi psicoacustici), `dkms.conf` di riserva, `t1bridge-appletbdrm`, `t1bridge-uvc`, `t1bridge-ncm` (rete privata per Touch ID) |
 | `patches/` | `touchbar/`: port di apple-ibridge a Linux 7.3 + `LLVM=1` automatico; README con le candidate; `audio/`; `tiny-dfr/` (T1) |
 | `docs/` | report di ricerca e note per componente; indice in `docs/README.md` |
 
 ## Regole per chi lavora qui
 
-1. **Sicurezza dei dischi.** `macos/prepare.sh` modifica le partizioni di questo Mac. Non lanciarlo con
+1. **Sicurezza dei dischi.** `cachyos/macos/prepare.sh` e `omarchy/prepare-usb.sh --execute` modifica le partizioni di questo Mac. Non lanciarlo con
    `--execute` di tua iniziativa: serve una richiesta esplicita dell'utente nella chat, backup fatto e
    alimentatore collegato. Le conferme scritte (`RIDIMENSIONA`, `ROLLBACK`) le scrive l'utente, non tu.
    Non cancellare mai la ESP di macOS (`disk0s1`, su Linux `nvme0n1p1`): contiene il firmware T1 (Touch Bar, webcam, ALS).
@@ -55,7 +63,7 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
 4. **Niente sorgenti non fidate eseguite alla cieca.** I repo 2026 citati sono piccoli, si citano a vicenda e in
    parte sono scritti con IA: leggi il codice prima di integrarlo; pinna a un commit dopo averlo verificato.
 5. **Commit/push solo su richiesta dell'utente.** Messaggi di commit con la riga `Co-Authored-By` richiesta dal sistema.
-6. Mantieni gli script compatibili: `macos/prepare.sh` con **bash 3.2** (quella di macOS); gli script Linux con bash moderna.
+6. Mantieni gli script compatibili: `cachyos/macos/prepare.sh` e `omarchy/prepare-usb.sh` con **bash 3.2** (quella di macOS); gli script Linux con bash moderna.
    Controlla con `bash -n` e `shellcheck` (la CI lo fa).
 
 ## Fatti da non dimenticare (correzioni emerse dalla ricerca)
@@ -78,6 +86,7 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
   cache in `/var/cache/macbookpro14-3/kernel-src`); senza rete ripiegano sulle copie 7.3. appletbdrm e ncm senza
   `BUILD_EXCLUSIVE_KERNEL`. Compilati e provati per 7.3.5 e 6.18.60 LTS. `macbookpro14-3-dkms-catchup.service` ricompila
   all'avvio quelli mancanti per il kernel in uso. La patch big-frames si applica con `-F3` (contesto diverso sul 6.18).
+  Dal 7.3.6 / 6.18.65 `codec->jacktbl` è una lista collegata: serve la patch audio `0003` (compila su entrambi, 26/11/2026).
 - **Omarchy/Hyprland** (25/11/2026, non provato sul 14,3): `desktop_kind`/`is_omarchy` in `lib.sh`; differenze in README
   (l'installatore cancella anche la ESP Apple!, kernel `linux-omarchy`, `omarchy update`, hyprlock con fprintd diretto,
   niente menu impronte di Omarchy, agente polkit, uwsm per servizi utente e environment.d).
@@ -121,11 +130,40 @@ personalizzata con kext signing disattivato). L'utente scrive in italiano: rispo
   USB, S3 provati invano; ACPI `FRST` = recovery, da non usare): `touchbar-mode set keyboard` salva soltanto.
 - `sudo` non funziona dalla shell di Claude (serve la password). Dal 23/11 pomeriggio funziona nel pannello Terminale
   dell'app (`run_in_terminal`, l'utente scrive la password); altrimenti Konsole.
+  **Su Hyprland (26/11/2026)** il processo principale di Claude Desktop 6.28899.6 ha `NoNewPrivs=1` (Hyprland, Noctalia,
+  il loro `systemd-run` e kitty no: origine non trovata, [I] l'app stessa) e lo passa anche al pannello Terminale,
+  quindi niente `sudo`/`pkexec` (setuid). Funziona **`run0`** (polkit 128 con helper via socket, niente setuid).
 - Il vecchio submodule `macbook-pro-touchbar-driver` (commit `42034ae`) è stato rimosso: senza `.gitmodules` e senza commit pubblico.
 - Il dry-run su questo Mac ha mostrato: container APFS `disk1` da ~500 GB, **7 snapshot locali di Time Machine**
   (il limite minimo del resize è uguale alla dimensione attuale finché non vengono eliminati).
 
-## Stato della sessione (aggiornato il 25 novembre 2026)
+## Stato della sessione (aggiornato il 26 novembre 2026)
+
+- **Omarchy installato [F] (26/11/2026)** su tutto il disco: `nvme0n1p1` vfat 2 GiB su `/boot` (Limine; `EFI/APPLE` rimesso,
+  guardia del T1 integra), `nvme0n1p2` LUKS + btrfs; kernel `7.2.15-4-omarchy`. NVRAM: `Boot0001 Limine`, `Boot0000 OpenCore`.
+  Partizioni COSLIVE/OMARCHY e CachyOS **non esistono più**: le note sotto su p3/p4/p5 sono storiche.
+  La live di Omarchy sul disco interno si avviava ma l'installatore esclude il disco della live (nessun disco su cui
+  installare) [F]: per Omarchy serve la chiavetta (`omarchy/prepare-usb.sh`).
+  Con 7.2 la sospensione è s2idle (S3 solo da 7.3, `ConditionKernelVersion`). Driver DKMS tutti pronti per 7.2.15, Wi-Fi 5 GHz.
+
+- **Reinstallazione [F] (25-26/11/2026)**: CachyOS + **Hyprland (Noctalia, uwsm) + Limine 12** (`limine-entry-tool`,
+  `limine-snapper-sync`). SSD con **settori logici da 4096 B** (sfdisk conta in 4K, sysfs in 512 B). Disco: p1 EFI vfat
+  4 GiB su `/boot` (Limine, `EFI/APPLE/EMBEDDEDOS` del T1 presente, `EFI/OC` OpenCore), p2 btrfs 350,6 GiB, p4 e p3
+  COSLIVE 7 GB (copie identiche, stesso UUID `2A49-15F2`), **p5 OMARCHY** FAT32 8 GiB con la ISO di Omarchy 4.5.0 estratta
+  (`archisolabel=OMARCHY`; sui Mac la ISO avvia il kernel `linux-t2` [NV] sul T1), ~89 GiB liberi tra p5 e p3.
+  `airootfs.sfs` della live ricostruito (zstd 19, blocchi da 1 MiB, `airootfs.sha512` aggiornato) con NVRAM + firmware
+  Wi-Fi di questo Mac in `/usr/lib/firmware/updates/brcm/` e niente MAC casuale in scansione (iwd e NetworkManager):
+  5 GHz nella live [NV]. Il sistema installato da Omarchy (`omarchy-root.img.zst`, con checksum) non ha la correzione:
+  dopo l'installazione `install.sh --only wifi`, che dal 26/11 configura anche iwd e non richiede più `nmcli`.
+  Su p5 anche `macbook14-3-efi-backup/`: `EFI/APPLE` (T1) + `EFI/OC` con `SHA256SUMS` (200 file verificati),
+  `limine.conf`, `efibootmgr.txt` e `ripristina.sh <ESP montata>` (copia solo i file mancanti). Un'installazione
+  "Full disk" di Omarchy cancella anche p5. Nella radice di p5 anche `Macbook14-3-cachyOS.tar.gz` (+ `.sha256`): la repo
+  con `.git` al 26/11 01:48 (commit `a5d4015` + modifiche non committate: patch audio 0003, iwd, note); da rifare dopo i commit.
+  Backup della GPT e di `limine.conf` in `/var/backups/macbookpro14-3/`.
+- **Avvio [F] (26/11/2026)**: voce NVRAM `Boot0000 OpenCore` → `nvme0n1p1 \EFI\OC\OpenCore.efi`, unica nell'ordine di avvio
+  (OpenCore predefinito, su richiesta dell'utente; la vecchia voce puntava alla ESP Apple da 512 MiB che non c'è più).
+  In fondo a `/boot/limine.conf` le voci manuali `/OpenCore` e `/Omarchy live` (`guid(<PARTUUID p5>)`): che
+  `limine-entry-tool` le conservi agli aggiornamenti del kernel è [I]. Avvio da OpenCore e dalle due voci: [NV].
 
 - **macOS cancellato [F] (25/11/2026)** su richiesta dell'utente (ha Time Machine). Disco: p1 ESP di Apple 512 MiB
   (firmware T1 + OpenCore + `\EFI\GRUB\grubx64.efi` + riserva `EFI/BOOT/BOOTX64.EFI`, montata su `/boot/efi` a richiesta),

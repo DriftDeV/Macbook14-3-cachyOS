@@ -12,10 +12,11 @@
 #   touchbar-mode display|keyboard       applica subito, senza salvare
 #   touchbar-mode boot                   (servizio all'avvio) applica la scelta salvata
 #   touchbar-mode sleep-pre|sleep-post   (servizio di sospensione) keyboard prima dello sleep, display dopo
-#   touchbar-mode renderer [t1bridge|tiny-dfr]   mostra o sceglie il renderer della modalità display (salvato; se la
-#                                        barra è in modalità display cambia subito):
+#   touchbar-mode renderer [t1bridge|tiny-dfr|omabar]   mostra o sceglie il renderer della modalità display
+#                                        (salvato; se la barra è in modalità display cambia subito):
 #                                        t1bridge  t1-touchbar-hw + renderer utente (fnstrip o quello di T1Bridge)
 #                                        tiny-dfr  tiny-dfr di Asahi Linux (scripts/install-tiny-dfr.sh)
+#                                        omabar  OmaBar, segue il tema del sistema (omarchy/install-omabar.sh)
 # Tornando a keyboard senza riavvio la barra resta spenta (il tocco funziona): il lato display del T1 resta nello
 # stato della configurazione 2 e si azzera solo con uno spegnimento completo (~30 s). Provati senza successo il
 # 23/11/2026: porta USB disattivata/riattivata, reset USB, sospensione S3 (il T1 non perde corrente). L'unico reset
@@ -50,25 +51,38 @@ t1_usb() {
 current_mode() { cat "$STATE/mode" 2>/dev/null || echo keyboard; }
 TDFR_UNIT=macbookpro14-3-tiny-dfr.service
 tdfr_installed() { [ -e "/etc/systemd/system/$TDFR_UNIT" ] && [ -x /usr/local/lib/macbookpro14-3/tiny-dfr/tiny-dfr ]; }
+CBAR_UNIT=macbookpro14-3-omabar.service
+cbar_installed() { [ -e "/etc/systemd/system/$CBAR_UNIT" ] && [ -x /usr/local/lib/macbookpro14-3/omabar/omabar ]; }
 renderer_wanted() {
-    if [ "$TOUCHBAR_RENDERER" = tiny-dfr ]; then
-        tdfr_installed && { echo tiny-dfr; return; }
-        log "renderer tiny-dfr scelto ma non installato (scripts/install-tiny-dfr.sh): uso t1bridge"
-    fi
+    case "$TOUCHBAR_RENDERER" in
+        tiny-dfr)
+            tdfr_installed && { echo tiny-dfr; return; }
+            log "renderer tiny-dfr scelto ma non installato (scripts/install-tiny-dfr.sh): uso t1bridge" ;;
+        omabar|cachybar)   # cachybar: nome precedente di OmaBar (fino al 26/11/2026)
+            cbar_installed && { echo omabar; return; }
+            log "renderer omabar scelto ma non installato (omarchy/install-omabar.sh): uso t1bridge" ;;
+    esac
     echo t1bridge
 }
 
 # Avvia il renderer scelto sullo schermo della barra già pronto (dev-dri-touchbar.device attivo).
 start_renderer() {
-    if [ "$(renderer_wanted)" = tiny-dfr ]; then
-        touch "$STATE/tiny-dfr"   # il drop-in del renderer utente non lo fa partire
+    local r unit other
+    r="$(renderer_wanted)"
+    if [ "$r" = tiny-dfr ] || [ "$r" = omabar ]; then
+        # Renderer di sistema: tiny-dfr o OmaBar, mai insieme (stesso schermo, stesso sensore).
+        if [ "$r" = tiny-dfr ]; then unit=$TDFR_UNIT other=omabar; else unit=$CBAR_UNIT other=tiny-dfr; fi
+        touch "$STATE/$r"   # il drop-in del renderer utente non lo fa partire
+        rm -f "$STATE/$other"
         user_systemctl stop macbookpro14-3-touchbar-renderer.service 2>/dev/null || true
         systemctl stop macbookpro14-3-touchbar-hw.service macbookpro14-3-touchbar-hw.socket 2>/dev/null || true
-        systemctl start "$TDFR_UNIT" || { log "tiny-dfr non avviato (journalctl -u $TDFR_UNIT)"; return 1; }
-        log "renderer: tiny-dfr"
+        if [ "$other" = tiny-dfr ]; then systemctl stop "$TDFR_UNIT" 2>/dev/null || true
+        else systemctl stop "$CBAR_UNIT" 2>/dev/null || true; fi
+        systemctl start "$unit" || { log "$r non avviato (journalctl -u $unit)"; return 1; }
+        log "renderer: $r"
     else
-        rm -f "$STATE/tiny-dfr"
-        systemctl stop "$TDFR_UNIT" 2>/dev/null || true
+        rm -f "$STATE/tiny-dfr" "$STATE/omabar"
+        systemctl stop "$TDFR_UNIT" "$CBAR_UNIT" 2>/dev/null || true
         systemctl start macbookpro14-3-touchbar-hw.socket macbookpro14-3-touchbar-hw.service
         user_systemctl start macbookpro14-3-touchbar-renderer.service || log "renderer non avviato"
         log "renderer: t1bridge"
@@ -172,7 +186,7 @@ to_keyboard() {
         systemctl stop t1-touchid-auth.service t1bridge-keybag.service 2>/dev/null || true
     fi
     user_systemctl stop macbookpro14-3-touchbar-renderer.service macbookpro14-3-webcam.service 2>/dev/null || true
-    systemctl stop "$TDFR_UNIT" macbookpro14-3-touchbar-hw.service macbookpro14-3-touchbar-hw.socket 2>/dev/null || true
+    systemctl stop "$TDFR_UNIT" "$CBAR_UNIT" macbookpro14-3-touchbar-hw.service macbookpro14-3-touchbar-hw.socket 2>/dev/null || true
     mod_loaded appletbdrm && rmmod appletbdrm
     # uvcvideo_t1 gestisce anche la configurazione 1: se un programma tiene aperta la webcam lo si lascia
     # caricato (scaricarlo fallirebbe e uvcvideo non potrebbe registrarsi con lo stesso nome).
@@ -203,7 +217,7 @@ status() {
     echo "scelta salvata: $TOUCHBAR_MODE   attuale: $(current_mode)   configurazione USB: $(cat "$usb/bConfigurationValue")"
     printf '  moduli:'; for m in apple_ibridge apple_ib_tb apple_ib_als appletbdrm uvcvideo uvcvideo_t1 v4l2loopback; do
         mod_loaded "$m" && printf ' %s' "$m"; done; echo
-    echo "  renderer scelto: $TOUCHBAR_RENDERER$(tdfr_installed || echo ' (tiny-dfr non installato)')   tiny-dfr: $(systemctl is-active "$TDFR_UNIT" 2>/dev/null)"
+    echo "  renderer scelto: $TOUCHBAR_RENDERER$(tdfr_installed || echo ' (tiny-dfr non installato)')   tiny-dfr: $(systemctl is-active "$TDFR_UNIT" 2>/dev/null)   omabar: $(cbar_installed && systemctl is-active "$CBAR_UNIT" 2>/dev/null || echo 'non installato')"
     echo "  servizio Touch Bar: $(systemctl is-active macbookpro14-3-touchbar-hw.service 2>/dev/null)   renderer: $(user_systemctl is-active macbookpro14-3-touchbar-renderer.service 2>/dev/null)"
     echo "  webcam: $(printf '%s ' /dev/video*)  webcam virtuale: $(user_systemctl is-active macbookpro14-3-webcam.service 2>/dev/null)"
 }
@@ -236,15 +250,16 @@ case "${1:-status}" in
     renderer)
         case "${2:-}" in
             "") echo "$TOUCHBAR_RENDERER" ;;
-            t1bridge|tiny-dfr)
+            t1bridge|tiny-dfr|omabar)
                 [ "$2" = tiny-dfr ] && ! tdfr_installed && { echo "tiny-dfr non installato: sudo scripts/install-tiny-dfr.sh" >&2; exit 1; }
+                [ "$2" = omabar ] && ! cbar_installed && { echo "OmaBar non installato: sudo omarchy/install-omabar.sh" >&2; exit 1; }
                 save_conf TOUCHBAR_RENDERER "$2"; TOUCHBAR_RENDERER="$2"
                 if [ "$(current_mode)" = display ]; then
                     start_renderer
                 else
                     log "renderer $2 salvato: vale dalla prossima attivazione della modalità display"
                 fi ;;
-            *) echo "Uso: touchbar-mode renderer [t1bridge|tiny-dfr]" >&2; exit 1 ;;
+            *) echo "Uso: touchbar-mode renderer [t1bridge|tiny-dfr|omabar]" >&2; exit 1 ;;
         esac ;;
     boot) [ "$TOUCHBAR_MODE" = display ] && { to_display || log "boot: modalità display non riuscita, resto in keyboard"; }; exit 0 ;;
     sleep-pre)
@@ -255,5 +270,5 @@ case "${1:-status}" in
         if [ -e "$STATE/resume-display" ]; then
             rm -f "$STATE/resume-display"; SLEEP_CALL=1; to_display || log "risveglio: modalità display non riuscita"
         fi ;;
-    *) echo "Uso: touchbar-mode status|set display|set keyboard|display|keyboard|renderer [t1bridge|tiny-dfr]" >&2; exit 1 ;;
+    *) echo "Uso: touchbar-mode status|set display|set keyboard|display|keyboard|renderer [t1bridge|tiny-dfr|omabar]" >&2; exit 1 ;;
 esac

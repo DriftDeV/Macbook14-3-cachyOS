@@ -9,11 +9,11 @@
 # Compatibile con bash 3.2 (quella di macOS).
 #
 # Uso:
-#   ./macos/prepare.sh prepare --linux-gb 120            # DRY-RUN: stampa il piano
-#   ./macos/prepare.sh prepare --linux-gb 120 --execute  # esegue davvero
-#   ./macos/prepare.sh backup  --execute                 # solo backup mappa partizioni + ESP
-#   ./macos/prepare.sh download --execute                # solo download+verifica ISO
-#   ./macos/prepare.sh rollback --execute                # annulla (vedi sotto)
+#   ./cachyos/macos/prepare.sh prepare --linux-gb 120            # DRY-RUN: stampa il piano
+#   ./cachyos/macos/prepare.sh prepare --linux-gb 120 --execute  # esegue davvero
+#   ./cachyos/macos/prepare.sh backup  --execute                 # solo backup mappa partizioni + ESP
+#   ./cachyos/macos/prepare.sh download --execute                # solo download+verifica ISO
+#   ./cachyos/macos/prepare.sh rollback --execute                # annulla (vedi sotto)
 set -euo pipefail
 
 EXECUTE=0
@@ -266,7 +266,7 @@ final_instructions() {
 5. Dopo l'installazione, da Linux:  sudo ./install.sh --dry-run   poi senza --dry-run.
 
 Tastiera: se la tastiera interna non funziona nel live, usa una tastiera USB-C esterna.
-Per tornare indietro:  ./macos/prepare.sh rollback --execute
+Per tornare indietro:  ./cachyos/macos/prepare.sh rollback --execute
 EOF
 }
 

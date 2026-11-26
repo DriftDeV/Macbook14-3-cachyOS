@@ -25,6 +25,13 @@ Il modulo del kernel `snd-hda-codec-cs8409` riconosce il codec ma lo configura i
   (confronto byte per byte con `torvalds/linux` tag `v7.3`). Nei commit dnlbtz nessuna chiamata a file, rete o programmi esterni.
 - [F] Patch nostra [`../patches/audio/`](../patches/audio/): `LLVM=1` automatico nel `Makefile` (gcc rifiuta le opzioni
   del kernel clang: `-fms-anonymous-structs`, `-mstack-alignment`). Due warning innocui (fall-through in pin sense, label C23).
+- [F] (26/11/2026) Linux **7.3.6** e **6.18.65** hanno trasformato `codec->jacktbl` da `snd_array` a lista collegata
+  (`jacktbl`, `jacktbl_last`, `jacktbl_used`, campo `next` in `struct hda_jack_tbl`): il driver non compilava più su
+  nessuno dei due kernel. Patch `0003-cs8409-build-with-the-linked-list-jack-table.patch`: il `Makefile` cerca
+  `jacktbl_used` in `hda_codec.h` e passa `-DHDA_JACKTBL_LIST`; `cirrus_apple.h` percorre e allunga la lista come
+  `snd_hda_jack_tbl_new()` del kernel (`kzalloc` + accodamento, liberata da `snd_hda_jack_tbl_clear()`); il vecchio
+  codice resta per i kernel precedenti. Compilato da utente per 7.3.6 (clang) e 6.18.65 (gcc); caricamento e prova
+  dell'audio [NV]. Senza rete il ripiego sulle copie 7.3.0 non compila su questi kernel (errore, non modulo sbagliato).
 - [F] Il fork compila solo per le serie di kernel che contiene (oggi `7.3`): `scripts/install-audio.sh` salta le altre
   (l'LTS `6.18` resta senza driver: speaker muti su quel kernel). Per aggiungere una serie: `./vendorKernel 6.18` nel fork.
 

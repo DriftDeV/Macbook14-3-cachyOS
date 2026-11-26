@@ -1,0 +1,10 @@
+[Unit]
+Description=OmaBar: segue i cambi di tema di Omarchy
+
+[Path]
+# omarchy-theme-set scrive theme.name per ultimo, dopo aver messo al suo posto la cartella del nuovo tema.
+PathChanged=%h/.local/state/omarchy/current/theme.name
+Unit=omabar-theme-sync.service
+
+[Install]
+WantedBy=default.target

@@ -75,7 +75,10 @@ run pacman -S --needed --noconfirm "${pk[@]}"
 [ -e "$MANGO" ] || run sh -c "printf 'no_display\nfps_limit=0\n' > '$MANGO'"
 install_file 644 "$REPO_DIR/config/power/90-macbookpro14-3-mangohud.conf" "$ENVD"
 # ...ma non dentro KWin (sessione e schermata di login): lì MangoHud lo faceva crollare
-for d in $KWIN_DROPINS; do install_file 644 "$REPO_DIR/config/systemd/user/$NOMANGO" "$d/$NOMANGO"; done
+# Solo KDE Plasma (CachyOS): su Hyprland/Omarchy non c'è KWin.
+if [ "$(desktop_kind)" = kde ]; then
+    for d in $KWIN_DROPINS; do install_file 644 "$REPO_DIR/cachyos/kde/$NOMANGO" "$d/$NOMANGO"; done
+fi
 
 log "Tetto di temperatura della CPU (servizio macbookpro14-3-cpu-limit)"
 install_file 755 "$REPO_DIR/config/power/cpu-limit.py" "$LIMIT_BIN"

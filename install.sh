@@ -4,11 +4,12 @@
 #   backup ESP Apple + firmware T1 -> pacchetti -> trackpad -> Touch Bar (modalità tastiera, usata in sospensione) ->
 #   audio (driver) -> DSP degli altoparlanti (crossover, EQ, bassi bankstown) -> sospensione -> energia -> Bluetooth ->
 #   Touch Bar in modalità display (T1Bridge, webcam H.264 corretta, renderer fnstrip) ->
-#   renderer tiny-dfr (alternativo) -> Touch ID -> driver per i kernel futuri -> MacBook Manager -> app Chromium/Electron (GPU sotto Wayland) -> Wi-Fi
-# La Touch Bar parte in modalità display con il renderer di T1Bridge: modalità (display/tastiera) e renderer
-# (fnstrip/T1Bridge o tiny-dfr) si scelgono poi da MacBook Manager, scheda Touch Bar.
+#   renderer tiny-dfr (alternativo) -> OmaBar (solo Omarchy, diventa il renderer) -> Touch ID -> driver per i kernel futuri -> MacBook Manager -> app Chromium/Electron (GPU sotto Wayland) -> Wi-Fi
+# La Touch Bar parte in modalità display con il renderer fnstrip (CachyOS/KDE) o OmaBar (Omarchy): modalità
+# (display/tastiera) e renderer si scelgono poi da MacBook Manager, scheda Touch Bar.
+# Le parti solo per un sistema stanno in cachyos/ e omarchy/; i passi le applicano da soli dove servono.
 # Prima: sistema aggiornato (CachyOS/Arch: sudo pacman -Syu; Omarchy: omarchy update) e un riavvio, perché il kernel
-# in uso deve essere quello installato. Funziona con KDE Plasma (provato) e con Hyprland/Omarchy (non provato sul 14,3).
+# in uso deve essere quello installato. Provato su CachyOS + KDE Plasma e su Omarchy (Hyprland).
 #
 #   sudo ./install.sh --dry-run                  mostra cosa farebbe
 #   sudo ./install.sh                            installa tutto
@@ -18,9 +19,9 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/lib.sh
 source "$REPO_DIR/scripts/lib.sh"
 
-STEPS="backup packages input touchbar audio audio-dsp sleep power bluetooth touchbar-display tiny-dfr touchid kernel manager apps wifi"
+STEPS="backup packages input touchbar audio audio-dsp sleep power bluetooth touchbar-display tiny-dfr omabar touchid kernel manager apps wifi"
 LOG=/var/log/macbookpro14-3-install.log
-ONLY="" SKIP="" WIFI_FILE="" DO_INITRAMFS=0
+ONLY="" SKIP="" WIFI_FILE="" WIFI_DIR="" DO_INITRAMFS=0
 
 ARGS="$*"   # per il registro: il ciclo sotto consuma gli argomenti
 
@@ -32,6 +33,7 @@ Uso: sudo ./install.sh [opzioni]
   --only PASSI              solo questi passi (separati da virgole)
   --skip PASSI              salta questi passi
   --wifi-nvram FILE         usa un file NVRAM tuo invece di generarlo dal chip
+  --wifi-files DIR          file di mbp143-wifi già scaricati (senza rete; per esempio dalla chiavetta di omarchy/)
   --initramfs               (non provato) tastiera SPI nell'initramfs, utile solo con disco cifrato
   --force                   ignora il controllo del modello (sconsigliato)
   --list                    elenca i passi
@@ -49,6 +51,7 @@ while [ $# -gt 0 ]; do
         --only) ONLY="${2:-}"; shift ;;
         --skip) SKIP="${2:-}"; shift ;;
         --wifi-nvram) WIFI_FILE="${2:-}"; shift ;;
+        --wifi-files) WIFI_DIR="${2:-}"; shift ;;
         --initramfs) DO_INITRAMFS=1 ;;
         --list) echo "$STEPS"; exit 0 ;;
         -h|--help) usage; exit 0 ;;
@@ -125,11 +128,18 @@ step_backup() { bash "$REPO_DIR/scripts/backup-esp.sh"; }
 
 step_packages() {
     local pkgs headers p avail=()
+    # Database dei repository mai scaricati (es. installazione offline di Omarchy): pacman -S non trova nulla.
+    # Niente -Sy qui: sincronizzare senza aggiornare è un aggiornamento parziale, non supportato su Arch.
+    if ! ls /var/lib/pacman/sync/core.db /var/lib/pacman/sync/extra.db >/dev/null 2>&1; then
+        die "Database di pacman mai sincronizzati (/var/lib/pacman/sync/ senza core.db/extra.db): aggiorna il sistema ($(is_omarchy && echo 'omarchy update' || echo 'sudo pacman -Syu')), riavvia e rilancia install.sh."
+    fi
     headers="$(kernel_header_packages | tr '\n' ' ')"
     [ -n "$headers" ] || warn "Nessun pacchetto header individuato: i moduli DKMS non compileranno."
     # shellcheck disable=SC2206
-    pkgs=(base-devel dkms git curl zstd python patch iw networkmanager iio-sensor-proxy
+    pkgs=(base-devel dkms git curl zstd python patch iw iio-sensor-proxy
           linux-firmware linux-firmware-broadcom libinput-tools $headers)
+    # NetworkManager solo dove c'è già o su KDE: Omarchy usa iwd da solo (install-wifi.sh configura l'uno o l'altro).
+    if [ "$DESKTOP" = kde ] || command -v nmcli >/dev/null; then pkgs+=(networkmanager); fi
     wanted manager && pkgs+=(pyside6)   # GUI di MacBook Manager
     # Modalità display (T1Bridge, fnstrip, tiny-dfr), webcam H.264 decodificata dalla Intel, DSP audio.
     pkgs+=(rust ffmpeg intel-media-driver brightnessctl cairo librsvg freetype2 fontconfig pipewire-audio wireplumber)
@@ -142,10 +152,13 @@ step_packages() {
         pkgs+=(hyprpolkitagent)
     fi
     for p in "${pkgs[@]}"; do
-        if pacman -Si "$p" >/dev/null 2>&1 || pacman -Qi "$p" >/dev/null 2>&1; then avail+=("$p")
+        # Già soddisfatto, anche da un pacchetto che lo "fornisce" (Omarchy: omarchy-power-profiles-daemon,
+        # in conflitto con power-profiles-daemon): pacman -S --needed proverebbe a sostituirlo e fallirebbe.
+        if pacman -T "$p" >/dev/null 2>&1; then continue
+        elif pacman -Si "$p" >/dev/null 2>&1; then avail+=("$p")
         else warn "pacchetto $p non trovato nei repository: salto"; fi
     done
-    run pacman -S --needed --noconfirm "${avail[@]}"
+    [ "${#avail[@]}" -eq 0 ] || run pacman -S --needed --noconfirm "${avail[@]}"
     run systemctl enable --now upower.service power-profiles-daemon.service 2>/dev/null || true
     if [ "$DESKTOP" = hyprland ] && pacman -Q hyprpolkitagent >/dev/null 2>&1; then
         as_user systemctl --user enable hyprpolkitagent.service || true
@@ -202,6 +215,14 @@ step_touchbar_display() {
     log "Modalità display salvata (renderer fnstrip): parte al prossimo avvio."
 }
 
+# OmaBar (omarchy/): renderer che segue il tema di Omarchy. Solo su Omarchy, dove diventa il renderer scelto.
+step_omabar() {
+    if ! is_omarchy; then log "Non è Omarchy: OmaBar non serve (resta fnstrip)."; return 0; fi
+    if [ "$DRY_RUN" = 1 ]; then bash "$REPO_DIR/omarchy/install-omabar.sh" --dry-run; else bash "$REPO_DIR/omarchy/install-omabar.sh"; fi
+    if [ "$DRY_RUN" = 1 ]; then echo "[dry-run] TOUCHBAR_RENDERER=omabar in /etc/macbookpro14-3/touchbar.conf"
+    else run touchbar-mode renderer omabar; fi
+}
+
 # tiny-dfr resta installato ma non attivo: si sceglie da MacBook Manager (Touch Bar > Renderer).
 step_tiny_dfr() { sub install-tiny-dfr.sh; }
 
@@ -212,16 +233,24 @@ step_apps() { as_user bash "$REPO_DIR/scripts/fix-chromium-gpu.sh"; }
 step_wifi() {
     if [ -n "$WIFI_FILE" ]; then
         sub install-wifi-nvram.sh --file "$WIFI_FILE"
+    elif [ -n "$WIFI_DIR" ]; then
+        sub install-wifi.sh --files "$WIFI_DIR"
     else
         sub install-wifi.sh
     fi
     [ "$DRY_RUN" = 1 ] && return 0
     log "Attendo che la rete torni (fino a 60 s)..."
     for _ in $(seq 30); do
-        nmcli -t -f STATE general 2>/dev/null | grep -q '^connected' && { ok "Rete di nuovo connessa."; return 0; }
+        # NetworkManager (CachyOS) oppure iwd da solo (Omarchy): basta una via d'uscita predefinita.
+        if command -v nmcli >/dev/null; then
+            nmcli -t -f STATE general 2>/dev/null | grep -q '^connected' && { ok "Rete di nuovo connessa."; return 0; }
+        elif ip route show default 2>/dev/null | grep -q .; then
+            ok "Rete di nuovo connessa."; return 0
+        fi
         sleep 2
     done
-    warn "La rete non è ancora tornata: ricollegati dal pannello di KDE."
+    if is_omarchy; then warn "La rete non è ancora tornata: ricollegati (Omarchy: menu Wi-Fi, o iwctl)."
+    else warn "La rete non è ancora tornata: ricollegati dal pannello di KDE."; fi
 }
 
 summary() {
@@ -243,6 +272,7 @@ run_step power "Energia (batteria/alimentatore)" step_power
 run_step bluetooth "Bluetooth (audio delle chiamate)" step_bluetooth
 run_step touchbar-display "Touch Bar, modalità display (T1Bridge, webcam, fnstrip)" step_touchbar_display
 run_step tiny-dfr "Touch Bar, renderer alternativo tiny-dfr" step_tiny_dfr
+run_step omabar "Touch Bar, renderer OmaBar (solo Omarchy)" step_omabar
 run_step touchid "Touch ID (T1Bridge: rete privata, xART, broker, fprintd)" step_touchid
 run_step kernel "Driver per i kernel futuri e guardia del firmware del T1" step_kernel
 run_step manager "MacBook Manager (stato e azioni rapide, GUI)" step_manager
@@ -260,7 +290,7 @@ ok "Fatto. Ora SPEGNI completamente il Mac, aspetta ~30 s e riaccendi (il T1 rip
 cat <<'EOF'
 Dopo la riaccensione:
   1. Apri "MacBook Manager" dal menu (o l'icona nella barra di sistema): stato di tutto, azioni rapide,
-     scheda Touch Bar per scegliere modalità (display/tastiera) e renderer (fnstrip/T1Bridge o tiny-dfr).
+     scheda Touch Bar per scegliere modalità (display/tastiera) e renderer (fnstrip/T1Bridge, tiny-dfr, OmaBar).
   2. Touch ID: sudo scripts/install-touchid.sh import, poi registra un dito (MacBook Manager > Azioni > Registra
      un'impronta, o fprintd-enroll; su KDE anche Impostazioni di sistema > Utenti). La prima volta può fallire: riprova.
      Su Omarchy NON usare il suo menu Setup > Security > Fingerprint: installerebbe il fprintd normale al posto di

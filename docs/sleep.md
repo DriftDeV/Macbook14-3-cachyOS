@@ -76,6 +76,12 @@ La Radeon `1002:67ef`, subsystem `106b:0179`, rev `c0` non è nella tabella `vi_
 generico `92a5184787b8` non è in v7.3 [F dal sorgente]: la ripresa funziona comunque [F], meccanismo non chiarito [I].
 Per prudenza S3 si attiva solo sui kernel >= 7.3 (servizio con `ConditionKernelVersion`); LTS 6.18 resta su s2idle.
 
+**S3 su `linux-omarchy` 7.2.15-4 [F] (26/11/2026): fallisce**, come segnalato dalla fonte. Stesso `PCI CONFIG reset`, poi
+`amdgpu: SMU load firmware failed` → `amdgpu_device_ip_resume failed (-22)` → `ring sdma0 timeout`; il reset della GPU
+~2 min dopo non basta. Schermo e Touch Bar restano neri, serve lo spegnimento forzato. Il T1 (iBridge) si
+ri-enumera correttamente: il problema è solo la Radeon. La condizione `>= 7.3` è quindi giusta; su Omarchy resta s2idle
+finché il kernel non arriva alla 7.3 (o con un kernel 7.3 installato a parte).
+
 Controllo dopo una notte: `scripts/sleep-test.sh report` (senza root) elenca ogni sospensione con durata, modalità,
 batteria (l'hook scrive % e mAh prima e dopo) e se il Mac si è svegliato **senza** aprire il coperchio.
 

@@ -1,7 +1,8 @@
 """Scheda "Touch Bar": si adatta al renderer della modalità display (touchbar-mode renderer).
 
-fnstrip / T1Bridge → editor di fnstrip (gui_fnstrip.py); tiny-dfr → editor di tiny-dfr (gui_tinydfr.py). In alto si sceglie
-il renderer (azioni root renderer-t1bridge / renderer-tiny-dfr, password via polkit).
+fnstrip / T1Bridge → editor di fnstrip (gui_fnstrip.py); tiny-dfr → editor di tiny-dfr (gui_tinydfr.py); OmaBar → editor
+di OmaBar (gui_omabar.py). In alto si sceglie il renderer (azioni root renderer-t1bridge / renderer-tiny-dfr /
+renderer-omabar, password via polkit).
 """
 import os
 
@@ -10,7 +11,11 @@ from PySide6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QPushButton, QStac
 
 from . import status
 
-RENDERERS = [("t1bridge", "fnstrip / T1Bridge"), ("tiny-dfr", "tiny-dfr (Asahi Linux)")]
+RENDERERS = [("t1bridge", "fnstrip / T1Bridge"), ("tiny-dfr", "tiny-dfr (Asahi Linux)"),
+             ("omabar", "OmaBar (tema di Omarchy)")]
+# Renderer opzionali: binario che deve esserci e script che lo installa.
+OPTIONAL = {"tiny-dfr": (status.TDFR_BIN, "scripts/install-tiny-dfr.sh"),
+            "omabar": (status.OMABAR_BIN, "omarchy/install-omabar.sh")}
 
 
 def renderer_now():
@@ -43,12 +48,15 @@ class TouchBarTab(QWidget):
         lay.addLayout(top)
 
         from .gui_fnstrip import FnstripEditor
+        from .gui_omabar import OmaBarEditor
         from .gui_tinydfr import TinyDfrEditor
         self.fnstrip = FnstripEditor(log, open_live)
         self.tinydfr = TinyDfrEditor(log)
+        self.omabar = OmaBarEditor(log)
         self.stack = QStackedWidget()
         self.stack.addWidget(self.fnstrip)
         self.stack.addWidget(self.tinydfr)
+        self.stack.addWidget(self.omabar)
         lay.addWidget(self.stack, 1)
         self.combo.currentIndexChanged.connect(self._combo_changed)
         self.sync()
@@ -60,18 +68,22 @@ class TouchBarTab(QWidget):
         self.combo.blockSignals(True)
         self.combo.setCurrentIndex(max(0, self.combo.findData(cur)))
         self.combo.blockSignals(False)
-        tdfr = os.path.exists(status.TDFR_BIN)
-        self.combo.model().item(1).setEnabled(tdfr)
-        self.state.setText(txt if tdfr else txt + " · tiny-dfr non installato (scripts/install-tiny-dfr.sh)")
+        missing = []
+        for i in range(self.combo.count()):
+            rid = self.combo.itemData(i)
+            if rid in OPTIONAL:
+                there = os.path.exists(OPTIONAL[rid][0])
+                self.combo.model().item(i).setEnabled(there)
+                if not there:
+                    missing.append("%s non installato (%s)" % (rid if rid != "omabar" else "OmaBar", OPTIONAL[rid][1]))
+        self.state.setText(" · ".join([txt] + missing))
         self._show(cur)
 
     def _show(self, rid):
-        self.stack.setCurrentWidget(self.tinydfr if rid == "tiny-dfr" else self.fnstrip)
+        ed = {"tiny-dfr": self.tinydfr, "omabar": self.omabar}.get(rid, self.fnstrip)
+        self.stack.setCurrentWidget(ed)
         self.apply.setVisible(rid != self.current)
-        if rid == "tiny-dfr":
-            self.tinydfr._update_info()
-        else:
-            self.fnstrip._update_info()
+        ed._update_info()
 
     def _combo_changed(self, _i):
         # Si può guardare/preparare la configurazione dell'altro renderer prima di passare.

@@ -1,14 +1,116 @@
 name: ci
-on: [push, pull_request]
+on: [push, pull_request, workflow_dispatch]
+
 jobs:
-  shellcheck:
+  # Tutti gli script shell della repo (riconosciuti dalla prima riga), anche quelli senza estensione.
+  shell:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Sintassi bash
+      - name: Elenco degli script
         run: |
-          for f in install.sh scripts/*.sh macos/prepare.sh config/sleep/*.sh config/tiny-dfr/tiny-dfr-touch config/power/power-source.sh config/dkms-catchup.sh config/t1-guard.sh dkms/t1bridge-uvc/prepare-src.sh; do bash -n "$f"; done
-      - name: ShellCheck
+          git ls-files | while read -r f; do
+            head -1 "$f" 2>/dev/null | grep -qE '^#!.*(bash|/sh)' && echo "$f"
+          done > "$RUNNER_TEMP/scripts.txt"
+          cat "$RUNNER_TEMP/scripts.txt"
+      - name: Sintassi bash
+        run: while read -r f; do bash -n "$f" || exit 1; done < "$RUNNER_TEMP/scripts.txt"
+      - name: ShellCheck (avvisi ed errori)
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
-          shellcheck -x install.sh scripts/*.sh macos/prepare.sh config/sleep/*.sh config/tiny-dfr/tiny-dfr-touch config/power/power-source.sh config/dkms-catchup.sh config/t1-guard.sh dkms/t1bridge-uvc/prepare-src.sh
+          xargs shellcheck -x --severity=warning < "$RUNNER_TEMP/scripts.txt"
+      - name: PKGBUILD e file .install (sintassi)
+        run: for f in pkgs/*/PKGBUILD pkgs/*/*.install; do bash -n "$f"; done
+
+  # Gli script lanciati da macOS devono andare con bash 3.2 (quella di macOS).
+  macos-bash32:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sintassi con /bin/bash 3.2
+        run: |
+          /bin/bash --version | head -1
+          for f in cachyos/macos/prepare.sh omarchy/prepare-usb.sh; do /bin/bash -n "$f"; done
+      - name: Aiuto e rifiuto del disco interno
+        run: |
+          /bin/bash omarchy/prepare-usb.sh --help
+          mkdir -p iso/boot/grub && echo 'linux /x archisosearchuuid=1' > iso/boot/grub/grub.cfg
+          tar -cf fake.iso --format iso9660 -C iso .
+          if /bin/bash omarchy/prepare-usb.sh --iso fake.iso --device disk0; then echo "disk0 accettato!"; exit 1; fi
+
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Compilazione di tutti i file Python
+        run: |
+          python - <<'EOF'
+          import glob
+          fs = glob.glob('**/*.py', recursive=True) + ['manager/macbook-manager', 'manager/macbook-manager-helper']
+          for f in fs:
+              compile(open(f, encoding='utf-8').read(), f, 'exec')
+          print(len(fs), 'file Python compilati')
+          EOF
+      - name: CLI di MacBook Manager (senza Qt)
+        run: PYTHONPATH=manager python manager/macbook-manager --help
+
+  # OmaBar (Rust): compilazione con le versioni di Cargo.lock, test, controllo della configurazione e anteprima.
+  omabar:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Dipendenze
+        run: pacman -Syu --noconfirm --needed base-devel git rust cairo librsvg pango libinput ttf-dejavu noto-fonts-cjk
+      - uses: actions/checkout@v4
+      - name: Compilazione
+        working-directory: omarchy/omabar
+        run: cargo build --release --locked
+      - name: Test
+        working-directory: omarchy/omabar
+        run: cargo test --release --locked
+      - name: Configurazione predefinita e anteprima
+        working-directory: omarchy/omabar
+        run: |
+          ./target/release/omabar check config.toml
+          ./target/release/omabar preview preview.png --config config.toml --media "恋愛サーキュレーション|Artista"
+          ./target/release/omabar preview preview-lock.png --config config.toml --locked --media "Titolo|Artista"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: omabar-anteprima
+          path: omarchy/omabar/preview*.png
+
+  # Driver (DKMS): apple-ibridge, audio CS8409, appletbdrm, webcam, rete del T1, contro gli header di Arch.
+  # linux-cachyos e linux-omarchy non sono in Arch: qui si provano linux (ultimo stabile) e linux-lts.
+  drivers:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    strategy:
+      fail-fast: false
+      matrix:
+        kernel: [linux, linux-lts]
+    steps:
+      - name: Dipendenze
+        run: pacman -Syu --noconfirm --needed base-devel git dkms patch curl ${{ matrix.kernel }}-headers
+      - uses: actions/checkout@v4
+      - name: Compilazione dei driver
+        run: bash .github/scripts/build-drivers.sh
+
+  # PKGBUILD: metadati leggibili da makepkg (da utente normale).
+  pkgbuild:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Dipendenze
+        run: pacman -Syu --noconfirm --needed base-devel git
+      - uses: actions/checkout@v4
+      - name: makepkg --printsrcinfo
+        run: |
+          useradd -m builder
+          chown -R builder .
+          for d in pkgs/*/; do
+            echo "== $d"
+            su builder -c "cd '$d' && makepkg --printsrcinfo" > /dev/null
+          done

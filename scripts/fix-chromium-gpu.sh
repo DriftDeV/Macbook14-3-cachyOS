@@ -36,6 +36,10 @@ UNITDIR="$CFG/systemd/user"
 SYS_APPS=/usr/share/applications
 KNOWN_LAUNCHERS="/usr/share/discord/discord /opt/discord/Discord"   # avviatori che lanciano Electron da altre cartelle
 WRAPPED="brave claude-desktop"                                       # avviati per nome: lanciatore in ~/.local/bin
+# Browser: Omarchy (omarchy-launch-browser, quindi xdg-open e i link di tutte le app) prende solo la prima parola
+# dell'Exec=, e con "env AMD_DEBUG=..." davanti lancerebbe "env URL". Per loro: lanciatore NOME-amd in ~/.local/bin,
+# scritto nell'Exec= con il percorso completo.
+BROWSERS="chromium google-chrome-stable microsoft-edge-stable vivaldi-stable"
 
 MODE=install
 case "${1:-}" in
@@ -86,6 +90,10 @@ fix_exec() {   # Exec: toglie --ozone-platform=x11 e mette "env AMD_DEBUG=notili
 unfix_exec() {
     sed -E -e "s#^Exec=$PREFIX #Exec=#" -e "/^Exec=/s# $OLDFLAG( |$)#\\1#" "$1"
 }
+is_browser() { case " $BROWSERS " in *" ${1##*/} "*) return 0 ;; esac; return 1; }
+browser_exec() {   # browser_exec FILE NOME: Exec= con il lanciatore NOME-amd al posto del browser
+    sed -E -e "/^Exec=/s# $OLDFLAG( |$)#\\1#" -e "s#^Exec=(/usr/bin/)?$2( |$)#Exec=$BIN/$2-amd\\2#" "$1"
+}
 by_name() {   # vero se l'Exec avvia per nome (senza percorso) un'app con il nostro lanciatore in ~/.local/bin
     case "$1" in */*) return 1 ;; esac
     case " $WRAPPED " in *" $1 "*) return 0 ;; esac
@@ -116,7 +124,7 @@ do_undo() {
     rm -f "$UNITDIR/$UNIT.path" "$UNITDIR/$UNIT.service" "$SELF"
     systemctl --user daemon-reload 2>/dev/null || true
     local f
-    for f in "$CFG/brave-flags.conf" "$CFG"/electron*-flags.conf "$BIN/brave" "$BIN/claude-desktop"; do
+    for f in "$CFG/brave-flags.conf" "$CFG"/electron*-flags.conf "$BIN/brave" "$BIN/claude-desktop" "$BIN"/*-amd; do
         ours "$f" && rm -f "$f"
     done
     for f in "$APPS"/*.desktop; do
@@ -152,6 +160,13 @@ apply() {
         by_name "$t" && continue                                         # coperta dal lanciatore
         d="$APPS/$name"
         if [ -e "$d" ] && ! ours "$d"; then continue; fi                 # copia utente non nostra: ciclo sotto
+        if is_browser "$t"; then                                         # browser: lanciatore NOME-amd, niente env
+            t="${t##*/}"
+            wrapper "$t" | write_if_changed "$BIN/$t-amd" 755 && say "$t: $BIN/$t-amd"
+            { echo "$MARK (scripts/fix-chromium-gpu.sh --undo per toglierlo)"; browser_exec "$f" "$t"; } \
+                | write_if_changed "$d" 644 && say "${name%.desktop}: $d"
+            continue
+        fi
         { echo "$MARK (scripts/fix-chromium-gpu.sh --undo per toglierlo)"; fix_exec "$f"; } \
             | write_if_changed "$d" 644 && say "${name%.desktop}: $d"
     done

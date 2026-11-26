@@ -1,0 +1,9 @@
+[Unit]
+Description=OmaBar: colori del tema attivo per la Touch Bar
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/omabar-theme-sync
+
+[Install]
+WantedBy=default.target
