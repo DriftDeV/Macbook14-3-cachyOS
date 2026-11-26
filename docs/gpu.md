@@ -63,6 +63,10 @@ di KDE la cambiano (scrivono `gmux_backlight`, regolata dal chip gmux e non dall
   costruisce da OpenCorePkg 1.0.8 fissato (`config/sources.conf`) con un `config.plist` generato da `Sample.plist`:
   niente kext/ACPI/proprietà, Booter come OCLP (`SignalAppleOS`, `ProtectSecureBoot`), driver `OpenRuntime`,
   `OpenLinuxBoot`, `ResetNvramEntry`, picker integrato, `LauncherOption=Full`, `PlatformInfo` lasciato al firmware.
+- Sorgente di OCLP 3.0.0-rc.5 (letto il 26/11/2026): "Windows GMUX" = `constants.dGPU_switch`, che in
+  `efi_builder/graphics_audio.py` accende **solo** `Booter > Quirks > SignalAppleOS` sui Mac con "Switchable GPUs";
+  `serial_settings` predefinito "None" (nessun seriale applicato); OpenCore incluso 1.0.6. Il "software demux" di OCLP
+  (dGPU disattivata via ACPI) è solo per MacBookPro8,2/8,3 e solo per macOS: per il 14,3 non c'è altro da copiare.
 - I seriali della EFI di OCLP non servono a Linux: con `Automatic`/`UpdateSMBIOS`/`UpdateDataHub`/`UpdateNVRAM` = false
   OpenCore non li applica [F, config.plist di OCLP 3.0.0 letto il 26/11/2026]; contano solo per i servizi Apple in macOS.
 - [F] la configurazione generata passa `ocvalidate` 1.0.8 nella CI; [NV] avvio con la configurazione generata (quella
