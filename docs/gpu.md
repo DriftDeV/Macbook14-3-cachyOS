@@ -56,8 +56,15 @@ di KDE la cambiano (scrivono `gmux_backlight`, regolata dal chip gmux e non dall
 
 - `status`: OpenCore nella partizione EFI, `SignalAppleOS`, `gpu-power-prefs` scritta da OpenCore e nel firmware, quale
   GPU ha `eDP`, voci di avvio.
-- `gpu intel|radeon`: mette `gpu-power-prefs` in `NVRAM > Add` (e in `Delete`, così OpenCore la riscrive a ogni avvio)
-  del `config.plist` in uso, con `SignalAppleOS` acceso; copia prima il file in `config.plist.bak-<data>`.
+- `gpu intel|radeon`: accende `SignalAppleOS` nel `config.plist` in uso (copia prima in `config.plist.bak-<data>`) e
+  scrive `gpu-power-prefs` una volta nella NVRAM con `gpu-control.sh display`, **come MacBook Manager** (scheda GPU).
+  La variabile non va in `NVRAM > Add/Delete` di OpenCore: la riscriverebbe a ogni avvio sovrascrivendo la scelta fatta
+  nel manager (errore della prima versione dello script, corretto lo stesso giorno: `gpu` toglie quelle righe).
+- Chi fa cosa: la **variabile** sceglie la GPU (la legge il firmware all'accensione e comanda il gmux); **SignalAppleOS**
+  non sceglie niente, serve perché il firmware rispetti la scelta e prepari la Intel per il pannello. Provato: solo
+  SignalAppleOS → nulla cambia; SignalAppleOS + variabile → Intel. **Solo variabile, senza OpenCore: mai provato** [NV]:
+  che la Intel resti cieca è un'inferenza (ricetta `apple_set_os`/`gpu-switch` del 2017-2018). Prova possibile:
+  variabile a Intel, poi Option all'avvio → "EFI Boot" (Limine diretto, senza OpenCore).
 - `install [--from DIR] [--rebuild] [--gpu …]`: se `EFI/OC` manca (per esempio dopo l'installatore di Omarchy, che
   cancella la ESP) lo rimette da una copia (`--from`, per esempio `efi-backup/EFI/OC` della chiavetta) oppure lo
   costruisce da OpenCorePkg 1.0.8 fissato (`config/sources.conf`) con un `config.plist` generato da `Sample.plist`:
@@ -73,8 +80,8 @@ di KDE la cambiano (scrivono `gmux_backlight`, regolata dal chip gmux e non dall
   di OCLP è provata). Con OpenCore avviato, `RequestBootVarRouting` fa vedere a Linux le variabili di avvio di OpenCore
   (per questo `efibootmgr` può mostrare voci vecchie); `LauncherOption=Full` tiene OpenCore primo.
 - [NV] S3 sul kernel 7.2 (`linux-omarchy`) con lo schermo sulla Intel: ipotesi da provare (sul 7.3 S3 va anche con la
-  Radeon; S3 è disattivato sotto il 7.3 perché non provato). Prova: `sudo scripts/opencore.sh gpu intel`, riavvio da
-  OpenCore, poi `sudo scripts/sleep-test.sh real-deep 60` (S3 solo per quella prova).
+  Radeon; S3 è disattivato sotto il 7.3 perché non provato). Prova: `sudo scripts/opencore.sh gpu intel` (o MacBook Manager
+  > GPU), riavvio da OpenCore, poi `sudo scripts/sleep-test.sh real-deep 60` (S3 solo per quella prova).
 
 ## Opzioni [NV salvo dove indicato]
 

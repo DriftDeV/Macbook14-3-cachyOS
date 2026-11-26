@@ -380,10 +380,11 @@ schermo passa alla Intel: circa 1,5-2 W in meno a riposo, luminosità funzionant
 ```bash
 sudo scripts/opencore.sh status          # OpenCore, SignalAppleOS, GPU dello schermo
 sudo scripts/opencore.sh install         # OpenCore nella partizione EFI (se manca) e voce di avvio
-sudo scripts/opencore.sh gpu intel       # schermo sulla Intel dal prossimo avvio da OpenCore (gpu radeon per tornare)
+sudo scripts/opencore.sh gpu intel       # SignalAppleOS + schermo sulla Intel dal prossimo avvio (gpu radeon per tornare)
 ```
 
-Se manca, `install` costruisce OpenCore da OpenCorePkg (versione fissata) con una configurazione **senza seriali**: su un
+La GPU si sceglie anche da MacBook Manager → scheda **GPU** (scrive la stessa variabile EFI, `gpu-power-prefs`); OpenCore
+serve perché il firmware la rispetti. Se manca, `install` costruisce OpenCore da OpenCorePkg (versione fissata) con una configurazione **senza seriali**: su un
 Mac vero OpenCore lascia al firmware i dati originali; i seriali servono solo ai servizi Apple dentro macOS. La
 configurazione generata passa `ocvalidate` nella CI ma non è ancora stata avviata [non verificato]; quella di OCLP sì. Se
 qualcosa va storto: Option (⌥) all'avvio → "EFI Boot", oppure "Reset NVRAM" dal menu di OpenCore. Sospensione e monitor

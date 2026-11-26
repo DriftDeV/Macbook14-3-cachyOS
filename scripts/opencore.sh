@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # OpenCore sul MacBookPro14,3 per avviare Linux (CachyOS, Omarchy) "come se fosse macOS" e scegliere la GPU dello schermo.
 #
-# Perché: senza macOS il firmware Apple collega il pannello alla Radeon e lascia la Intel senza schermo. Con OpenCore,
-# Booter > Quirks > SignalAppleOS fa credere al firmware di avviare macOS; con in più la variabile EFI gpu-power-prefs
-# = 01 il chip gmux collega il pannello alla Intel (provato il 25/11/2026, docs/gpu.md). Qui la variabile la scrive
-# OpenCore a ogni avvio (NVRAM > Add/Delete), quindi cambiarla vuol dire cambiare una riga di config.plist.
-# Vale dal riavvio successivo (il firmware legge la variabile prima di OpenCore: può servirne un secondo).
+# Perché: la GPU dello schermo la sceglie il firmware all'accensione dalla variabile EFI gpu-power-prefs (01 = Intel),
+# che scrive MacBook Manager (scheda GPU, scripts/gpu-control.sh display). Provato il 25/11/2026 (docs/gpu.md): con
+# SignalAppleOS (OpenCore dice al firmware che parte macOS) + variabile a 01 lo schermo passa alla Intel; con solo
+# SignalAppleOS non cambia nulla; con solo la variabile, senza OpenCore, non provato [NV]. Questo script si occupa solo
+# di OpenCore e di SignalAppleOS: la variabile resta del manager (OpenCore non la tocca).
 #
 # Niente seriali: su un Mac vero OpenCore lascia al firmware i suoi dati (PlatformInfo con Automatic/UpdateSMBIOS/
 # UpdateDataHub/UpdateNVRAM = false), come la EFI di OCLP di questo Mac. Nessuna kext: servono solo a macOS.
@@ -16,8 +16,8 @@
 #                                                      altrimenti OpenCorePkg fissato in config/sources.conf con una
 #                                                      configurazione generata) e la voce di avvio "OpenCore"
 #   sudo scripts/opencore.sh install --rebuild         rigenera EFI/OC (il vecchio resta in EFI/OC.bak-<data>)
-#   sudo scripts/opencore.sh gpu intel|radeon          GPU dello schermo dal prossimo avvio (con SignalAppleOS)
-#   scripts/opencore.sh config --pkg DIR --out FILE [--gpu intel|radeon]   solo genera config.plist (usato dalla CI)
+#   sudo scripts/opencore.sh gpu intel|radeon          SignalAppleOS acceso + gpu-power-prefs come il manager (gpu-control.sh)
+#   scripts/opencore.sh config --pkg DIR --out FILE    solo genera config.plist (usato dalla CI)
 #   --dry-run mostra senza cambiare. Ogni config.plist toccato viene prima copiato in config.plist.bak-<data>.
 #
 # Se qualcosa va storto all'avvio: tieni premuto Option (⌥) e scegli "EFI Boot" (Limine/GRUB senza OpenCore, schermo
@@ -69,22 +69,18 @@ import plistlib, sys
 GMUX = "FA4CE28D-B62F-4C99-9CC3-6815686E30F9"
 action = sys.argv[1]
 
-def set_gpu(p, gpu):
+def signal(p):
+    """SignalAppleOS acceso; gpu-power-prefs fuori da NVRAM Add/Delete (versioni precedenti di questo script la
+    mettevano lì e OpenCore avrebbe sovrascritto a ogni avvio la scelta fatta con MacBook Manager)."""
     p["Booter"]["Quirks"]["SignalAppleOS"] = True
     nv = p.setdefault("NVRAM", {})
-    add, delete = nv.setdefault("Add", {}), nv.setdefault("Delete", {})
-    if gpu == "intel":
-        add.setdefault(GMUX, {})["gpu-power-prefs"] = b"\x01\x00\x00\x00"
-    elif gpu == "radeon":
-        add.setdefault(GMUX, {})["gpu-power-prefs"] = b"\x00\x00\x00\x00"
-    # In Delete: OpenCore riscrive la variabile a ogni avvio (Add non sovrascrive una variabile già presente).
-    dl = delete.setdefault(GMUX, [])
-    if "gpu-power-prefs" not in dl:
-        dl.append("gpu-power-prefs")
-    nv["WriteFlash"] = True
+    nv.get("Add", {}).get(GMUX, {}).pop("gpu-power-prefs", None)
+    dl = nv.get("Delete", {}).get(GMUX)
+    if dl and "gpu-power-prefs" in dl:
+        dl.remove("gpu-power-prefs")
 
 if action == "generate":
-    sample, out, gpu = sys.argv[2], sys.argv[3], sys.argv[4]
+    sample, out = sys.argv[2], sys.argv[3]
     p = plistlib.load(open(sample, "rb"))
     # Niente per macOS: ACPI, proprietà dei dispositivi, kext e patch del kernel.
     for a in p["ACPI"]["Add"]: a["Enabled"] = False
@@ -117,21 +113,21 @@ if action == "generate":
     pi = p["PlatformInfo"]
     pi.update({"Automatic": False, "UpdateSMBIOS": False, "UpdateDataHub": False, "UpdateNVRAM": False,
                "CustomMemory": False})
-    # NVRAM: solo la variabile del gmux (niente boot-args/csr di macOS).
+    # NVRAM: niente boot-args/csr di macOS; gpu-power-prefs la gestisce MacBook Manager.
     p["NVRAM"]["Add"] = {}
     p["NVRAM"]["Delete"] = {}
-    set_gpu(p, gpu or "radeon")
+    signal(p)
     plistlib.dump(p, open(out, "wb"))
-elif action == "gpu":
-    f, gpu = sys.argv[2], sys.argv[3]
+elif action == "signal":
+    f = sys.argv[2]
     p = plistlib.load(open(f, "rb"))
-    set_gpu(p, gpu)
+    signal(p)
     plistlib.dump(p, open(f, "wb"))
 elif action == "show":
     p = plistlib.load(open(sys.argv[2], "rb"))
     v = p.get("NVRAM", {}).get("Add", {}).get(GMUX, {}).get("gpu-power-prefs")
-    gpu = {b"\x01\x00\x00\x00": "intel", b"\x00\x00\x00\x00": "radeon"}.get(v, "non impostata" if v is None else v.hex())
-    print(f"SignalAppleOS={p['Booter']['Quirks'].get('SignalAppleOS')} gpu-power-prefs={gpu}")
+    extra = "" if v is None else " ATTENZIONE: gpu-power-prefs anche in config.plist (lancia: opencore.sh gpu ...)"
+    print(f"SignalAppleOS={p['Booter']['Quirks'].get('SignalAppleOS')}{extra}")
 PY
 }
 
@@ -146,8 +142,8 @@ download_pkg() {   # scarica e verifica OpenCorePkg, stampa la cartella estratta
 
 case "$CMD" in
 config)
-    [ -n "$PKG" ] && [ -n "$OUT" ] || die "Uso: opencore.sh config --pkg DIR --out FILE [--gpu intel|radeon]"
-    plist generate "$PKG/Docs/Sample.plist" "$OUT" "${GPU:-radeon}"
+    [ -n "$PKG" ] && [ -n "$OUT" ] || die "Uso: opencore.sh config --pkg DIR --out FILE"
+    plist generate "$PKG/Docs/Sample.plist" "$OUT"
     ok "Configurazione scritta in $OUT"
     ;;
 status)
@@ -179,11 +175,13 @@ gpu)
     [ -n "$ESP" ] && [ -f "$ESP/EFI/OC/config.plist" ] || die "OpenCore non trovato nella partizione EFI: prima sudo scripts/opencore.sh install"
     F="$ESP/EFI/OC/config.plist"
     run cp -a "$F" "$F.bak-$STAMP"
-    if [ "$DRY_RUN" = 1 ]; then echo "[dry-run] gpu-power-prefs=$GPU e SignalAppleOS in $F"
-    else plist gpu "$F" "$GPU"; fi
-    ok "Schermo sulla $GPU dal prossimo avvio da OpenCore ($(plist show "$F"))."
-    log "Riavvia passando da OpenCore; se lo schermo non cambia, riavvia una seconda volta (il firmware legge la variabile prima di OpenCore)."
-    [ "$GPU" = intel ] && log "Indietro: sudo scripts/opencore.sh gpu radeon (o Option all'avvio → EFI Boot, oppure Reset NVRAM)."
+    if [ "$DRY_RUN" = 1 ]; then echo "[dry-run] SignalAppleOS in $F"
+    else plist signal "$F"; fi
+    # La variabile come la scrive MacBook Manager (scheda GPU): una volta, nella NVRAM.
+    run bash "$SCRIPT_DIR/gpu-control.sh" display "$GPU"
+    ok "OpenCore: $(plist show "$F")."
+    log "Riavvia passando da OpenCore (è lui che manda SignalAppleOS al firmware)."
+    [ "$GPU" = intel ] && log "Indietro: sudo scripts/opencore.sh gpu radeon, o MacBook Manager > GPU (oppure Reset NVRAM)."
     ;;
 install)
     need_root
@@ -209,7 +207,7 @@ install)
             for d in OpenRuntime.efi OpenLinuxBoot.efi ResetNvramEntry.efi; do run install -m644 "$X/Drivers/$d" "$OC/Drivers/$d"; done
             run install -m644 "$X/Tools/OpenShell.efi" "$OC/Tools/OpenShell.efi"
             if [ "$DRY_RUN" = 1 ]; then echo "[dry-run] genera $OC/config.plist da Docs/Sample.plist"
-            else plist generate "$WORK/pkg/Docs/Sample.plist" "$OC/config.plist" "${GPU:-radeon}"; fi
+            else plist generate "$WORK/pkg/Docs/Sample.plist" "$OC/config.plist"; fi
         fi
         ok "OpenCore in $OC."
     fi
