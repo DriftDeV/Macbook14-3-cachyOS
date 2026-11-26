@@ -10,7 +10,7 @@ post-installazione) è nel [README principale](../README.md#installare-omarchy);
 | [`wifi-live.sh`](wifi-live.sh) | copiato sulla chiavetta: Wi-Fi a 5 GHz nella live (NVRAM e firmware pronti, oppure generati dal chip) |
 | [`omabar/`](omabar/README.md) | OmaBar, renderer della Touch Bar che segue il tema di Omarchy (Rust) |
 | [`install-omabar.sh`](install-omabar.sh) | compila e installa OmaBar (passo `omabar` di `install.sh`, solo su Omarchy) e la skill `/omabar` |
-| [`hypr-phantom-display`](hypr-phantom-display) | servizio di sessione (passo `hyprland` di `install.sh`): con lo schermo sulla Intel disattiva in Hyprland l'eDP "collegato" ma vuoto della Radeon, solo se 4 condizioni sono vere insieme (0×0 in Hyprland, eDP senza EDID né modalità, scheda PCI, altro eDP vero su un'altra GPU); `--check` spiega la decisione |
+| [`hypr-phantom-display`](hypr-phantom-display) | servizio di sessione (passo `hyprland` di `install.sh`): con lo schermo sulla Intel disattiva in Hyprland l'eDP "collegato" ma vuoto della Radeon, solo se 4 condizioni sono vere insieme (0×0 in Hyprland, eDP senza EDID né modalità, scheda PCI, altro eDP vero su un'altra GPU); se smette di essere vuoto lo riattiva (`hyprctl reload`, che rimette le regole di `monitors.lua`); controlla agli eventi di Hyprland e ogni 5 s; non tocca gli schermi spenti dall'utente; `--check` spiega la decisione |
 | [`claude-skill/omabar/`](claude-skill/omabar/SKILL.md) | skill di Claude Code per personalizzare la Touch Bar da qualunque sessione |
 
 Perché la live va su chiavetta: l'installatore di Omarchy esclude il disco da cui è partita, quindi una live sul disco

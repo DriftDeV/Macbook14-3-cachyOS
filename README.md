@@ -185,7 +185,7 @@ all'accensione. Da qui in poi la guardia installata da `install.sh` lo controlla
   ("nessun nuovo privilegio"): usa **`run0`** al posto di `sudo`.
 - Con lo schermo sulla Intel la Radeon lascia uno schermo "fantasma" (0×0) che Hyprland vedrebbe: il passo `hyprland`
   di `install.sh` installa un servizio che lo disattiva, solo dopo aver controllato che sia davvero vuoto (mai lo schermo
-  vero né la Touch Bar). `hypr-phantom-display --check` spiega cosa vede.
+  vero né la Touch Bar) e lo riaccende da solo se diventa uno schermo vero. `hypr-phantom-display --check` spiega cosa vede.
 - Icona del manager, renderer della Touch Bar e limite FPS partono con la sessione di systemd (uwsm). Se non partono,
   aggiungi `macbook-manager gui --tray` all'avvio (in `~/.config/hypr/autostart.lua`).
 

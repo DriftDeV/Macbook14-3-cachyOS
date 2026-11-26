@@ -72,6 +72,8 @@ di KDE la cambiano (scrivono `gmux_backlight`, regolata dal chip gmux e non dall
   `EDID err: 2`, nessuna modalità) e Hyprland lo mostra a 0×0 con un workspace sopra. Non sono le uscite USB-C (`DP-3`…`DP-6`
   di amdgpu, scollegate) né la Touch Bar (`USB-1` di appletbdrm, USB, `seat-touchbar`). `omarchy/hypr-phantom-display`
   lo disattiva (`hl.monitor({output=…, disabled=true})`) e lo rifà dopo `configreloaded`/`monitoradded` (provato).
+  Se un connettore disattivato da lì riceve EDID o modalità, lo riattiva con `hyprctl reload` (provato con
+  `HYPR_PHANTOM_TEST_REAL=eDP-2 hypr-phantom-display --once`: riacceso, e non rispento finché resta "vero").
 - Attributi della variabile dopo l'avvio: `07 00 00 80` (il firmware aggiunge il bit 31), valore `01 00 00 00`.
 - `install [--from DIR] [--rebuild] [--gpu …]`: se `EFI/OC` manca (per esempio dopo l'installatore di Omarchy, che
   cancella la ESP) lo rimette da una copia (`--from`, per esempio `efi-backup/EFI/OC` della chiavetta) oppure lo

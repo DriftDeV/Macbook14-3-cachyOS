@@ -10,15 +10,19 @@ solo se TUTTE queste condizioni sono vere:
   2. in sysfs è un connettore eDP "connected" con EDID vuoto e senza modalità;
   3. appartiene a una scheda grafica PCI (mai la Touch Bar: appletbdrm è USB, e sta in seat-touchbar);
   4. esiste un altro eDP vero (EDID e modalità) su una GPU diversa.
-Lo disattiva con hl.monitor({output=..., disabled=true}) e ricontrolla a ogni schermo aggiunto e a ogni ricarica della
-configurazione (eventi di Hyprland).
+Lo disattiva con hl.monitor({output=..., disabled=true}) e ricontrolla a ogni evento di schermo e di ricarica della
+configurazione, e comunque ogni 5 s. Se uno schermo disattivato da qui smette di essere un fantasma (condizioni 2-4 non più
+vere: EDID o modalità comparse, connettore scollegato, nessun altro pannello vero), lo riattiva con `hyprctl reload`, che
+rimette le regole di ~/.config/hypr/monitors.lua. Gli schermi spenti dall'utente non li tocca (elenco in $XDG_RUNTIME_DIR).
 
   hypr-phantom-display            servizio (omarchy-phantom-display.service, sessione utente)
   hypr-phantom-display --check    dice cosa farebbe e perché, senza toccare niente
+  hypr-phantom-display --once     un solo controllo con effetto (prove; HYPR_PHANTOM_TEST_REAL=eDP-2 finge un pannello vero)
 """
 import glob, json, os, socket, subprocess, sys, time
 
 CHECK = "--check" in sys.argv
+ONCE = "--once" in sys.argv   # un solo controllo (con effetto), poi esce: per le prove
 
 
 def log(msg):
@@ -61,10 +65,17 @@ def connectors():
             "driver": os.path.basename(os.path.realpath(dev + "/driver")),
             "bus": os.path.basename(os.path.realpath(dev + "/subsystem")),
         }
+    # Solo per le prove: HYPR_PHANTOM_TEST_REAL=eDP-2 fa sembrare quel connettore un pannello vero (EDID e modalità).
+    fake = os.environ.get("HYPR_PHANTOM_TEST_REAL")
+    if fake in out:
+        out[fake].update(edid=128, modes=["2880x1800"])
     return out
 
 
-def phantoms(d):
+def evaluate(d):
+    """Per ogni schermo di Hyprland: (nome, disattivato, vuoto in Hyprland, fantasma per sysfs, motivi, descrizione).
+    Le condizioni 2-4 (sysfs) decidono se è ancora un fantasma; la 1 (Hyprland 0x0) serve solo per disattivarlo:
+    uno schermo disattivato Hyprland può mostrarlo a 0x0 anche se è vero."""
     mons = json.loads(hyprctl(d, "-j", "monitors", "all") or "[]")
     conn = connectors()
     real = [n for n, c in conn.items() if n.startswith("eDP") and c["status"] == "connected" and c["edid"] > 0
@@ -78,7 +89,6 @@ def phantoms(d):
             if not cond:
                 why.append(msg)
 
-        need(m["width"] == 0 and m["height"] == 0 and not m.get("availableModes"), "Hyprland gli dà modalità")
         need(c is not None, "nessun connettore in sysfs")
         others = []
         if c:
@@ -88,23 +98,64 @@ def phantoms(d):
             need(c["edid"] == 0 and not c["modes"], "ha EDID o modalità")
             need(c["bus"] == "pci", "non è una scheda PCI (%s)" % c["bus"])
             need(bool(others), "nessun altro eDP vero su un'altra GPU")
-        if not why:
-            result.append((n, m.get("disabled", False), "%s su %s, pannello vero: %s" % (n, c["driver"], ", ".join(others))))
-        elif CHECK:
-            log("%s: non fantasma (%s)" % (n, "; ".join(why)))
+        empty = m["width"] == 0 and m["height"] == 0 and not m.get("availableModes")
+        info = "%s su %s, pannello vero: %s" % (n, c["driver"], ", ".join(others)) if c else n
+        result.append((n, m.get("disabled", False), empty, not why, why, info))
     return result
 
 
+def state_file(d):
+    return os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"),
+                        "hypr-phantom-display-%s.json" % os.path.basename(d))
+
+
+def load_ours(d):
+    try:
+        return set(json.load(open(state_file(d))))
+    except (OSError, ValueError):
+        return set()
+
+
+def save_ours(d, ours):
+    with open(state_file(d), "w") as f:
+        json.dump(sorted(ours), f)
+
+
 def apply(d):
-    for name, disabled, why in phantoms(d):
-        if disabled:
-            if CHECK: log("%s: fantasma, già disattivato (%s)" % (name, why))
-            continue
-        if CHECK:
-            log("%s: FANTASMA, lo disattiverei (%s)" % (name, why))
-            continue
-        r = hyprctl(d, "eval", 'hl.monitor({ output = "%s", disabled = true })' % name).strip()
-        log("%s disattivato (%s): %s" % (name, why, r))
+    ours = load_ours(d)   # schermi disattivati da questo servizio (mai quelli spenti dall'utente)
+    reload_needed = []
+    for name, disabled, empty, phantom, why, info in evaluate(d):
+        if phantom and not disabled:
+            if not empty:
+                if CHECK: log("%s: vuoto per sysfs ma Hyprland gli dà modalità: lo lascio (%s)" % (name, info))
+                continue
+            if CHECK:
+                log("%s: FANTASMA, lo disattiverei (%s)" % (name, info))
+                continue
+            r = hyprctl(d, "eval", 'hl.monitor({ output = "%s", disabled = true })' % name).strip()
+            ours.add(name)
+            log("%s disattivato (%s): %s" % (name, info, r))
+        elif phantom:
+            if CHECK: log("%s: fantasma, già disattivato (%s)" % (name, info))
+        elif name in ours:
+            # Non è più un fantasma: si toglie la regola di disattivazione ricaricando la configurazione, che rimette
+            # modalità, scala e posizione decise in ~/.config/hypr/monitors.lua.
+            if CHECK:
+                log("%s: NON più fantasma (%s): lo riattiverei" % (name, "; ".join(why)))
+                continue
+            reload_needed.append((name, "; ".join(why)))
+            ours.discard(name)
+        elif CHECK:
+            log("%s: non fantasma (%s)" % (name, "; ".join(why)))
+    if not CHECK:
+        save_ours(d, ours)
+        if reload_needed:
+            for name, why in reload_needed:
+                log("%s non è più un fantasma (%s): lo riattivo" % (name, why))
+            log("hyprctl reload: %s" % hyprctl(d, "reload").strip())
+
+
+POLL = 5   # secondi: EDID e modalità di un connettore possono cambiare senza eventi di Hyprland
 
 
 def main():
@@ -114,19 +165,24 @@ def main():
             if CHECK: sys.exit("Hyprland non trovato.")
             time.sleep(5); continue
         apply(d)
-        if CHECK:
+        if CHECK or ONCE:
             return
         try:
             s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             s.connect(d + "/.socket2.sock")
+            s.settimeout(POLL)
             buf = b""
             while True:
-                data = s.recv(4096)
+                try:
+                    data = s.recv(4096)
+                except socket.timeout:
+                    apply(d)
+                    continue
                 if not data:
                     break
                 buf += data
                 *lines, buf = buf.split(b"\n")
-                if any(l.startswith((b"monitoradded", b"configreloaded")) for l in lines):
+                if any(l.startswith((b"monitoradded", b"monitorremoved", b"configreloaded")) for l in lines):
                     time.sleep(1)   # lascia a Hyprland il tempo di configurare l'uscita
                     apply(d)
         except OSError as e:
